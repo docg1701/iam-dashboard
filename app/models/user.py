@@ -1,0 +1,46 @@
+"""User model for authentication and authorization."""
+
+import enum
+
+from sqlalchemy import Boolean, Column, Enum, String
+
+from .base import TimestampedModel
+
+
+class UserRole(enum.Enum):
+    """User role enumeration."""
+
+    SYSADMIN = "sysadmin"
+    ADMIN_USER = "admin_user"
+    COMMON_USER = "common_user"
+
+
+class User(TimestampedModel):
+    """User model for authentication and authorization."""
+
+    __tablename__ = "users"
+
+    username = Column(String(255), unique=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    role = Column(
+        Enum(UserRole, values_callable=lambda x: [e.value for e in x]), nullable=False
+    )
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    # 2FA fields
+    totp_secret = Column(String(32), nullable=True)
+    is_2fa_enabled = Column(Boolean, default=False, nullable=False)
+
+    def __repr__(self) -> str:
+        """String representation of User."""
+        return f"<User(id={self.id}, username='{self.username}', role='{self.role.value}')>"
+
+    @property
+    def is_admin(self) -> bool:
+        """Check if user has admin privileges."""
+        return self.role in (UserRole.SYSADMIN, UserRole.ADMIN_USER)
+
+    @property
+    def is_sysadmin(self) -> bool:
+        """Check if user is a system administrator."""
+        return self.role == UserRole.SYSADMIN

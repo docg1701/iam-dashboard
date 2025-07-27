@@ -1,0 +1,8 @@
+APÓS MVP
+
+clamav para scanear arquivos antes do upload
+limitar tamanho dos arquivos
+validar tipo dos arquivos enviados
+
+outras estratégias de segurança no upload
+instalar bibliotecas de gerenciamento de desempenho já sugeridas pelo bmad

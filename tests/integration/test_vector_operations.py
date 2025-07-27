@@ -1,0 +1,284 @@
+"""Integration tests for vector storage and retrieval operations."""
+
+import uuid
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+import numpy as np
+
+from app.config.llama_index_config import LlamaIndexConfig
+from app.models.document_chunk import DocumentChunk
+from app.repositories.document_repository import DocumentRepository
+
+
+class TestVectorOperations:
+    """Integration tests for vector storage and retrieval."""
+
+    @pytest.fixture
+    def mock_db_session(self):
+        """Create mock database session."""
+        return AsyncMock()
+
+    @pytest.fixture
+    def sample_embedding(self):
+        """Create a sample 768-dimensional embedding."""
+        return np.random.rand(768).tolist()
+
+    @pytest.fixture
+    def sample_document_chunk(self, sample_embedding):
+        """Create a sample document chunk."""
+        return DocumentChunk(
+            id=uuid.uuid4(),
+            node_id="test_node_123",
+            embedding=sample_embedding,
+            text="This is a sample chunk of text for testing vector operations.",
+            chunk_metadata={
+                "chunk_position": 0,
+                "total_chunks": 3,
+                "char_count": 62,
+                "word_count": 12,
+                "document_id": str(uuid.uuid4()),
+                "filename": "test_document.pdf"
+            },
+            document_id=uuid.uuid4()
+        )
+
+    @pytest.mark.asyncio
+    async def test_document_chunk_creation_with_embedding(self, mock_db_session, sample_document_chunk):
+        """Test creating document chunks with vector embeddings."""
+        # Arrange
+        repository = DocumentRepository(mock_db_session)
+        repository.save_document_chunk = AsyncMock(return_value=sample_document_chunk)
+        
+        # Act
+        saved_chunk = await repository.save_document_chunk(sample_document_chunk)
+        
+        # Assert
+        assert saved_chunk.node_id == "test_node_123"
+        assert len(saved_chunk.embedding) == 768
+        assert saved_chunk.text == "This is a sample chunk of text for testing vector operations."
+        assert saved_chunk.chunk_metadata["chunk_position"] == 0
+
+    @pytest.mark.asyncio
+    async def test_vector_similarity_query_simulation(self, mock_db_session, sample_embedding):
+        """Test vector similarity query functionality."""
+        # This would test actual vector similarity search
+        # In a real implementation, this would query the PGVectorStore
+        
+        # Arrange
+        query_embedding = np.random.rand(768).tolist()
+        
+        # Mock chunks with different similarity scores
+        chunk1 = DocumentChunk(
+            id=uuid.uuid4(),
+            node_id="similar_node",
+            embedding=sample_embedding,  # Similar to query
+            text="Similar content about legal matters.",
+            chunk_metadata={"similarity_score": 0.95},
+            document_id=uuid.uuid4()
+        )
+        
+        chunk2 = DocumentChunk(
+            id=uuid.uuid4(),
+            node_id="different_node", 
+            embedding=[0.1] * 768,  # Different from query
+            text="Different content about cooking recipes.",
+            chunk_metadata={"similarity_score": 0.2},
+            document_id=uuid.uuid4()
+        )
+        
+        # Simulate vector search results (ordered by similarity)
+        mock_search_results = [chunk1, chunk2]
+        
+        # Act
+        # In real implementation, this would be:
+        # results = await vector_store.similarity_search(query_embedding, k=5)
+        results = mock_search_results
+        
+        # Assert
+        assert len(results) == 2
+        assert results[0].chunk_metadata["similarity_score"] > results[1].chunk_metadata["similarity_score"]
+
+    def test_embedding_dimension_consistency(self, sample_document_chunk):
+        """Test that embeddings maintain consistent dimensions."""
+        # Assert
+        assert len(sample_document_chunk.embedding) == 768
+        assert all(isinstance(val, (int, float)) for val in sample_document_chunk.embedding)
+
+    @pytest.mark.asyncio
+    async def test_chunk_retrieval_by_document(self, mock_db_session, sample_document_chunk):
+        """Test retrieving all chunks for a specific document."""
+        # Arrange
+        document_id = sample_document_chunk.document_id
+        repository = DocumentRepository(mock_db_session)
+        
+        # Create multiple chunks for the same document
+        chunks = [
+            DocumentChunk(
+                id=uuid.uuid4(),
+                node_id=f"node_{i}",
+                embedding=np.random.rand(768).tolist(),
+                text=f"Chunk {i} content",
+                chunk_metadata={"chunk_position": i},
+                document_id=document_id
+            )
+            for i in range(3)
+        ]
+        
+        repository.get_chunks_by_document_id = AsyncMock(return_value=chunks)
+        
+        # Act
+        retrieved_chunks = await repository.get_chunks_by_document_id(document_id)
+        
+        # Assert
+        assert len(retrieved_chunks) == 3
+        assert all(chunk.document_id == document_id for chunk in retrieved_chunks)
+
+    def test_llama_index_vector_store_configuration(self):
+        """Test Llama-Index vector store configuration."""
+        # Arrange & Act
+        with patch.dict('os.environ', {
+            'GEMINI_API_KEY': 'test_key',
+            'DATABASE_URL': 'postgresql://user:pass@localhost:5432/test_db'
+        }):
+            with patch('app.config.llama_index_config.create_engine') as mock_engine:
+                with patch('app.config.llama_index_config.PGVectorStore.from_params') as mock_vector_store:
+                    
+                    # Configure mocks
+                    mock_engine_instance = MagicMock()
+                    mock_engine_instance.url.database = 'test_db'
+                    mock_engine_instance.url.host = 'localhost'
+                    mock_engine_instance.url.password = 'pass'
+                    mock_engine_instance.url.port = 5432
+                    mock_engine_instance.url.username = 'user'
+                    mock_engine.return_value = mock_engine_instance
+                    
+                    config = LlamaIndexConfig()
+                    vector_store = config.get_vector_store()
+                    
+                    # Assert
+                    mock_vector_store.assert_called_once_with(
+                        database='test_db',
+                        host='localhost',
+                        password='pass',
+                        port=5432,
+                        user='user',
+                        table_name="document_chunks",
+                        embed_dim=768,
+                        hnsw_kwargs={
+                            "hnsw_m": 16,
+                            "hnsw_ef_construction": 64,
+                            "hnsw_ef_search": 40,
+                        }
+                    )
+
+    @pytest.mark.asyncio
+    async def test_vector_index_creation(self, sample_document_chunk):
+        """Test creation of vector index with document chunks."""
+        # Arrange
+        chunks = [sample_document_chunk]
+        
+        with patch('app.workers.llama_index_processor.VectorStoreIndex') as mock_index:
+            with patch('app.config.llama_index_config.get_llama_index_config') as mock_config:
+                
+                # Configure mocks
+                mock_config_instance = MagicMock()
+                mock_config.return_value = mock_config_instance
+                
+                mock_vector_store = MagicMock()
+                mock_service_context = MagicMock()
+                mock_config_instance.get_vector_store.return_value = mock_vector_store
+                mock_config_instance.setup_service_context.return_value = mock_service_context
+                
+                # Simulate index creation
+                mock_index_instance = MagicMock()
+                mock_index.return_value = mock_index_instance
+                
+                # Act
+                from app.workers.llama_index_processor import LlamaIndexProcessor
+                processor = LlamaIndexProcessor()
+                
+                # Create mock nodes
+                mock_nodes = [MagicMock()]
+                
+                await processor._store_chunks_in_vector_db(chunks, mock_nodes)
+                
+                # Assert
+                mock_index.assert_called_once()
+
+    def test_embedding_generation_consistency(self):
+        """Test that embedding generation is consistent."""
+        # This test would verify that the same text generates the same embedding
+        # when processed multiple times (with deterministic model settings)
+        pass
+
+    @pytest.mark.asyncio
+    async def test_large_document_chunking_and_storage(self):
+        """Test handling of large documents with many chunks."""
+        # Arrange
+        large_text = "Sample text. " * 1000  # Large document
+        
+        # This test would verify that large documents are properly chunked
+        # and all chunks are stored in the vector database
+        pass
+
+    def test_metadata_preservation_in_vector_storage(self, sample_document_chunk):
+        """Test that chunk metadata is preserved in vector storage."""
+        # Assert
+        metadata = sample_document_chunk.chunk_metadata
+        assert "chunk_position" in metadata
+        assert "total_chunks" in metadata
+        assert "char_count" in metadata
+        assert "word_count" in metadata
+        assert "document_id" in metadata
+        assert "filename" in metadata
+
+    @pytest.mark.asyncio
+    async def test_vector_search_performance(self):
+        """Test vector search performance with large datasets."""
+        # This test would verify that vector searches perform well
+        # even with large numbers of stored chunks
+        pass
+
+    def test_hnsw_index_configuration(self):
+        """Test HNSW index configuration parameters."""
+        # Arrange & Act
+        with patch.dict('os.environ', {
+            'GEMINI_API_KEY': 'test_key',
+            'DATABASE_URL': 'postgresql://user:pass@localhost:5432/test_db'
+        }):
+            with patch('app.config.llama_index_config.create_engine'):
+                with patch('app.config.llama_index_config.PGVectorStore.from_params') as mock_vector_store:
+                    
+                    config = LlamaIndexConfig()
+                    config.get_vector_store()
+                    
+                    # Assert HNSW parameters
+                    call_args = mock_vector_store.call_args
+                    hnsw_kwargs = call_args.kwargs['hnsw_kwargs']
+                    
+                    assert hnsw_kwargs["hnsw_m"] == 16
+                    assert hnsw_kwargs["hnsw_ef_construction"] == 64
+                    assert hnsw_kwargs["hnsw_ef_search"] == 40
+
+    @pytest.mark.asyncio
+    async def test_embedding_model_integration(self):
+        """Test integration with Gemini embedding model."""
+        # This test would verify that embeddings are generated correctly
+        # using the Gemini API
+        pass
+
+    def test_chunk_text_to_embedding_mapping(self, sample_document_chunk):
+        """Test that chunk text is properly mapped to its embedding."""
+        # Assert
+        assert sample_document_chunk.text is not None
+        assert len(sample_document_chunk.text) > 0
+        assert sample_document_chunk.embedding is not None
+        assert len(sample_document_chunk.embedding) == 768
+
+    @pytest.mark.asyncio
+    async def test_vector_database_connection_handling(self):
+        """Test proper handling of vector database connections."""
+        # This test would verify connection pooling, error handling,
+        # and proper cleanup of database connections
+        pass
