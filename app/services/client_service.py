@@ -69,7 +69,7 @@ class ClientService:
         if name is not None:
             if not name or len(name.strip()) < 2:
                 raise ValueError("Name must have at least 2 characters")
-            client.name = name.strip()
+            client.name = name.strip()  # type: ignore[assignment]
 
         if cpf is not None:
             cleaned_cpf = self._clean_cpf(cpf)
@@ -81,7 +81,7 @@ class ClientService:
             if existing_client and existing_client.id != client_id:
                 raise ValueError(f"CPF '{cpf}' is already registered")
 
-            client.cpf = cleaned_cpf
+            client.cpf = cleaned_cpf  # type: ignore[assignment]
 
         if birth_date is not None:
             client.birth_date = birth_date

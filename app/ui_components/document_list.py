@@ -7,7 +7,7 @@ from datetime import datetime
 from nicegui import ui
 
 from app.core.database import get_async_db
-from app.models.document import Document
+from app.models.document import Document, DocumentStatus
 from app.repositories.document_repository import DocumentRepository
 from app.services.document_service import DocumentService
 

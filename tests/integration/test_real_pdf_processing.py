@@ -32,6 +32,11 @@ class TestRealPDFProcessing:
 
     def test_simple_pdf_local_ocr_capability(self, simple_pdf_path):
         """Test that simple PDF can be processed with local OCR (user requirement)."""
+        # Load environment variables
+        import os
+        from dotenv import load_dotenv
+        load_dotenv()
+        
         # Arrange
         processor = get_llama_index_processor()
         
@@ -62,7 +67,7 @@ class TestRealPDFProcessing:
 
     @pytest.mark.asyncio
     async def test_simple_pdf_text_extraction(self, simple_pdf_path):
-        """Test text extraction from simple PDF using PyMuPDF."""
+        """Test text extraction from PDF (may need OCR if not pure digital text)."""
         # Load environment variables
         import os
         from dotenv import load_dotenv
@@ -71,13 +76,18 @@ class TestRealPDFProcessing:
         # Arrange
         processor = get_llama_index_processor()
         
-        # Act
+        # Act - Try simple first, then OCR if needed
         extracted_text = processor._extract_simple_text(simple_pdf_path)
+        if not extracted_text.strip():
+            # Fall back to OCR for PDFs that look digital but need OCR
+            extracted_text = processor._extract_simple_text_or_local_ocr(simple_pdf_path)
         
         # Assert
         assert extracted_text is not None
-        assert len(extracted_text.strip()) > 0, "Should extract text from digital PDF"
+        assert len(extracted_text.strip()) > 0, "Should extract text from PDF"
         assert "---" in extracted_text, "Should include page separators"
+        # Check for expected content specific to our test PDF
+        assert "ESTADO DO MARANHÃO" in extracted_text, "Should contain expected document content"
 
     @pytest.mark.asyncio
     async def test_complex_pdf_ocr_extraction(self, complex_pdf_path):

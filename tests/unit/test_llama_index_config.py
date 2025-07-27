@@ -133,13 +133,10 @@ class TestLlamaIndexConfig:
         assert result == mock_vector_store
 
     @patch('app.config.llama_index_config.Settings')
-    @patch('app.config.llama_index_config.ServiceContext.from_defaults')
-    def test_setup_service_context(self, mock_service_context, mock_settings, mock_env_vars):
-        """Test service context setup with global settings configuration."""
+    def test_setup_global_settings(self, mock_settings, mock_env_vars):
+        """Test global settings setup (replaces deprecated ServiceContext)."""
         # Arrange
         config = LlamaIndexConfig()
-        mock_context = MagicMock()
-        mock_service_context.return_value = mock_context
         
         with patch.object(config, 'get_embedding_model') as mock_get_embed:
             with patch.object(config, 'get_text_splitter') as mock_get_splitter:
@@ -149,21 +146,13 @@ class TestLlamaIndexConfig:
                 mock_get_splitter.return_value = mock_text_splitter
                 
                 # Act
-                result = config.setup_service_context()
+                config.setup_global_settings()
                 
                 # Assert
                 assert mock_settings.embed_model == mock_embed_model
-                assert mock_settings.node_parser == mock_text_splitter
+                assert mock_settings.text_splitter == mock_text_splitter
                 assert mock_settings.chunk_size == 512
                 assert mock_settings.chunk_overlap == 50
-                
-                mock_service_context.assert_called_once_with(
-                    embed_model=mock_embed_model,
-                    node_parser=mock_text_splitter,
-                    chunk_size=512,
-                    chunk_overlap=50
-                )
-                assert result == mock_context
 
     def test_factory_function(self, mock_env_vars):
         """Test factory function returns LlamaIndexConfig instance."""

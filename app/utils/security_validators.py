@@ -72,13 +72,13 @@ class DocumentSecurityValidator:
     def validate_pdf_file(self, file_path: Path) -> dict[str, Any]:
         """
         Comprehensive security validation for PDF files.
-        
+
         Args:
             file_path: Path to the PDF file
-            
+
         Returns:
             Dict with validation results
-            
+
         Raises:
             SecurityError: If validation fails
         """
@@ -133,7 +133,7 @@ class DocumentSecurityValidator:
                 pdf_document.close()
 
             except Exception as pdf_error:
-                raise SecurityError(f"PDF structure validation failed: {str(pdf_error)}")
+                raise SecurityError(f"PDF structure validation failed: {str(pdf_error)}") from pdf_error
 
             logger.info(f"PDF validation successful for {file_path.name}: {validation_results}")
             return validation_results
@@ -143,15 +143,15 @@ class DocumentSecurityValidator:
             raise
         except Exception as e:
             validation_results["valid"] = False
-            raise SecurityError(f"Unexpected error during validation: {str(e)}")
+            raise SecurityError(f"Unexpected error during validation: {str(e)}") from e
 
     def sanitize_extracted_text(self, text: str) -> str:
         """
         Sanitize extracted text to remove potential injection patterns.
-        
+
         Args:
             text: Raw extracted text
-            
+
         Returns:
             Sanitized text
         """
@@ -186,10 +186,10 @@ class DocumentSecurityValidator:
     def _clean_text(self, text: str) -> str:
         """
         Additional text cleaning for safety.
-        
+
         Args:
             text: Text to clean
-            
+
         Returns:
             Cleaned text
         """
@@ -213,12 +213,12 @@ class DocumentSecurityValidator:
     def create_audit_log_entry(self, operation: str, document_id: str, details: dict[str, Any]) -> dict[str, Any]:
         """
         Create an audit log entry for document processing operations.
-        
+
         Args:
             operation: Type of operation (e.g., 'upload', 'process', 'delete')
             document_id: Document identifier
             details: Additional operation details
-            
+
         Returns:
             Audit log entry
         """
@@ -238,10 +238,10 @@ class DocumentSecurityValidator:
     def secure_file_cleanup(self, file_paths: list[Path]) -> dict[str, bool]:
         """
         Securely delete temporary files after processing.
-        
+
         Args:
             file_paths: List of file paths to delete
-            
+
         Returns:
             Dict mapping file path to deletion success
         """

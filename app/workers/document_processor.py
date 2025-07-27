@@ -4,6 +4,10 @@ import asyncio
 import uuid
 from datetime import datetime
 
+# Load environment variables first (required for Celery workers)
+from dotenv import load_dotenv
+load_dotenv()
+
 from celery import Celery
 from celery.utils.log import get_task_logger
 
@@ -48,21 +52,30 @@ def process_document(self, document_id: str) -> dict[str, any]:
         # Convert string back to UUID
         doc_uuid = uuid.UUID(document_id)
 
-        # Run the async processing function
-        result = asyncio.run(_process_document_async(doc_uuid, self.request.id))
-
-        return result
+        # Run the async processing function with new event loop
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(_process_document_async(doc_uuid, self.request.id))
+            return result
+        finally:
+            loop.close()
 
     except Exception as exc:
         logger.error(f"Error processing document {document_id}: {str(exc)}")
 
         # Update document status to failed
         try:
-            asyncio.run(
-                _update_document_status(
-                    uuid.UUID(document_id), DocumentStatus.FAILED, str(exc)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(
+                    _update_document_status(
+                        uuid.UUID(document_id), DocumentStatus.FAILED, str(exc)
+                    )
                 )
-            )
+            finally:
+                loop.close()
         except Exception as update_exc:
             logger.error(f"Error updating document status: {str(update_exc)}")
 
@@ -82,7 +95,10 @@ async def _process_document_async(
     """Async function to process a document."""
     logger.info(f"Starting document processing for {document_id}")
 
-    async for db_session in get_async_db():
+    # Create a new database session for this task
+    from app.core.database import AsyncSessionLocal
+    
+    async with AsyncSessionLocal() as db_session:
         document_repository = DocumentRepository(db_session)
         document_service = DocumentService(document_repository)
 
@@ -173,7 +189,9 @@ async def _update_document_status(
     document_id: uuid.UUID, status: DocumentStatus, error_message: str | None = None
 ) -> None:
     """Helper function to update document status."""
-    async for db_session in get_async_db():
+    from app.core.database import AsyncSessionLocal
+    
+    async with AsyncSessionLocal() as db_session:
         document_repository = DocumentRepository(db_session)
         document_service = DocumentService(document_repository)
         await document_service.update_document_status(

@@ -10,7 +10,7 @@ from .base import TimestampedModel
 
 class DocumentChunk(TimestampedModel):
     """Model for storing document text chunks with vector embeddings.
-    
+
     This model is designed to be compatible with Llama-Index's PGVectorStore
     and stores the vectorized text chunks for RAG operations.
     """
@@ -47,7 +47,8 @@ class DocumentChunk(TimestampedModel):
     @property
     def preview_text(self) -> str:
         """Get a preview of the chunk text (first 100 characters)."""
-        return self.text[:100] + "..." if len(self.text) > 100 else self.text
+        text_str = str(self.text)
+        return text_str[:100] + "..." if len(text_str) > 100 else text_str
 
     @property
     def word_count(self) -> int:

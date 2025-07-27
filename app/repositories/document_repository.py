@@ -78,9 +78,9 @@ class DocumentRepository:
         if not document:
             return False
 
-        document.status = status
+        document.status = status  # type: ignore[assignment]
         if error_message:
-            document.error_message = error_message
+            document.error_message = error_message  # type: ignore[assignment]
 
         await self.db_session.commit()
         return True
@@ -94,7 +94,7 @@ class DocumentRepository:
         if not document:
             return False
 
-        document.task_id = task_id
+        document.task_id = task_id  # type: ignore[assignment]
         await self.db_session.commit()
         return True
 

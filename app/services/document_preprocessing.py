@@ -24,10 +24,10 @@ class DocumentPreprocessor:
     def preprocess_image_for_ocr(self, image: np.ndarray) -> np.ndarray:
         """
         Preprocess an image for better OCR results using OpenCV.
-        
+
         Args:
             image: Input image as numpy array
-            
+
         Returns:
             Preprocessed image optimized for OCR
         """
@@ -77,10 +77,10 @@ class DocumentPreprocessor:
     def extract_text_from_complex_document(self, pdf_path: Path) -> str:
         """
         Extract text from complex documents using OCR with preprocessing.
-        
+
         Args:
             pdf_path: Path to the PDF file
-            
+
         Returns:
             Extracted text from all pages
         """
@@ -134,10 +134,10 @@ class DocumentPreprocessor:
     def _estimate_dpi(self, image: np.ndarray) -> float:
         """
         Estimate the DPI of an image based on its dimensions.
-        
+
         Args:
             image: Input image
-            
+
         Returns:
             Estimated DPI
         """
@@ -160,16 +160,16 @@ class DocumentPreprocessor:
     def is_complex_document(self, pdf_path: Path) -> bool:
         """
         Determine if a document is complex (requires Gemini OCR) or simple (can be processed locally).
-        
+
         Strategy:
         1. First, try direct text extraction (fastest)
         2. If no text found, test OCR locally with Tesseract on first page
         3. If Tesseract extracts good text, classify as "simple" (process locally)
         4. Only classify as "complex" if Tesseract fails or extracts poor quality text
-        
+
         Args:
             pdf_path: Path to the PDF file
-            
+
         Returns:
             True if document requires Gemini OCR, False if can be processed locally
         """
@@ -231,10 +231,10 @@ class DocumentPreprocessor:
     def _test_local_ocr_capability(self, page) -> bool:
         """
         Test if local Tesseract OCR can extract good quality text from a page.
-        
+
         Args:
             page: PyMuPDF page object
-            
+
         Returns:
             True if OCR extracts readable text, False otherwise
         """

@@ -188,13 +188,48 @@ class DocumentSummaryModal:
                                     ).classes("bg-blue-500 text-white px-4 py-2 rounded text-sm")
 
                     # Metadata if available
-                    if chunk.metadata:
+                    if chunk.chunk_metadata:
                         with ui.expansion("Metadados", icon="info").classes("w-full mt-2"):
                             with ui.column().classes("w-full p-4 bg-gray-50 rounded"):
                                 # Display metadata in a formatted way
-                                for key, value in chunk.metadata.items():
-                                    if key != "text":  # Don't duplicate text content
-                                        ui.label(f"{key}: {value}").classes("text-sm mb-1")
+                                metadata = chunk.chunk_metadata
+                                
+                                # Core metadata
+                                if "chunk_position" in metadata:
+                                    ui.label(f"Posição: {metadata['chunk_position']}").classes("text-sm mb-1")
+                                if "total_chunks" in metadata:
+                                    ui.label(f"Total de chunks: {metadata['total_chunks']}").classes("text-sm mb-1")
+                                if "char_count" in metadata:
+                                    ui.label(f"Caracteres: {metadata['char_count']:,}").classes("text-sm mb-1")
+                                if "word_count" in metadata:
+                                    ui.label(f"Palavras: {metadata['word_count']:,}").classes("text-sm mb-1")
+                                
+                                # Document metadata
+                                if "document_id" in metadata:
+                                    ui.label(f"ID do documento: {str(metadata['document_id'])[:8]}...").classes("text-sm mb-1")
+                                if "filename" in metadata:
+                                    ui.label(f"Arquivo: {metadata['filename']}").classes("text-sm mb-1")
+                                if "document_type" in metadata:
+                                    ui.label(f"Tipo: {metadata['document_type']}").classes("text-sm mb-1")
+                                if "file_size" in metadata:
+                                    ui.label(f"Tamanho: {metadata['file_size']:,} bytes").classes("text-sm mb-1")
+                                if "client_id" in metadata:
+                                    ui.label(f"Cliente ID: {str(metadata['client_id'])[:8]}...").classes("text-sm mb-1")
+                                
+                                # Show any additional metadata
+                                excluded_keys = {"chunk_position", "total_chunks", "char_count", "word_count", 
+                                               "document_id", "filename", "document_type", "file_size", "client_id", "text"}
+                                additional_metadata = {k: v for k, v in metadata.items() if k not in excluded_keys}
+                                
+                                if additional_metadata:
+                                    ui.separator().classes("my-2")
+                                    ui.label("Metadados adicionais:").classes("text-xs font-semibold text-gray-700 mb-1")
+                                    for key, value in additional_metadata.items():
+                                        ui.label(f"{key}: {value}").classes("text-xs text-gray-600 mb-1")
+                    else:
+                        with ui.expansion("Metadados", icon="info").classes("w-full mt-2"):
+                            with ui.column().classes("w-full p-4 bg-gray-50 rounded"):
+                                ui.label("Nenhum metadado disponível para este bloco").classes("text-sm text-gray-500")
 
         # Show "Load more" button if there are more chunks
         if len(self.chunks) > chunks_to_show:
@@ -257,10 +292,15 @@ class DocumentSummaryModal:
     async def _display_statistics(self) -> None:
         """Display processing statistics."""
         with self.stats_container:
+            if not self.chunks:
+                ui.label("Nenhuma estatística disponível - documento não processado").classes("text-center text-gray-500 py-4")
+                return
+                
             total_chars = sum(len(chunk.text) for chunk in self.chunks if chunk.text)
             total_words = sum(len(chunk.text.split()) for chunk in self.chunks if chunk.text)
 
-            with ui.row().classes("w-full gap-8"):
+            # Main statistics row
+            with ui.row().classes("w-full gap-8 mb-6"):
                 with ui.column().classes("text-center"):
                     ui.label(str(len(self.chunks))).classes("text-3xl font-bold text-blue-600")
                     ui.label("Blocos de Texto").classes("text-sm text-gray-600")
@@ -278,6 +318,61 @@ class DocumentSummaryModal:
                     with ui.column().classes("text-center"):
                         ui.label(f"{avg_chunk_size:,}").classes("text-3xl font-bold text-orange-600")
                         ui.label("Chars/Bloco").classes("text-sm text-gray-600")
+
+            # Additional processing information
+            with ui.row().classes("w-full gap-6"):
+                with ui.column().classes("flex-1"):
+                    ui.label("Informações do Processamento:").classes("text-lg font-semibold mb-2")
+                    
+                    try:
+                        # Status
+                        status_text = self.document.status.value if hasattr(self.document.status, 'value') else str(self.document.status)
+                        ui.label(f"• Status: {status_text}").classes("text-sm mb-1")
+                        
+                        # Document type
+                        doc_type = str(self.document.document_type).title() if self.document.document_type else "Não definido"
+                        ui.label(f"• Tipo: {doc_type}").classes("text-sm mb-1")
+                        
+                        # Hash
+                        if self.document.content_hash:
+                            hash_preview = self.document.content_hash[:16] + "..." if len(self.document.content_hash) > 16 else self.document.content_hash
+                            ui.label(f"• Hash SHA256: {hash_preview}").classes("text-sm mb-1")
+                        
+                        # Processing duration
+                        if self.document.processed_at and self.document.created_at:
+                            processing_duration = self.document.processed_at - self.document.created_at
+                            ui.label(f"• Tempo total: {processing_duration}").classes("text-sm mb-1")
+                        
+                        # Task ID if available
+                        if hasattr(self.document, 'task_id') and self.document.task_id:
+                            ui.label(f"• Task ID: {self.document.task_id[:8]}...").classes("text-sm mb-1")
+                            
+                    except Exception as e:
+                        ui.label(f"• Erro ao carregar informações: {str(e)}").classes("text-sm mb-1 text-red-500")
+
+                with ui.column().classes("flex-1"):
+                    ui.label("Estatísticas por Bloco:").classes("text-lg font-semibold mb-2")
+                    
+                    try:
+                        if self.chunks and len(self.chunks) > 0:
+                            chunk_lengths = [len(chunk.text) for chunk in self.chunks if chunk.text]
+                            if chunk_lengths:
+                                min_chars = min(chunk_lengths)
+                                max_chars = max(chunk_lengths)
+                                ui.label(f"• Menor bloco: {min_chars:,} caracteres").classes("text-sm mb-1")
+                                ui.label(f"• Maior bloco: {max_chars:,} caracteres").classes("text-sm mb-1")
+                                ui.label(f"• Média: {avg_chunk_size:,} caracteres").classes("text-sm mb-1")
+                                
+                                # Additional chunk statistics
+                                total_embeddings = sum(1 for chunk in self.chunks if chunk.embedding is not None)
+                                ui.label(f"• Embeddings gerados: {total_embeddings}/{len(self.chunks)}").classes("text-sm mb-1")
+                            else:
+                                ui.label("• Nenhum texto encontrado nos blocos").classes("text-sm mb-1 text-gray-500")
+                        else:
+                            ui.label("• Nenhum bloco disponível").classes("text-sm mb-1 text-gray-500")
+                            
+                    except Exception as e:
+                        ui.label(f"• Erro ao calcular estatísticas: {str(e)}").classes("text-sm mb-1 text-red-500")
 
     def _handle_download(self) -> None:
         """Handle document download."""

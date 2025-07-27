@@ -62,7 +62,7 @@ class UserService:
         if not user.is_2fa_enabled or not user.totp_secret:
             return True  # 2FA not enabled
 
-        totp = pyotp.TOTP(user.totp_secret)
+        totp = pyotp.TOTP(str(user.totp_secret))
         return totp.verify(totp_code, valid_window=1)  # Allow 1 window tolerance
 
     def get_totp_provisioning_uri(self, user: User) -> str | None:
@@ -70,23 +70,23 @@ class UserService:
         if not user.totp_secret:
             return None
 
-        totp = pyotp.TOTP(user.totp_secret)
-        return totp.provisioning_uri(name=user.username, issuer_name="IAM Dashboard")
+        totp = pyotp.TOTP(str(user.totp_secret))
+        return totp.provisioning_uri(name=str(user.username), issuer_name="IAM Dashboard")
 
     async def enable_2fa(self, user: User) -> str:
         """Enable 2FA for a user and return the secret."""
         if not user.totp_secret:
-            user.totp_secret = self._generate_totp_secret()
+            user.totp_secret = self._generate_totp_secret()  # type: ignore[assignment]
 
-        user.is_2fa_enabled = True
+        user.is_2fa_enabled = True  # type: ignore[assignment]
         await self.user_repository.update(user)
 
-        return user.totp_secret
+        return str(user.totp_secret)
 
     async def disable_2fa(self, user: User) -> None:
         """Disable 2FA for a user."""
-        user.is_2fa_enabled = False
-        user.totp_secret = None
+        user.is_2fa_enabled = False  # type: ignore[assignment]
+        user.totp_secret = None  # type: ignore[assignment]
         await self.user_repository.update(user)
 
     async def get_user_by_id(self, user_id: uuid.UUID) -> User | None:

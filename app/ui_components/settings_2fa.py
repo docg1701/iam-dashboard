@@ -108,8 +108,14 @@ class Settings2FAPage:
                 user_repository = UserRepository(db_session)
                 user_service = UserService(user_repository)
 
+                # Get fresh user object from current session
+                current_user = await user_repository.get_by_id(self.current_user_obj.id)
+                if not current_user:
+                    ui.notify("Usuário não encontrado", type="negative")
+                    return
+
                 # Enable 2FA and get secret
-                secret = await user_service.enable_2fa(self.current_user_obj)
+                secret = await user_service.enable_2fa(current_user)
 
                 # Show QR code for setup
                 self._show_2fa_setup(user_service, secret)
@@ -124,8 +130,14 @@ class Settings2FAPage:
                 user_repository = UserRepository(db_session)
                 user_service = UserService(user_repository)
 
+                # Get fresh user object from current session
+                current_user = await user_repository.get_by_id(self.current_user_obj.id)
+                if not current_user:
+                    ui.notify("Usuário não encontrado", type="negative")
+                    return
+
                 # Disable 2FA
-                await user_service.disable_2fa(self.current_user_obj)
+                await user_service.disable_2fa(current_user)
 
                 ui.notify("2FA desabilitado com sucesso", type="positive")
 

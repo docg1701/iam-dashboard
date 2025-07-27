@@ -22,7 +22,7 @@ class User(TimestampedModel):
 
     username = Column(String(255), unique=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(
+    role: Column[UserRole] = Column(
         Enum(UserRole, values_callable=lambda x: [e.value for e in x]), nullable=False
     )
     is_active = Column(Boolean, default=True, nullable=False)
@@ -38,9 +38,9 @@ class User(TimestampedModel):
     @property
     def is_admin(self) -> bool:
         """Check if user has admin privileges."""
-        return self.role in (UserRole.SYSADMIN, UserRole.ADMIN_USER)
+        return bool(self.role in (UserRole.SYSADMIN, UserRole.ADMIN_USER))
 
     @property
     def is_sysadmin(self) -> bool:
         """Check if user is a system administrator."""
-        return self.role == UserRole.SYSADMIN
+        return bool(self.role == UserRole.SYSADMIN)

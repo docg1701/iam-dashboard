@@ -3,7 +3,7 @@
 import asyncio
 import uuid
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -150,7 +150,8 @@ class TestDocumentProcessor:
                     mock_service = AsyncMock()
                     mock_service_class.return_value = mock_service
                     mock_service.get_document_by_id.return_value = mock_document
-                    mock_service.get_file_path.return_value = nonexistent_path
+                    # get_file_path is not async, so we need to configure it differently
+                    mock_service.get_file_path = Mock(return_value=nonexistent_path)
                     mock_service.update_document_status = AsyncMock()
                     
                     mock_repo.update_task_id = AsyncMock()
@@ -188,7 +189,8 @@ class TestDocumentProcessor:
                         mock_service = AsyncMock()
                         mock_service_class.return_value = mock_service
                         mock_service.get_document_by_id.return_value = mock_document
-                        mock_service.get_file_path.return_value = mock_file_path
+                        # get_file_path is not async, so we need to configure it differently
+                        mock_service.get_file_path = Mock(return_value=mock_file_path)
                         mock_service.update_document_status = AsyncMock()
                         
                         mock_repo.update_task_id = AsyncMock()

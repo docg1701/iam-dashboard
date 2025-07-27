@@ -10,7 +10,7 @@ from sqlalchemy.ext.declarative import declarative_base
 Base = declarative_base()
 
 
-class TimestampedModel(Base):
+class TimestampedModel(Base):  # type: ignore[misc]
     """Abstract base model with timestamp fields."""
 
     __abstract__ = True

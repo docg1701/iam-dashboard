@@ -34,11 +34,11 @@ class LlamaIndexProcessor:
     async def process_document(self, document: Document, file_path: Path) -> list[DocumentChunk]:
         """
         Process a document through the complete RAG pipeline.
-        
+
         Args:
             document: Document model instance
             file_path: Path to the PDF file
-            
+
         Returns:
             List of created DocumentChunk instances
         """
@@ -171,10 +171,10 @@ class LlamaIndexProcessor:
     def _extract_simple_text(self, file_path: Path) -> str:
         """
         Extract text from simple PDF documents using PyMuPDF.
-        
+
         Args:
             file_path: Path to the PDF file
-            
+
         Returns:
             Extracted text
         """
@@ -199,10 +199,10 @@ class LlamaIndexProcessor:
         """
         Extract text from documents marked as 'simple' by user.
         First tries direct text extraction, then falls back to local Tesseract OCR.
-        
+
         Args:
             file_path: Path to the PDF file
-            
+
         Returns:
             Extracted text
         """
@@ -235,10 +235,10 @@ class LlamaIndexProcessor:
     def _extract_with_local_ocr(self, file_path: Path) -> str:
         """
         Extract text using local Tesseract OCR (similar to complex document processing but local).
-        
+
         Args:
             file_path: Path to the PDF file
-            
+
         Returns:
             Extracted text using local OCR
         """
@@ -301,10 +301,10 @@ class LlamaIndexProcessor:
     async def _generate_embedding(self, text: str) -> list[float]:
         """
         Generate embedding for text using configured embedding model.
-        
+
         Args:
             text: Text to embed
-            
+
         Returns:
             Embedding vector as list of floats
         """
@@ -320,14 +320,14 @@ class LlamaIndexProcessor:
     async def _store_chunks_in_vector_db(self, chunks: list[DocumentChunk], nodes: list[BaseNode]) -> None:
         """
         Store document chunks in the vector database.
-        
+
         Args:
             chunks: List of DocumentChunk instances
             nodes: Corresponding Llama-Index nodes
         """
         try:
             # Create a VectorStoreIndex with our configured vector store
-            index = VectorStoreIndex(
+            VectorStoreIndex(
                 nodes=nodes,
                 vector_store=self.vector_store
                 # Settings are configured globally, no need to pass service_context

@@ -143,7 +143,7 @@ class TestDocumentSummaryModal:
         mock_chunk_repository.get_by_document_id.return_value = sample_chunks
 
         with patch("app.ui_components.document_summary.get_async_db") as mock_get_db, \
-             patch("app.ui_components.document_summary.DocumentChunkRepository", return_value=mock_chunk_repository), \
+             patch("app.repositories.document_chunk_repository.DocumentChunkRepository", return_value=mock_chunk_repository), \
              patch.object(modal, "_display_chunks") as mock_display_chunks, \
              patch.object(modal, "_display_statistics") as mock_display_stats:
 
@@ -168,7 +168,7 @@ class TestDocumentSummaryModal:
         mock_chunk_repository.get_by_document_id.side_effect = Exception("Database error")
 
         with patch("app.ui_components.document_summary.get_async_db") as mock_get_db, \
-             patch("app.ui_components.document_summary.DocumentChunkRepository", return_value=mock_chunk_repository), \
+             patch("app.repositories.document_chunk_repository.DocumentChunkRepository", return_value=mock_chunk_repository), \
              patch("app.ui_components.document_summary.ui.icon"), \
              patch("app.ui_components.document_summary.ui.label"):
 

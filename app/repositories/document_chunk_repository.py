@@ -19,7 +19,7 @@ class DocumentChunkRepository:
         """Get all chunks for a specific document."""
         query = select(DocumentChunk).where(DocumentChunk.document_id == document_id)
         result = await self.db_session.execute(query)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
     async def get_by_id(self, chunk_id: str) -> DocumentChunk | None:
         """Get a chunk by node_id."""

@@ -126,6 +126,11 @@ where = ["."]
 include = ["app*"]
 exclude = ["alembic*", "tests*"]
 
+[dependency-groups]
+dev = [
+    "types-passlib>=1.7.7.20250602",
+]
+
 [tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",

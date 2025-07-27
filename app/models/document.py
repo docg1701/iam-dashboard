@@ -74,14 +74,14 @@ class Document(TimestampedModel):
     @property
     def is_processing(self) -> bool:
         """Check if document is currently being processed."""
-        return self.status == DocumentStatus.PROCESSING
+        return bool(self.status == DocumentStatus.PROCESSING)
 
     @property
     def is_processed(self) -> bool:
         """Check if document has been successfully processed."""
-        return self.status == DocumentStatus.PROCESSED
+        return bool(self.status == DocumentStatus.PROCESSED)
 
     @property
     def has_failed(self) -> bool:
         """Check if document processing has failed."""
-        return self.status == DocumentStatus.FAILED
+        return bool(self.status == DocumentStatus.FAILED)

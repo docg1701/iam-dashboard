@@ -32,6 +32,7 @@ class Client(TimestampedModel):
     @property
     def formatted_cpf(self) -> str:
         """Format CPF for display (XXX.XXX.XXX-XX)."""
-        if len(self.cpf) != 11:
-            return self.cpf
-        return f"{self.cpf[:3]}.{self.cpf[3:6]}.{self.cpf[6:9]}-{self.cpf[9:]}"
+        cpf_str = str(self.cpf)
+        if len(cpf_str) != 11:
+            return cpf_str
+        return f"{cpf_str[:3]}.{cpf_str[3:6]}.{cpf_str[6:9]}-{cpf_str[9:]}"
