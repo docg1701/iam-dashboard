@@ -8,6 +8,7 @@ from nicegui import ui
 
 from app.core.auth import AuthManager
 from app.core.database import get_async_db
+from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.services.user_service import UserService
 
@@ -117,8 +118,14 @@ class Settings2FAPage:
                 # Enable 2FA and get secret
                 secret = await user_service.enable_2fa(current_user)
 
+                # Refresh current_user object to get the updated totp_secret
+                current_user = await user_repository.get_by_id(self.current_user_obj.id)
+                if not current_user:
+                    ui.notify("Erro ao recarregar dados do usuário", type="negative")
+                    return
+
                 # Show QR code for setup
-                self._show_2fa_setup(user_service, secret)
+                self._show_2fa_setup(user_service, current_user, secret)
 
         except Exception as e:
             ui.notify(f"Erro ao habilitar 2FA: {str(e)}", type="negative")
@@ -147,13 +154,11 @@ class Settings2FAPage:
         except Exception as e:
             ui.notify(f"Erro ao desabilitar 2FA: {str(e)}", type="negative")
 
-    def _show_2fa_setup(self, user_service: UserService, secret: str) -> None:
+    def _show_2fa_setup(self, user_service: UserService, user: User, secret: str) -> None:
         """Show QR code for 2FA setup."""
         try:
             # Get provisioning URI
-            provisioning_uri = user_service.get_totp_provisioning_uri(
-                self.current_user_obj
-            )
+            provisioning_uri = user_service.get_totp_provisioning_uri(user)
             if not provisioning_uri:
                 ui.notify("Erro ao gerar URI de configuração", type="negative")
                 return
@@ -192,7 +197,7 @@ class Settings2FAPage:
                 ui.label("Ou digite manualmente esta chave:").classes(
                     "text-sm text-gray-600 mb-2"
                 )
-                ui.input(value=secret, readonly=True).classes("w-full mb-4")
+                ui.input(value=secret).props("readonly").classes("w-full mb-4")
 
                 ui.label(
                     "3. Digite o código de 6 dígitos do seu aplicativo para confirmar:"
