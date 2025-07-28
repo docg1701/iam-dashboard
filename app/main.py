@@ -5,11 +5,13 @@ from nicegui import app, ui
 
 from app.api.clients import router as clients_router
 from app.api.documents import router as documents_router
+from app.api.questionnaire import router as questionnaire_router
 from app.core.auth import AuthManager
 from app.ui_components.client_details import client_details_page
 from app.ui_components.clients_area import clients_area_page
 from app.ui_components.dashboard import dashboard_page
 from app.ui_components.login import login_page
+from app.ui_components.questionnaire_writer import questionnaire_writer_page
 from app.ui_components.register import register_page
 from app.ui_components.settings_2fa import settings_2fa_page
 
@@ -19,6 +21,7 @@ fastapi_app: FastAPI = app
 # Register API routers
 fastapi_app.include_router(documents_router)
 fastapi_app.include_router(clients_router)
+fastapi_app.include_router(questionnaire_router)
 
 
 @ui.page("/")
@@ -78,6 +81,12 @@ def clients() -> None:
 def client_details(client_id: str) -> None:
     """Client details page route."""
     client_details_page(client_id)
+
+
+@ui.page("/questionnaire-writer")
+def questionnaire_writer() -> None:
+    """Questionnaire writer page route."""
+    questionnaire_writer_page()
 
 
 @ui.page("/logout")

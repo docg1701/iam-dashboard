@@ -6,12 +6,12 @@ from datetime import datetime
 
 # Load environment variables first (required for Celery workers)
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from celery import Celery
 from celery.utils.log import get_task_logger
 
-from app.core.database import get_async_db
 from app.models.document import DocumentStatus
 from app.repositories.document_repository import DocumentRepository
 from app.services.document_service import DocumentService
@@ -97,7 +97,7 @@ async def _process_document_async(
 
     # Create a new database session for this task
     from app.core.database import AsyncSessionLocal
-    
+
     async with AsyncSessionLocal() as db_session:
         document_repository = DocumentRepository(db_session)
         document_service = DocumentService(document_repository)
@@ -190,7 +190,7 @@ async def _update_document_status(
 ) -> None:
     """Helper function to update document status."""
     from app.core.database import AsyncSessionLocal
-    
+
     async with AsyncSessionLocal() as db_session:
         document_repository = DocumentRepository(db_session)
         document_service = DocumentService(document_repository)

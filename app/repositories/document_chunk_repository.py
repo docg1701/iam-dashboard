@@ -60,3 +60,15 @@ class DocumentChunkRepository:
         result = await self.db_session.execute(query)
         chunks = result.scalars().all()
         return len(chunks)
+
+    async def get_chunks_by_client(self, client_id: uuid.UUID) -> list[DocumentChunk]:
+        """Get all chunks for documents belonging to a specific client."""
+        from app.models.document import Document
+
+        query = (
+            select(DocumentChunk)
+            .join(Document, DocumentChunk.document_id == Document.id)
+            .where(Document.client_id == client_id)
+        )
+        result = await self.db_session.execute(query)
+        return list(result.scalars().all())

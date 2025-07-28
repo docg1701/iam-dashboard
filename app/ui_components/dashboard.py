@@ -70,9 +70,7 @@ class DashboardPage:
                         )
                         ui.button(
                             "Acessar",
-                            on_click=lambda: ui.notify(
-                                "Funcionalidade em desenvolvimento", type="info"
-                            ),
+                            on_click=lambda: ui.navigate.to("/questionnaire-writer"),
                         ).classes(
                             "w-full bg-green-500 text-white py-2 rounded hover:bg-green-600"
                         )

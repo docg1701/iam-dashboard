@@ -1,21 +1,23 @@
-version: 4.31.0
-installed_at: '2025-07-25T20:16:06.324Z'
+version: 4.32.0
+installed_at: '2025-07-28T02:34:37.412Z'
 install_type: full
 agent: null
 ides_setup:
   - claude-code
-  - roo
   - gemini
-expansion_packs:
-  - bmad-2d-phaser-game-dev
-  - bmad-2d-unity-game-dev
-  - bmad-infrastructure-devops
+expansion_packs: []
 files:
   - path: .bmad-core/working-in-the-brownfield.md
-    hash: 467f6b560ab170ef
+    hash: 6009c2da0fd375da
     modified: false
   - path: .bmad-core/user-guide.md
-    hash: a50ffc3de4034175
+    hash: a816f42bb2a1a405
+    modified: false
+  - path: .bmad-core/install-manifest.yaml
+    hash: 97d9ce9710491897
+    modified: false
+  - path: .bmad-core/enhanced-ide-development-workflow.md
+    hash: 3c3a2383d7772089
     modified: false
   - path: .bmad-core/core-config.yaml
     hash: a7d1007020c0702f
@@ -87,25 +89,25 @@ files:
     hash: ed55fdb819d630ca
     modified: false
   - path: .bmad-core/tasks/review-story.md
-    hash: 3227ccb80046a22a
+    hash: b9dddb500aaaf548
     modified: false
   - path: .bmad-core/tasks/kb-mode-interaction.md
-    hash: 9c73e5ff25ef4890
+    hash: 2c52751f40ae7ef0
     modified: false
   - path: .bmad-core/tasks/index-docs.md
-    hash: 349f0ddf65dd71fe
+    hash: f2be9139d8977fc9
     modified: false
   - path: .bmad-core/tasks/generate-ai-frontend-prompt.md
     hash: b0a89d7a4aeaa5f8
     modified: false
   - path: .bmad-core/tasks/facilitate-brainstorming-session.md
-    hash: 084a72e9c71e2c7f
+    hash: 9fade39213d767f2
     modified: false
   - path: .bmad-core/tasks/execute-checklist.md
     hash: e0467201115d500f
     modified: false
   - path: .bmad-core/tasks/document-project.md
-    hash: 62495d0979bb6924
+    hash: 585f55eb261a260f
     modified: false
   - path: .bmad-core/tasks/create-next-story.md
     hash: fa18ad2a04b6a93f
@@ -117,7 +119,7 @@ files:
     hash: 5716b19ae78b3afb
     modified: false
   - path: .bmad-core/tasks/create-brownfield-story.md
-    hash: 3399449361fa0ea3
+    hash: b8ace638736a3e28
     modified: false
   - path: .bmad-core/tasks/correct-course.md
     hash: 1c9dd46177b0ac6b
@@ -129,19 +131,19 @@ files:
     hash: 1b2b6c8b67a176ee
     modified: false
   - path: .bmad-core/tasks/advanced-elicitation.md
-    hash: 28e3b538dc6fe104
+    hash: 26f26e9ccb8b4aac
     modified: false
   - path: .bmad-core/data/technical-preferences.md
     hash: 6530bed845540b0d
     modified: false
   - path: .bmad-core/data/elicitation-methods.md
-    hash: 6c4d7716010e8d55
+    hash: 82d24b664e1a58ff
     modified: false
   - path: .bmad-core/data/brainstorming-techniques.md
     hash: 2dae43f4464f1ad2
     modified: false
   - path: .bmad-core/data/bmad-kb.md
-    hash: fd0d443bd30753c5
+    hash: b1d7e08dd8f74677
     modified: false
   - path: .bmad-core/checklists/story-draft-checklist.md
     hash: d3a5783fcd5bf5e9
@@ -161,35 +163,38 @@ files:
   - path: .bmad-core/checklists/architect-checklist.md
     hash: 99f4655b9ff99dd1
     modified: false
+  - path: .bmad-core/bmad-core/user-guide.md
+    hash: e3b0c44298fc1c14
+    modified: false
   - path: .bmad-core/agents/ux-expert.md
-    hash: 6977961373e2e471
+    hash: dc538703809ff200
     modified: false
   - path: .bmad-core/agents/sm.md
-    hash: 0d6fd5f7063f485a
+    hash: 81254b523dba1b63
     modified: false
   - path: .bmad-core/agents/qa.md
-    hash: 70aa18cc0f26704e
+    hash: 308512d4bf9baba9
     modified: false
   - path: .bmad-core/agents/po.md
-    hash: 6cb654b8b20f0f14
+    hash: 1f222db903222562
     modified: false
   - path: .bmad-core/agents/pm.md
-    hash: 2aa0ad1d378a6c03
+    hash: cac5a913038cd7d6
     modified: false
   - path: .bmad-core/agents/dev.md
-    hash: fb4646ef5befbc11
+    hash: 3e643e994f464ee3
     modified: false
   - path: .bmad-core/agents/bmad-orchestrator.md
-    hash: 1ad7981f12ca4987
+    hash: d9c116ea35f53e04
     modified: false
   - path: .bmad-core/agents/bmad-master.md
-    hash: e657e2dc82267a46
+    hash: ca97feef0cbc1688
     modified: false
   - path: .bmad-core/agents/architect.md
-    hash: 8b78cc043099846f
+    hash: 889b168bd33ff22d
     modified: false
   - path: .bmad-core/agents/analyst.md
-    hash: c8469ed88139158a
+    hash: e8d7488ff12e44f1
     modified: false
   - path: .bmad-core/agent-teams/team-no-ui.yaml
     hash: 56e7e3a9e1a243f6
@@ -202,147 +207,4 @@ files:
     modified: false
   - path: .bmad-core/agent-teams/team-all.yaml
     hash: abbb0c0eaf28b894
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/agents/game-sm.md
-    hash: 0e4397413b65aeb1
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/agents/game-developer.md
-    hash: b8548ea526697708
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/agents/game-designer.md
-    hash: cc252f62bd99788b
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/agent-teams/phaser-2d-nodejs-game-team.yaml
-    hash: abc777bfc19aff14
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/templates/level-design-doc-tmpl.yaml
-    hash: 02bcb36646829b18
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/templates/game-story-tmpl.yaml
-    hash: da898530031b16b0
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/templates/game-design-doc-tmpl.yaml
-    hash: 267964ca7e07faa9
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/templates/game-brief-tmpl.yaml
-    hash: f15507b7009e8eb6
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/templates/game-architecture-tmpl.yaml
-    hash: 4c7a4193f97f5d03
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/tasks/game-design-brainstorming.md
-    hash: fe608dd7b1cbfe82
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/tasks/create-game-story.md
-    hash: 0d5320a55108119a
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/tasks/advanced-elicitation.md
-    hash: c7bee8d283900b1c
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/checklists/game-story-dod-checklist.md
-    hash: 1c04d3dac10a357a
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/checklists/game-design-checklist.md
-    hash: 0f802420a3e7f7ed
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/workflows/game-prototype.yaml
-    hash: ddb28541f1b4aad4
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/workflows/game-dev-greenfield.yaml
-    hash: 12cfcbc74c9a2416
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/data/development-guidelines.md
-    hash: a4ca049daf82a096
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/data/bmad-kb.md
-    hash: de7908ee71c67412
-    modified: false
-  - path: .bmad-2d-phaser-game-dev/config.yaml
-    hash: 073f6a80b300ece6
-    modified: false
-  - path: .bmad-2d-unity-game-dev/agents/game-sm.md
-    hash: c16f3195dfb1b21e
-    modified: false
-  - path: .bmad-2d-unity-game-dev/agents/game-developer.md
-    hash: 2a81363aa7eec2fb
-    modified: false
-  - path: .bmad-2d-unity-game-dev/agents/game-designer.md
-    hash: 59d723cc8638db1b
-    modified: false
-  - path: .bmad-2d-unity-game-dev/agent-teams/unity-2d-game-team.yaml
-    hash: cc53f49815c985dc
-    modified: false
-  - path: .bmad-2d-unity-game-dev/templates/level-design-doc-tmpl.yaml
-    hash: 02bcb36646829b18
-    modified: false
-  - path: .bmad-2d-unity-game-dev/templates/game-story-tmpl.yaml
-    hash: 8b29b35907b6cea3
-    modified: false
-  - path: .bmad-2d-unity-game-dev/templates/game-design-doc-tmpl.yaml
-    hash: 9fe5fb2bd43c1945
-    modified: false
-  - path: .bmad-2d-unity-game-dev/templates/game-brief-tmpl.yaml
-    hash: b31b863cafcdbb09
-    modified: false
-  - path: .bmad-2d-unity-game-dev/templates/game-architecture-tmpl.yaml
-    hash: db9c563d1925d04c
-    modified: false
-  - path: .bmad-2d-unity-game-dev/tasks/game-design-brainstorming.md
-    hash: fe608dd7b1cbfe82
-    modified: false
-  - path: .bmad-2d-unity-game-dev/tasks/create-game-story.md
-    hash: bddef3e38ec41c79
-    modified: false
-  - path: .bmad-2d-unity-game-dev/tasks/advanced-elicitation.md
-    hash: 37632703e41499bf
-    modified: false
-  - path: .bmad-2d-unity-game-dev/checklists/game-story-dod-checklist.md
-    hash: 7afc030630c69069
-    modified: false
-  - path: .bmad-2d-unity-game-dev/checklists/game-design-checklist.md
-    hash: bb5cacdc95c312c7
-    modified: false
-  - path: .bmad-2d-unity-game-dev/workflows/game-prototype.yaml
-    hash: 9a21965193f2b4fe
-    modified: false
-  - path: .bmad-2d-unity-game-dev/workflows/game-dev-greenfield.yaml
-    hash: 12e261d9905eac5e
-    modified: false
-  - path: .bmad-2d-unity-game-dev/data/development-guidelines.md
-    hash: c3772f59471e827d
-    modified: false
-  - path: .bmad-2d-unity-game-dev/data/bmad-kb.md
-    hash: 546232939a730bb6
-    modified: false
-  - path: .bmad-2d-unity-game-dev/config.yaml
-    hash: ab83f05ce22988a6
-    modified: false
-  - path: .bmad-infrastructure-devops/agents/infra-devops-platform.md
-    hash: 7a42f1366af5afa9
-    modified: false
-  - path: >-
-      .bmad-infrastructure-devops/templates/infrastructure-platform-from-arch-tmpl.yaml
-    hash: 5b6a3604a7e6912a
-    modified: false
-  - path: >-
-      .bmad-infrastructure-devops/templates/infrastructure-architecture-tmpl.yaml
-    hash: a3204be65e3ba95d
-    modified: false
-  - path: .bmad-infrastructure-devops/tasks/validate-infrastructure.md
-    hash: 7f809521d26f2ca3
-    modified: false
-  - path: .bmad-infrastructure-devops/tasks/review-infrastructure.md
-    hash: 4e9af9734a519ca1
-    modified: false
-  - path: .bmad-infrastructure-devops/checklists/infrastructure-checklist.md
-    hash: 354d52a34c3eb5aa
-    modified: false
-  - path: .bmad-infrastructure-devops/data/bmad-kb.md
-    hash: a608321f9b01bc5d
-    modified: false
-  - path: .bmad-infrastructure-devops/config.yaml
-    hash: 11b2afdf38da58d9
-    modified: false
-  - path: .bmad-infrastructure-devops/README.md
-    hash: bb81a20324b3ffd6
     modified: false

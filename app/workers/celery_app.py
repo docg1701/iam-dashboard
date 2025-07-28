@@ -1,10 +1,12 @@
 """Celery application configuration."""
 
 import os
+
 from celery import Celery
 
 # Load environment variables
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Create Celery app

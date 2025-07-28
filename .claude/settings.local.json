@@ -45,7 +45,19 @@
       "mcp__playwright__browser_wait_for",
       "mcp__playwright__browser_evaluate",
       "Bash(rg:*)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(uv add:*)",
+      "Bash(tesseract:*)",
+      "Bash(redis-cli:*)",
+      "Bash(docker run:*)",
+      "Bash(celery:*)",
+      "mcp__playwright__browser_navigate_back",
+      "mcp__playwright__browser_press_key",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "WebFetch(domain:python-dependency-injector.ets-labs.org)",
+      "WebFetch(domain:docs.agno.com)"
     ],
     "deny": []
   }
