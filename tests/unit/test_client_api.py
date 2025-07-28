@@ -6,9 +6,12 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import HTTPException
-from httpx import AsyncClient
 
-from app.api.clients import get_client, get_client_documents, get_client_documents_summary
+from app.api.clients import (
+    get_client,
+    get_client_documents,
+    get_client_documents_summary,
+)
 from app.models.client import Client
 from app.models.document import Document, DocumentStatus, DocumentType
 
@@ -106,7 +109,7 @@ class TestClientAPI:
         mock_db = AsyncMock()
         mock_client_service = AsyncMock()
         mock_client_service.get_client_by_id.return_value = sample_client
-        
+
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = sample_documents
 
@@ -116,7 +119,7 @@ class TestClientAPI:
             result = await get_client_documents(str(sample_client.id), mock_db)
 
             assert len(result) == 2
-            
+
             # Check first document
             doc1 = result[0]
             assert doc1["filename"] == "document1.pdf"
@@ -125,7 +128,7 @@ class TestClientAPI:
             assert doc1["file_size"] == 1024000
             assert doc1["formatted_file_size"] == "1000.0 KB"
             assert doc1["processed_at"] is not None
-            
+
             # Check second document
             doc2 = result[1]
             assert doc2["filename"] == "document2.pdf"
@@ -152,7 +155,7 @@ class TestClientAPI:
         mock_db = AsyncMock()
         mock_client_service = AsyncMock()
         mock_client_service.get_client_by_id.return_value = sample_client
-        
+
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = []
 
@@ -169,7 +172,7 @@ class TestClientAPI:
         mock_db = AsyncMock()
         mock_client_service = AsyncMock()
         mock_client_service.get_client_by_id.return_value = sample_client
-        
+
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = sample_documents
 
@@ -180,7 +183,7 @@ class TestClientAPI:
 
             assert result["client"]["id"] == str(sample_client.id)
             assert result["client"]["name"] == sample_client.name
-            
+
             summary = result["summary"]
             assert summary["total_documents"] == 2
             assert summary["total_size"] == 1536000  # 1024000 + 512000
@@ -196,7 +199,7 @@ class TestClientAPI:
         mock_db = AsyncMock()
         mock_client_service = AsyncMock()
         mock_client_service.get_client_by_id.return_value = sample_client
-        
+
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = []
 
@@ -230,7 +233,7 @@ class TestClientAPI:
         mock_db = AsyncMock()
         mock_client_service = AsyncMock()
         mock_client_service.get_client_by_id.return_value = sample_client
-        
+
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = [failed_document]
 
@@ -350,7 +353,7 @@ class TestClientAPI:
         mock_db = AsyncMock()
         mock_client_service = AsyncMock()
         mock_client_service.get_client_by_id.return_value = sample_client
-        
+
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = documents
 
@@ -365,7 +368,7 @@ class TestClientAPI:
             assert summary["processing_count"] == 1
             assert summary["failed_count"] == 1
             assert summary["completion_rate"] == 50.0  # 2 processed out of 4 total
-            
+
             status_counts = summary["status_counts"]
             assert status_counts["processed"] == 2
             assert status_counts["processing"] == 1

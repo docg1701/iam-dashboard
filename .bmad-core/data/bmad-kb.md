@@ -477,7 +477,6 @@ that can handle [specific requirements]."
 **Prerequisites**: Planning documents must exist in `docs/` folder
 
 1. **Document Sharding** (CRITICAL STEP):
-
    - Documents created by PM/Architect (in Web or IDE) MUST be sharded for development
    - Two methods to shard:
      a) **Manual**: Drag `shard-doc` task + document file into chat
@@ -500,20 +499,17 @@ Resulting Folder Structure:
 1. **Development Cycle** (Sequential, one story at a time):
 
    **CRITICAL CONTEXT MANAGEMENT**:
-
    - **Context windows matter!** Always use fresh, clean context windows
    - **Model selection matters!** Use most powerful thinking model for SM story creation
    - **ALWAYS start new chat between SM, Dev, and QA work**
 
    **Step 1 - Story Creation**:
-
    - **NEW CLEAN CHAT** → Select powerful model → `@sm` → `*create`
    - SM executes create-next-story task
    - Review generated story in `docs/stories/`
    - Update status from "Draft" to "Approved"
 
    **Step 2 - Story Implementation**:
-
    - **NEW CLEAN CHAT** → `@dev`
    - Agent asks which story to implement
    - Include story file content to save dev agent lookup time
@@ -522,7 +518,6 @@ Resulting Folder Structure:
    - Dev marks story as "Review" when complete with all tests passing
 
    **Step 3 - Senior QA Review**:
-
    - **NEW CLEAN CHAT** → `@qa` → execute review-story task
    - QA performs senior developer code review
    - QA can refactor and improve code directly
@@ -574,11 +569,9 @@ Each status change requires user verification and approval before proceeding.
 1. **Upload project to Gemini Web**
 2. **Document everything**: `@analyst` → `*document-project`
 3. **Then create PRD**: `@pm` → `*create-doc brownfield-prd`
-
    - More thorough but can create excessive documentation
 
 4. **Requirements Gathering**:
-
    - **Brownfield PRD**: Use PM agent with `brownfield-prd-tmpl`
    - **Analyzes**: Existing system, constraints, integration points
    - **Defines**: Enhancement scope, compatibility requirements, risk assessment

@@ -1,6 +1,5 @@
 """Unit tests for document processing logic in worker."""
 
-import asyncio
 import uuid
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -8,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 import pytest
 
 from app.models.document import Document, DocumentStatus, DocumentType
-from app.workers.document_processor import _process_document_async
 
 
 class TestDocumentProcessor:
@@ -41,7 +39,7 @@ class TestDocumentProcessor:
         mock_repo = AsyncMock()
         mock_service = AsyncMock()
         mock_llama_processor = AsyncMock()
-        
+
         return {
             "repository": mock_repo,
             "service": mock_service,
@@ -63,13 +61,13 @@ class TestDocumentProcessor:
 
         with patch("app.workers.document_processor.get_llama_index_processor") as mock_get_processor:
             mock_get_processor.return_value = mock_services["llama_processor"]
-            
+
             with patch("app.workers.document_processor.DocumentRepository") as mock_repo_class:
                 mock_repo_class.return_value = mock_services["repository"]
-                
+
                 with patch("app.workers.document_processor.DocumentService") as mock_service_class:
                     mock_service_class.return_value = mock_services["service"]
-                    
+
                     # Act
                     # Note: This would need to be adapted based on actual implementation
                     # For now, testing the logic components
@@ -96,27 +94,27 @@ class TestDocumentProcessor:
         # Arrange
         document_id = uuid.uuid4()
         task_id = "test_task_id"
-        
+
         # Mock the database session and services
         with patch("app.workers.document_processor.get_async_db") as mock_get_db:
             with patch("app.workers.document_processor.DocumentRepository") as mock_repo_class:
                 with patch("app.workers.document_processor.DocumentService") as mock_service_class:
-                    
+
                     # Configure mocks
                     mock_session = AsyncMock()
-                    
+
                     async def mock_async_db():
                         yield mock_session
-                    
+
                     mock_get_db.return_value = mock_async_db()
-                    
+
                     mock_repo = AsyncMock()
                     mock_repo_class.return_value = mock_repo
-                    
+
                     mock_service = AsyncMock()
                     mock_service_class.return_value = mock_service
                     mock_service.get_document_by_id.return_value = None
-                    
+
                     # Act & Assert
                     from app.workers.document_processor import _process_document_async
                     with pytest.raises(ValueError, match="not found"):
@@ -130,32 +128,32 @@ class TestDocumentProcessor:
         task_id = "test_task_id"
         mock_document.document_type = DocumentType.SIMPLE
         nonexistent_path = Path("/nonexistent/file.pdf")
-        
+
         # Mock the database session and services
         with patch("app.workers.document_processor.get_async_db") as mock_get_db:
             with patch("app.workers.document_processor.DocumentRepository") as mock_repo_class:
                 with patch("app.workers.document_processor.DocumentService") as mock_service_class:
-                    
+
                     # Configure mocks
                     mock_session = AsyncMock()
-                    
+
                     async def mock_async_db():
                         yield mock_session
-                    
+
                     mock_get_db.return_value = mock_async_db()
-                    
+
                     mock_repo = AsyncMock()
                     mock_repo_class.return_value = mock_repo
-                    
+
                     mock_service = AsyncMock()
                     mock_service_class.return_value = mock_service
                     mock_service.get_document_by_id.return_value = mock_document
                     # get_file_path is not async, so we need to configure it differently
                     mock_service.get_file_path = Mock(return_value=nonexistent_path)
                     mock_service.update_document_status = AsyncMock()
-                    
+
                     mock_repo.update_task_id = AsyncMock()
-                    
+
                     # Act & Assert
                     from app.workers.document_processor import _process_document_async
                     with pytest.raises(FileNotFoundError, match="Document file not found"):
@@ -168,43 +166,45 @@ class TestDocumentProcessor:
         document_id = uuid.uuid4()
         task_id = "test_task_id"
         mock_document.document_type = DocumentType.SIMPLE
-        
+
         # Mock the database session and services
         with patch("app.workers.document_processor.get_async_db") as mock_get_db:
             with patch("app.workers.document_processor.DocumentRepository") as mock_repo_class:
                 with patch("app.workers.document_processor.DocumentService") as mock_service_class:
                     with patch("app.workers.document_processor.get_llama_index_processor") as mock_get_processor:
-                        
+
                         # Configure mocks
                         mock_session = AsyncMock()
-                        
+
                         async def mock_async_db():
                             yield mock_session
-                        
+
                         mock_get_db.return_value = mock_async_db()
-                        
+
                         mock_repo = AsyncMock()
                         mock_repo_class.return_value = mock_repo
-                        
+
                         mock_service = AsyncMock()
                         mock_service_class.return_value = mock_service
                         mock_service.get_document_by_id.return_value = mock_document
                         # get_file_path is not async, so we need to configure it differently
                         mock_service.get_file_path = Mock(return_value=mock_file_path)
                         mock_service.update_document_status = AsyncMock()
-                        
+
                         mock_repo.update_task_id = AsyncMock()
-                        
+
                         # Mock processor to fail
                         mock_processor = AsyncMock()
                         mock_get_processor.return_value = mock_processor
                         mock_processor.process_document.side_effect = Exception("Processing failed")
-                        
+
                         # Act & Assert
-                        from app.workers.document_processor import _process_document_async
+                        from app.workers.document_processor import (
+                            _process_document_async,
+                        )
                         with pytest.raises(Exception, match="Processing failed"):
                             await _process_document_async(document_id, task_id)
-                        
+
                         # Verify status was updated to FAILED
                         mock_service.update_document_status.assert_called_with(
                             document_id, DocumentStatus.FAILED, "Processing failed"

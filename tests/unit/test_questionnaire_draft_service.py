@@ -46,12 +46,12 @@ class TestQuestionnaireDraftService:
             mock_config_instance = MagicMock()
             mock_config_instance.gemini_api_key = "test-api-key"
             mock_config.return_value = mock_config_instance
-            
+
             with patch('app.services.questionnaire_draft_service.genai.configure'):
                 with patch('app.services.questionnaire_draft_service.genai.GenerativeModel') as mock_model:
                     mock_model_instance = MagicMock()
                     mock_model.return_value = mock_model_instance
-                    
+
                     service = QuestionnaireDraftService(mock_chunk_repository)
                     service.model = mock_model_instance
                     return service
@@ -159,23 +159,23 @@ class TestQuestionnaireDraftService:
         """Test context retrieval from client documents."""
         # Arrange
         mock_chunk_repository.get_chunks_by_client.return_value = mock_chunks
-        
+
         # Mock vector store and index
         with patch('app.services.questionnaire_draft_service.VectorStoreIndex') as mock_index_class:
             mock_index = MagicMock()
             mock_index_class.from_vector_store.return_value = mock_index
-            
+
             mock_retriever = MagicMock()
             mock_index.as_retriever.return_value = mock_retriever
-            
+
             # Mock retrieved nodes
             mock_nodes = []
-            for i, chunk in enumerate(mock_chunks):
+            for i, _chunk in enumerate(mock_chunks):
                 node = MagicMock()
                 node.text = f"Retrieved text {i+1}"
                 node.metadata = {"client_id": str(mock_client.id)}
                 mock_nodes.append(node)
-            
+
             mock_retriever.retrieve.return_value = mock_nodes
 
             # Act

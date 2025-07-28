@@ -1,10 +1,10 @@
 """Unit tests for DocumentRepository."""
 
-import pytest
-from unittest.mock import AsyncMock, Mock
 import uuid
 from datetime import datetime
+from unittest.mock import AsyncMock, Mock
 
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import Document, DocumentStatus, DocumentType
@@ -50,10 +50,10 @@ class TestDocumentRepository:
         # Arrange
         mock_db_session.commit = AsyncMock()
         mock_db_session.refresh = AsyncMock()
-        
+
         # Act
         result = await document_repository.create(sample_document)
-        
+
         # Assert
         assert result == sample_document
         mock_db_session.add.assert_called_once_with(sample_document)
@@ -67,10 +67,10 @@ class TestDocumentRepository:
         mock_result = Mock()
         mock_result.scalar_one_or_none.return_value = sample_document
         mock_db_session.execute = AsyncMock(return_value=mock_result)
-        
+
         # Act
         result = await document_repository.get_by_id(sample_document.id)
-        
+
         # Assert
         assert result == sample_document
         mock_db_session.execute.assert_called_once()
@@ -82,10 +82,10 @@ class TestDocumentRepository:
         mock_result = Mock()
         mock_result.scalar_one_or_none.return_value = None
         mock_db_session.execute = AsyncMock(return_value=mock_result)
-        
+
         # Act
         result = await document_repository.get_by_id(uuid.uuid4())
-        
+
         # Assert
         assert result is None
         mock_db_session.execute.assert_called_once()
@@ -98,10 +98,10 @@ class TestDocumentRepository:
         mock_result = Mock()
         mock_result.scalars.return_value = [sample_document]
         mock_db_session.execute = AsyncMock(return_value=mock_result)
-        
+
         # Act
         result = await document_repository.get_by_client_id(client_id)
-        
+
         # Assert
         assert result == [sample_document]
         mock_db_session.execute.assert_called_once()
@@ -113,13 +113,13 @@ class TestDocumentRepository:
         mock_result = Mock()
         mock_result.scalar_one_or_none.return_value = sample_document
         mock_db_session.execute = AsyncMock(return_value=mock_result)
-        
+
         # Act
         result = await document_repository.check_duplicate_by_hash(
-            sample_document.client_id, 
+            sample_document.client_id,
             sample_document.content_hash
         )
-        
+
         # Assert
         assert result == sample_document
         mock_db_session.execute.assert_called_once()
@@ -131,10 +131,10 @@ class TestDocumentRepository:
         mock_result = Mock()
         mock_result.scalar_one_or_none.return_value = None
         mock_db_session.execute = AsyncMock(return_value=mock_result)
-        
+
         # Act
         result = await document_repository.check_duplicate_by_hash(uuid.uuid4(), "hash123")
-        
+
         # Assert
         assert result is None
         mock_db_session.execute.assert_called_once()
@@ -147,14 +147,14 @@ class TestDocumentRepository:
         mock_result.scalar_one_or_none.return_value = sample_document
         mock_db_session.execute = AsyncMock(return_value=mock_result)
         mock_db_session.commit = AsyncMock()
-        
+
         # Act
         result = await document_repository.update_status(
-            sample_document.id, 
-            DocumentStatus.PROCESSED, 
+            sample_document.id,
+            DocumentStatus.PROCESSED,
             None
         )
-        
+
         # Assert
         assert result is True
         assert sample_document.status == DocumentStatus.PROCESSED
@@ -167,10 +167,10 @@ class TestDocumentRepository:
         mock_result = Mock()
         mock_result.scalar_one_or_none.return_value = None
         mock_db_session.execute = AsyncMock(return_value=mock_result)
-        
+
         # Act
         result = await document_repository.update_status(uuid.uuid4(), DocumentStatus.PROCESSED)
-        
+
         # Assert
         assert result is False
 
@@ -183,10 +183,10 @@ class TestDocumentRepository:
         mock_db_session.execute = AsyncMock(return_value=mock_result)
         mock_db_session.commit = AsyncMock()
         task_id = "task_123"
-        
+
         # Act
         result = await document_repository.update_task_id(sample_document.id, task_id)
-        
+
         # Assert
         assert result is True
         assert sample_document.task_id == task_id
@@ -199,10 +199,10 @@ class TestDocumentRepository:
         mock_result = Mock()
         mock_result.scalars.return_value = [sample_document]
         mock_db_session.execute = AsyncMock(return_value=mock_result)
-        
+
         # Act
         result = await document_repository.get_by_status(DocumentStatus.UPLOADED)
-        
+
         # Assert
         assert result == [sample_document]
         mock_db_session.execute.assert_called_once()
@@ -216,10 +216,10 @@ class TestDocumentRepository:
         mock_db_session.execute = AsyncMock(return_value=mock_result)
         mock_db_session.delete = AsyncMock()
         mock_db_session.commit = AsyncMock()
-        
+
         # Act
         result = await document_repository.delete(sample_document.id)
-        
+
         # Assert
         assert result is True
         mock_db_session.delete.assert_called_once_with(sample_document)
@@ -232,9 +232,9 @@ class TestDocumentRepository:
         mock_result = Mock()
         mock_result.scalar_one_or_none.return_value = None
         mock_db_session.execute = AsyncMock(return_value=mock_result)
-        
+
         # Act
         result = await document_repository.delete(uuid.uuid4())
-        
+
         # Assert
         assert result is False

@@ -1,13 +1,14 @@
 """Create users table
 
 Revision ID: 001
-Revises: 
+Revises:
 Create Date: 2025-01-26 10:00:00.000000
 
 """
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '001'
@@ -20,11 +21,11 @@ def upgrade() -> None:
     # Create pgcrypto extension for UUID generation
     op.execute('CREATE EXTENSION IF NOT EXISTS "pgcrypto"')
     op.execute('CREATE EXTENSION IF NOT EXISTS "vector"')
-    
+
     # Create user role enum
     user_role_enum = postgresql.ENUM('sysadmin', 'admin_user', 'common_user', name='userrole')
     user_role_enum.create(op.get_bind())
-    
+
     # Create users table
     op.create_table('users',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text('gen_random_uuid()')),
@@ -44,7 +45,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_index(op.f('ix_users_username'), table_name='users')
     op.drop_table('users')
-    
+
     # Drop the enum type
     user_role_enum = postgresql.ENUM('sysadmin', 'admin_user', 'common_user', name='userrole')
     user_role_enum.drop(op.get_bind())

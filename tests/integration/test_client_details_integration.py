@@ -1,18 +1,17 @@
 """Integration tests for client details functionality."""
 
+import time
 import uuid
 from datetime import datetime
-import time
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.client import Client
-from app.models.document import Document, DocumentStatus, DocumentType
+from app.models.document import DocumentStatus, DocumentType
 from app.models.document_chunk import DocumentChunk
 from app.repositories.client_repository import ClientRepository
-from app.repositories.document_repository import DocumentRepository
 from app.repositories.document_chunk_repository import DocumentChunkRepository
+from app.repositories.document_repository import DocumentRepository
 from app.services.client_service import ClientService
 from app.services.document_service import DocumentService
 
@@ -27,15 +26,15 @@ class TestClientDetailsIntegration:
         client_repository = ClientRepository(async_session)
         document_repository = DocumentRepository(async_session)
         chunk_repository = DocumentChunkRepository(async_session)
-        
+
         client_service = ClientService(client_repository)
         document_service = DocumentService(document_repository)
 
-        # Create a test client  
+        # Create a test client
         timestamp = int(time.time() * 1000000) % 100000000  # Use timestamp for unique CPF
         cpf = f"{timestamp:011d}"
-        cpf_formatted = f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:11]}"
-        
+        f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:11]}"
+
         client = await client_service.create_client(
             name="João Silva",
             cpf="123.456.789-09",  # Use the known working CPF
@@ -64,13 +63,13 @@ class TestClientDetailsIntegration:
         # Simulate document processing completion
         doc1_id = uuid.UUID(doc1["document_id"])
         doc2_id = uuid.UUID(doc2["document_id"])
-        
+
         await document_service.update_document_status(
-            doc1_id, 
+            doc1_id,
             DocumentStatus.PROCESSED
         )
         await document_service.update_document_status(
-            doc2_id, 
+            doc2_id,
             DocumentStatus.FAILED,
             error_message="OCR processing failed"
         )
@@ -78,11 +77,11 @@ class TestClientDetailsIntegration:
         # Create document chunks for processed document with fake embeddings
         doc1_obj = await document_service.get_document_by_id(doc1_id)
         import numpy as np
-        
+
         # Create fake embeddings (768 dimensions)
         fake_embedding_1 = np.random.random(768).tolist()
         fake_embedding_2 = np.random.random(768).tolist()
-        
+
         chunks = [
             DocumentChunk(
                 node_id="chunk1",
@@ -92,7 +91,7 @@ class TestClientDetailsIntegration:
                 document_id=doc1_obj.id,
             ),
             DocumentChunk(
-                node_id="chunk2", 
+                node_id="chunk2",
                 text="Este é o segundo bloco com mais conteúdo.",
                 embedding=fake_embedding_2,
                 chunk_metadata={"page": 1, "section": "body"},
@@ -114,7 +113,7 @@ class TestClientDetailsIntegration:
         # Verify document statuses
         processed_docs = [d for d in documents if d.status == DocumentStatus.PROCESSED]
         failed_docs = [d for d in documents if d.status == DocumentStatus.FAILED]
-        
+
         assert len(processed_docs) == 1
         assert len(failed_docs) == 1
         assert failed_docs[0].error_message == "OCR processing failed"
@@ -128,7 +127,7 @@ class TestClientDetailsIntegration:
         # Test document summary statistics
         total_chars = sum(len(chunk.text) for chunk in doc1_chunks)
         total_words = sum(len(chunk.text.split()) for chunk in doc1_chunks)
-        
+
         assert total_chars > 0
         assert total_words > 0
 
@@ -137,7 +136,7 @@ class TestClientDetailsIntegration:
         """Test client details when client has no documents."""
         client_repository = ClientRepository(async_session)
         document_repository = DocumentRepository(async_session)
-        
+
         client_service = ClientService(client_repository)
         document_service = DocumentService(document_repository)
 
@@ -162,7 +161,7 @@ class TestClientDetailsIntegration:
         """Test real-time document status update workflow."""
         client_repository = ClientRepository(async_session)
         document_repository = DocumentRepository(async_session)
-        
+
         client_service = ClientService(client_repository)
         document_service = DocumentService(document_repository)
 
@@ -176,7 +175,7 @@ class TestClientDetailsIntegration:
         doc_content = b"Test document for status updates"
         doc = await document_service.create_document(
             client_id=client.id,
-            filename="status_test.pdf", 
+            filename="status_test.pdf",
             content=doc_content,
             document_type=DocumentType.SIMPLE
         )
@@ -215,7 +214,7 @@ class TestClientDetailsIntegration:
         """Test duplicate document detection in client details."""
         client_repository = ClientRepository(async_session)
         document_repository = DocumentRepository(async_session)
-        
+
         client_service = ClientService(client_repository)
         document_service = DocumentService(document_repository)
 
@@ -256,7 +255,7 @@ class TestClientDetailsIntegration:
         client_repository = ClientRepository(async_session)
         document_repository = DocumentRepository(async_session)
         chunk_repository = DocumentChunkRepository(async_session)
-        
+
         client_service = ClientService(client_repository)
         document_service = DocumentService(document_repository)
 
@@ -310,7 +309,7 @@ class TestClientDetailsIntegration:
         """Test handling of non-existent client IDs."""
         client_repository = ClientRepository(async_session)
         document_repository = DocumentRepository(async_session)
-        
+
         client_service = ClientService(client_repository)
         document_service = DocumentService(document_repository)
 
@@ -328,7 +327,7 @@ class TestClientDetailsIntegration:
         """Test document processing error scenarios."""
         client_repository = ClientRepository(async_session)
         document_repository = DocumentRepository(async_session)
-        
+
         client_service = ClientService(client_repository)
         document_service = DocumentService(document_repository)
 

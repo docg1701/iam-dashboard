@@ -4,7 +4,6 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from nicegui.testing import User
 
 from app.models.client import Client
 from app.ui_components.questionnaire_writer import QuestionnaireWriterPage
@@ -130,7 +129,7 @@ class TestQuestionnaireWriterPage:
         page_instance.client_select = MagicMock()
         page_instance.client_select.options = {}
 
-        with patch('app.ui_components.questionnaire_writer.ClientRepository') as mock_repo:
+        with patch('app.ui_components.questionnaire_writer.ClientRepository'):
             with patch('app.ui_components.questionnaire_writer.ClientService') as mock_service:
                 with patch('app.ui_components.questionnaire_writer.ui.notify') as mock_notify:
                     mock_service.return_value = mock_client_service

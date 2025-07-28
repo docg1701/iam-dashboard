@@ -216,7 +216,7 @@ class TestDocumentSummaryModal:
     @patch("app.ui_components.document_summary.ui.column")
     @patch("app.ui_components.document_summary.ui.label")
     @patch("app.ui_components.document_summary.ui.button")
-    def test_show_full_content(self, mock_button, mock_label, mock_column, mock_row, 
+    def test_show_full_content(self, mock_button, mock_label, mock_column, mock_row,
                               mock_card, mock_dialog, sample_document, sample_chunks):
         """Test showing full content of a chunk."""
         modal = DocumentSummaryModal(sample_document)
@@ -308,7 +308,7 @@ class TestDocumentSummaryModal:
         with patch("app.ui_components.document_summary.ui.card"), \
              patch("app.ui_components.document_summary.ui.row"), \
              patch("app.ui_components.document_summary.ui.column"), \
-             patch("app.ui_components.document_summary.ui.label") as mock_label, \
+             patch("app.ui_components.document_summary.ui.label"), \
              patch("app.ui_components.document_summary.ui.spinner"):
 
             modal._create_content()
@@ -321,7 +321,7 @@ class TestDocumentSummaryModal:
     def test_format_metadata_display(self, sample_chunks):
         """Test metadata formatting in chunk display."""
         chunk = sample_chunks[0]
-        
+
         # Verify metadata structure
         assert "page" in chunk.metadata
         assert "section" in chunk.metadata

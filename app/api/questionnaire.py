@@ -6,11 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.base_agent import plugin_registry
 from app.core.database import get_async_db
+
+# Import plugin to ensure registration
 from app.repositories.client_repository import ClientRepository
 from app.repositories.document_chunk_repository import DocumentChunkRepository
 from app.services.client_service import ClientService
-from app.services.questionnaire_draft_service import get_questionnaire_draft_service
 
 router = APIRouter(prefix="/v1/questionnaire", tags=["questionnaire"])
 
@@ -55,6 +57,38 @@ class ClientDocumentsResponse(BaseModel):
     chunk_count: int = Field(..., description="Number of document chunks available")
 
 
+async def get_questionnaire_agent() -> object | None:
+    """Get or create QuestionnaireAgent instance."""
+    agent_id = "questionnaire_agent_default"
+
+    # Try to get existing instance
+    agent_instance = plugin_registry.get_instance(agent_id)
+
+    if not agent_instance:
+        # Create new instance
+        config = {
+            "name": "Questionnaire Agent",
+            "description": "Autonomous agent for legal questionnaire generation",
+            "model": "gemini-1.5-pro",
+            "capabilities": [
+                "questionnaire_generation",
+                "rag_document_retrieval",
+                "legal_template_formatting",
+                "content_validation",
+                "draft_management"
+            ]
+        }
+
+        agent_instance = await plugin_registry.create_instance(
+            "QuestionnairePlugin", agent_id, config
+        )
+
+        if agent_instance:
+            await agent_instance.initialize()
+
+    return agent_instance
+
+
 @router.post("/generate", response_model=QuestionnaireGenerateResponse)
 async def generate_questionnaire(
     request: QuestionnaireGenerateRequest, db: AsyncSession = Depends(get_async_db)
@@ -62,9 +96,10 @@ async def generate_questionnaire(
     """
     Generate judicial questionnaire draft from form data and client documents.
 
-    This endpoint uses RAG (Retrieval-Augmented Generation) to search for relevant
-    information in the client's processed documents and combines it with the provided
-    form data to generate a contextual judicial questionnaire using Google Gemini API.
+    This endpoint uses an autonomous agent with RAG (Retrieval-Augmented Generation)
+    to search for relevant information in the client's processed documents and combines
+    it with the provided form data to generate a contextual judicial questionnaire
+    using Google Gemini API.
     """
     try:
         # Get client
@@ -75,17 +110,29 @@ async def generate_questionnaire(
         if not client:
             raise HTTPException(status_code=404, detail="Client not found")
 
-        # Generate questionnaire
-        chunk_repository = DocumentChunkRepository(db)
-        questionnaire_service = get_questionnaire_draft_service(chunk_repository)
+        # Get questionnaire agent
+        agent = await get_questionnaire_agent()
+        if not agent:
+            raise HTTPException(status_code=503, detail="Questionnaire agent not available")
 
-        result = await questionnaire_service.generate_questionnaire(
-            client=client,
-            profession=request.profession,
-            disease=request.disease,
-            incident_date=request.incident_date,
-            medical_date=request.medical_date,
-        )
+        # Prepare data for agent processing
+        client_data = {
+            "id": str(client.id),
+            "name": client.name,
+            "cpf": client.cpf
+        }
+
+        agent_input = {
+            "client": client_data,
+            "profession": request.profession,
+            "disease": request.disease,
+            "incident_date": request.incident_date,
+            "medical_date": request.medical_date,
+            "save_draft": True
+        }
+
+        # Process through agent
+        result = await agent.process(agent_input)
 
         if result["success"]:
             return QuestionnaireGenerateResponse(
@@ -93,13 +140,14 @@ async def generate_questionnaire(
                 questionnaire=result["questionnaire"],
                 context_chunks=result["context_chunks"],
                 client_name=result["client_name"],
+                error=None,
             )
         else:
             return QuestionnaireGenerateResponse(
                 success=False,
                 questionnaire="",
                 context_chunks=0,
-                client_name=client.name,
+                client_name=str(client.name),
                 error=result.get("error", "Unknown error"),
             )
 

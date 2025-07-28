@@ -1,20 +1,19 @@
 """Test configuration and fixtures."""
 
 import asyncio
-from typing import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator
+
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.models.base import Base
-from app.models.user import User, UserRole
 from app.models.client import Client
-from app.repositories.user_repository import UserRepository
+from app.models.user import User, UserRole
 from app.repositories.client_repository import ClientRepository
-from app.services.user_service import UserService
+from app.repositories.user_repository import UserRepository
 from app.services.client_service import ClientService
+from app.services.user_service import UserService
 
 # Test database URL (use PostgreSQL for tests to support JSONB and Vector types)
 TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/advocacia_test_db"
@@ -34,24 +33,24 @@ async def async_session() -> AsyncGenerator[AsyncSession, None]:
     """Create an async database session for testing."""
     # Create async engine
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-    
+
     # Create tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     # Create session
     async_session_maker = async_sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
     )
-    
+
     async with async_session_maker() as session:
         yield session
         await session.rollback()
-    
+
     # Drop tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    
+
     await engine.dispose()
 
 

@@ -1,0 +1,96 @@
+# Agent Configuration
+# This file defines the configuration for autonomous agents in the system
+
+# Global agent settings
+global:
+  health_check_interval: 60  # seconds
+  max_retries: 3
+  timeout: 30  # seconds
+  log_level: "INFO"
+
+# Plugin discovery settings
+discovery:
+  plugin_directories:
+    - "app.plugins"
+  auto_discovery: true
+  reload_on_change: false
+
+# Individual agent configurations
+agents:
+  # Example agent configuration (will be used when agents are implemented)
+  example_agent:
+    enabled: false
+    plugin_name: "ExamplePlugin"
+    name: "Example Agent"
+    description: "Example autonomous agent for demonstration"
+    version: "1.0.0"
+    capabilities:
+      - "data_processing"
+      - "document_analysis"
+    dependencies: []
+    config:
+      model: "gemini-pro"
+      max_tokens: 1000
+      temperature: 0.7
+    
+  # PDF processor agent for autonomous document processing
+  pdf_processor:
+    enabled: true
+    plugin_name: "PDFProcessorPlugin"
+    name: "PDF Processor Agent"
+    description: "Autonomous agent for PDF document processing with OCR and vector storage"
+    version: "1.0.0"
+    capabilities:
+      - "pdf_text_extraction"
+      - "ocr_processing"
+      - "vector_embedding_generation"
+      - "document_storage"
+      - "metadata_extraction"
+    dependencies: []
+    config:
+      model: "gemini-2.5-pro"
+      embedding_model: "gemini-embedding-001"
+      max_file_size_mb: 50
+      chunk_size: 1000
+      perform_ocr: true
+      supported_formats: ["pdf"]
+      
+  # Questionnaire generator agent (placeholder for future implementation)
+  questionnaire_generator:
+    enabled: false
+    plugin_name: "QuestionnaireGeneratorPlugin"
+    name: "Questionnaire Generator"
+    description: "Agent for generating legal questionnaires"
+    version: "1.0.0"
+    capabilities:
+      - "questionnaire_generation"
+      - "legal_analysis"
+      - "client_interaction"
+    dependencies: ["document_processor"]
+    config:
+      question_types: ["multiple_choice", "text", "boolean"]
+      max_questions: 50
+
+# Environment variable overrides
+# These settings can be overridden using environment variables with the prefix AGENT_
+# Example: AGENT_GLOBAL_HEALTH_CHECK_INTERVAL=30 will override global.health_check_interval
+
+# Security settings
+security:
+  validate_plugins: true
+  sandbox_plugins: false  # Future implementation
+  allowed_imports:
+    - "agno"
+    - "logging"
+    - "asyncio"
+    - "typing"
+    - "datetime"
+    - "pathlib"
+  
+# Monitoring and logging
+monitoring:
+  enable_metrics: true
+  metrics_endpoint: "/metrics"
+  health_check_endpoint: "/health"
+  log_agent_actions: true
+  log_level: "INFO"

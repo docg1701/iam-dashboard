@@ -1,13 +1,12 @@
 """End-to-end tests for document upload UI."""
 
-import pytest
-from unittest.mock import patch, Mock, AsyncMock
-import tempfile
 import os
-from pathlib import Path
+import tempfile
+from unittest.mock import AsyncMock, Mock, patch
 
-from nicegui.testing import Screen
+import pytest
 from nicegui import ui
+from nicegui.testing import Screen
 
 from app.models.client import Client
 from app.models.document import DocumentType
@@ -33,12 +32,12 @@ def sample_client():
 def sample_pdf_file():
     """Create a temporary PDF file for testing."""
     pdf_content = b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj xref 0 4 0000000000 65535 f 0000000010 00000 n 0000000053 00000 n 0000000100 00000 n trailer<</Size 4/Root 1 0 R>> startxref 150 %%EOF"
-    
+
     with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f:
         f.write(pdf_content)
         f.flush()
         yield f.name
-    
+
     # Cleanup
     os.unlink(f.name)
 
@@ -54,9 +53,9 @@ class TestDocumentUploadUI:
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
                 upload_dialog.show()
-            
+
             await screen.open("/test")
-            
+
             # Check that dialog elements are present
             screen.should_contain(f"Upload de Documento - {sample_client.name}")
             screen.should_contain("Selecione um arquivo PDF:")
@@ -74,28 +73,28 @@ class TestDocumentUploadUI:
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
                 upload_dialog.show()
-            
+
             await screen.open("/test")
-            
+
             # Find document type selector
             type_selector = screen.find("Tipo de documento").parent()
-            
+
             # Check default selection
             assert type_selector.text == DocumentType.SIMPLE
-            
+
             # Test changing selection
             type_selector.click()
             screen.find("Complexo (PDF escaneado, requer OCR)").click()
-            
+
             # Verify selection changed
             assert type_selector.text == DocumentType.COMPLEX
 
     @patch('app.services.document_service.DocumentService.create_document')
     @pytest.mark.asyncio
     async def test_successful_file_upload_flow(
-        self, 
+        self,
         mock_create_document,
-        sample_client, 
+        sample_client,
         sample_pdf_file
     ):
         """Test successful file upload and processing initiation."""
@@ -106,22 +105,22 @@ class TestDocumentUploadUI:
             'task_id': 'task_456',
             'message': 'Documento criado e processamento iniciado'
         }
-        
+
         with Screen("/test") as screen:
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
                 upload_dialog.show()
-            
+
             await screen.open("/test")
-            
+
             # Simulate file upload
-            file_upload = screen.find("Arrastar PDF aqui ou clicar para selecionar")
-            
+            screen.find("Arrastar PDF aqui ou clicar para selecionar")
+
             # Read the test PDF file
             with open(sample_pdf_file, 'rb') as f:
                 file_content = f.read()
-            
+
             # Simulate file selection (this would normally be done by browser)
             # In a real E2E test, you would use Playwright to interact with file input
             upload_dialog.uploaded_file_info = {
@@ -131,19 +130,19 @@ class TestDocumentUploadUI:
                 'hash': 'abc123'
             }
             upload_dialog._update_file_info()
-            
+
             # Select document type
             type_selector = screen.find("Tipo de documento").parent()
             type_selector.click()
             screen.find("Simples (PDF digital com texto selecionável)").click()
-            
+
             # Click submit
             submit_button = screen.find("Enviar Documento")
             submit_button.click()
-            
+
             # Verify success notification appears
             screen.should_contain("Documento enviado com sucesso!")
-            
+
             # Verify document service was called
             mock_create_document.assert_called_once()
             call_args = mock_create_document.call_args
@@ -154,7 +153,7 @@ class TestDocumentUploadUI:
     @patch('app.services.document_service.DocumentService.create_document')
     @pytest.mark.asyncio
     async def test_duplicate_file_error_handling(
-        self, 
+        self,
         mock_create_document,
         sample_client,
         sample_pdf_file
@@ -165,19 +164,19 @@ class TestDocumentUploadUI:
             'success': False,
             'error': 'Documento duplicado encontrado. Arquivo já existe: existing_file.pdf'
         }
-        
+
         with Screen("/test") as screen:
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
                 upload_dialog.show()
-            
+
             await screen.open("/test")
-            
+
             # Simulate file upload with duplicate
             with open(sample_pdf_file, 'rb') as f:
                 file_content = f.read()
-            
+
             upload_dialog.uploaded_file_info = {
                 'filename': 'duplicate.pdf',
                 'content': file_content,
@@ -185,11 +184,11 @@ class TestDocumentUploadUI:
                 'hash': 'duplicate_hash'
             }
             upload_dialog._update_file_info()
-            
+
             # Submit the duplicate file
             submit_button = screen.find("Enviar Documento")
             submit_button.click()
-            
+
             # Verify error notification appears
             screen.should_contain("Documento duplicado encontrado")
 
@@ -210,26 +209,26 @@ class TestDocumentUploadUI:
             'result': {'message': 'Processing completed'},
             'error': None
         }
-        
+
         mock_client_instance = AsyncMock()
         mock_client_instance.get.return_value = mock_response
         mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
-        
+
         with Screen("/test") as screen:
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
                 upload_dialog.show()
-                
+
                 # Simulate successful upload that starts tracking
                 upload_dialog.current_task_id = 'task_123'
                 upload_dialog._start_status_tracking()
-            
+
             await screen.open("/test")
-            
+
             # Wait for status update
             await screen.wait_for(lambda: "Status do Processamento:" in screen.content)
-            
+
             # Verify status tracking elements appear
             screen.should_contain("Status do Processamento:")
             screen.should_contain("Iniciando processamento...")
@@ -242,16 +241,16 @@ class TestDocumentUploadUI:
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
                 upload_dialog.show()
-            
+
             await screen.open("/test")
-            
+
             # Verify dialog is open
             screen.should_contain(f"Upload de Documento - {sample_client.name}")
-            
+
             # Click cancel button
             cancel_button = screen.find("Cancelar")
             cancel_button.click()
-            
+
             # Verify dialog is closed (content should not be visible)
             screen.should_not_contain(f"Upload de Documento - {sample_client.name}")
 
@@ -263,12 +262,12 @@ class TestDocumentUploadUI:
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
                 upload_dialog.show()
-            
+
             await screen.open("/test")
-            
+
             # Verify upload component has size limit
             upload_component = screen.find("Arrastar PDF aqui ou clicar para selecionar")
-            
+
             # In a real implementation, this would test the max_file_size property
             # For now, verify the component exists with proper configuration
             assert upload_component is not None
@@ -281,15 +280,15 @@ class TestDocumentUploadUI:
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
                 upload_dialog.show()
-            
+
             await screen.open("/test")
-            
+
             # Simulate uploading non-PDF file
             upload_dialog._handle_file_upload(Mock(
                 name="document.txt",
                 content=b"This is not a PDF file"
             ))
-            
+
             # Verify error notification
             screen.should_contain("Apenas arquivos PDF são permitidos")
 
@@ -301,13 +300,13 @@ class TestDocumentUploadUI:
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
                 upload_dialog.show()
-            
+
             await screen.open("/test")
-            
+
             # Simulate file upload
             with open(sample_pdf_file, 'rb') as f:
                 file_content = f.read()
-            
+
             upload_dialog.uploaded_file_info = {
                 'filename': 'test_document.pdf',
                 'content': file_content,
@@ -315,7 +314,7 @@ class TestDocumentUploadUI:
                 'hash': 'abcdef123456'
             }
             upload_dialog._update_file_info()
-            
+
             # Verify file information is displayed
             screen.should_contain("Informações do arquivo:")
             screen.should_contain("Nome: test_document.pdf")

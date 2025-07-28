@@ -34,6 +34,8 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "pyotp>=2.9.0",
     "qrcode[pil]>=7.4.2",
+    "pydantic>=2.11.7",
+    "pyyaml>=6.0.2",
 ]
 
 [project.optional-dependencies]
@@ -129,6 +131,8 @@ exclude = ["alembic*", "tests*"]
 [dependency-groups]
 dev = [
     "types-passlib>=1.7.7.20250602",
+    "types-python-jose>=3.5.0.20250531",
+    "types-pyyaml>=6.0.12.20250516",
 ]
 
 [tool.coverage.report]

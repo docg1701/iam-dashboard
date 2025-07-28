@@ -3,9 +3,9 @@
 import os
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from alembic import context
 from app.models.base import Base
 
 # this is the Alembic Config object, which provides
@@ -30,7 +30,7 @@ target_metadata = Base.metadata
 def get_database_url() -> str:
     """Get database URL from environment variable or config."""
     return os.getenv(
-        "DATABASE_URL", 
+        "DATABASE_URL",
         config.get_main_option("sqlalchemy.url", "postgresql://postgres:postgres@localhost:5432/advocacia_db")
     )
 
@@ -70,7 +70,7 @@ def run_migrations_online() -> None:
     if configuration is None:
         configuration = {}
     configuration["sqlalchemy.url"] = get_database_url()
-    
+
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",

@@ -1,10 +1,10 @@
 """Unit tests for DocumentService."""
 
-import pytest
-from unittest.mock import AsyncMock, Mock, patch, mock_open
-import uuid
 import hashlib
-from pathlib import Path
+import uuid
+from unittest.mock import AsyncMock, Mock, mock_open, patch
+
+import pytest
 
 from app.models.document import Document, DocumentStatus, DocumentType
 from app.repositories.document_repository import DocumentRepository
@@ -52,7 +52,7 @@ class TestDocumentService:
         """Test file hash calculation."""
         # Act
         result = document_service.calculate_file_hash(sample_file_content)
-        
+
         # Assert
         expected_hash = hashlib.sha256(sample_file_content).hexdigest()
         assert result == expected_hash
@@ -65,10 +65,10 @@ class TestDocumentService:
         client_id = uuid.uuid4()
         content_hash = "abc123"
         mock_document_repository.check_duplicate_by_hash.return_value = sample_document
-        
+
         # Act
         result = await document_service.check_duplicate(client_id, content_hash)
-        
+
         # Assert
         assert result == sample_document
         mock_document_repository.check_duplicate_by_hash.assert_called_once_with(client_id, content_hash)
@@ -80,10 +80,10 @@ class TestDocumentService:
         client_id = uuid.uuid4()
         content_hash = "abc123"
         mock_document_repository.check_duplicate_by_hash.return_value = None
-        
+
         # Act
         result = await document_service.check_duplicate(client_id, content_hash)
-        
+
         # Assert
         assert result is None
         mock_document_repository.check_duplicate_by_hash.assert_called_once_with(client_id, content_hash)
@@ -94,12 +94,12 @@ class TestDocumentService:
     @patch('app.workers.document_processor.process_document')
     @pytest.mark.asyncio
     async def test_create_document_success(
-        self, 
+        self,
         mock_process_document,
-        mock_file_open, 
+        mock_file_open,
         mock_mkdir,
-        document_service, 
-        mock_document_repository, 
+        document_service,
+        mock_document_repository,
         sample_file_content,
         sample_document
     ):
@@ -108,19 +108,19 @@ class TestDocumentService:
         client_id = uuid.uuid4()
         filename = "test.pdf"
         document_type = DocumentType.SIMPLE
-        
+
         mock_document_repository.check_duplicate_by_hash.return_value = None
         mock_document_repository.create.return_value = sample_document
         mock_document_repository.update_task_id = AsyncMock()
-        
+
         # Mock Celery task
         mock_task_result = Mock()
         mock_task_result.id = "task_123"
         mock_process_document.delay.return_value = mock_task_result
-        
+
         # Act
         result = await document_service.create_document(client_id, filename, sample_file_content, document_type)
-        
+
         # Assert
         assert result['success'] is True
         assert 'document_id' in result
@@ -131,9 +131,9 @@ class TestDocumentService:
 
     @pytest.mark.asyncio
     async def test_create_document_duplicate_found(
-        self, 
-        document_service, 
-        mock_document_repository, 
+        self,
+        document_service,
+        mock_document_repository,
         sample_file_content,
         sample_document
     ):
@@ -142,12 +142,12 @@ class TestDocumentService:
         client_id = uuid.uuid4()
         filename = "test.pdf"
         document_type = DocumentType.SIMPLE
-        
+
         mock_document_repository.check_duplicate_by_hash.return_value = sample_document
-        
+
         # Act
         result = await document_service.create_document(client_id, filename, sample_file_content, document_type)
-        
+
         # Assert
         assert result['success'] is False
         assert 'duplicado' in result['error']
@@ -159,10 +159,10 @@ class TestDocumentService:
         # Arrange
         document_id = uuid.uuid4()
         mock_document_repository.get_by_id.return_value = sample_document
-        
+
         # Act
         result = await document_service.get_document_by_id(document_id)
-        
+
         # Assert
         assert result == sample_document
         mock_document_repository.get_by_id.assert_called_once_with(document_id)
@@ -173,10 +173,10 @@ class TestDocumentService:
         # Arrange
         client_id = uuid.uuid4()
         mock_document_repository.get_by_client_id.return_value = [sample_document]
-        
+
         # Act
         result = await document_service.get_documents_by_client(client_id)
-        
+
         # Assert
         assert result == [sample_document]
         mock_document_repository.get_by_client_id.assert_called_once_with(client_id)
@@ -188,10 +188,10 @@ class TestDocumentService:
         document_id = uuid.uuid4()
         status = DocumentStatus.PROCESSED
         mock_document_repository.update_status.return_value = True
-        
+
         # Act
         result = await document_service.update_document_status(document_id, status)
-        
+
         # Assert
         assert result is True
         mock_document_repository.update_status.assert_called_once_with(document_id, status, None)
@@ -204,10 +204,10 @@ class TestDocumentService:
         status = DocumentStatus.FAILED
         error_message = "Processing failed"
         mock_document_repository.update_status.return_value = True
-        
+
         # Act
         result = await document_service.update_document_status(document_id, status, error_message)
-        
+
         # Assert
         assert result is True
         mock_document_repository.update_status.assert_called_once_with(document_id, status, error_message)
@@ -218,10 +218,10 @@ class TestDocumentService:
         # Arrange
         task_id = "task_123"
         mock_document_repository.get_by_task_id.return_value = sample_document
-        
+
         # Act
         result = await document_service.get_document_by_task_id(task_id)
-        
+
         # Assert
         assert result == sample_document
         mock_document_repository.get_by_task_id.assert_called_once_with(task_id)
@@ -231,10 +231,10 @@ class TestDocumentService:
         """Test getting processing documents."""
         # Arrange
         mock_document_repository.get_by_status.return_value = [sample_document]
-        
+
         # Act
         result = await document_service.get_processing_documents()
-        
+
         # Assert
         assert result == [sample_document]
         mock_document_repository.get_by_status.assert_called_once_with(DocumentStatus.PROCESSING)
@@ -244,10 +244,10 @@ class TestDocumentService:
         """Test getting failed documents."""
         # Arrange
         mock_document_repository.get_by_status.return_value = [sample_document]
-        
+
         # Act
         result = await document_service.get_failed_documents()
-        
+
         # Assert
         assert result == [sample_document]
         mock_document_repository.get_by_status.assert_called_once_with(DocumentStatus.FAILED)
@@ -256,11 +256,11 @@ class TestDocumentService:
     @patch('pathlib.Path.unlink')
     @pytest.mark.asyncio
     async def test_delete_document_success(
-        self, 
+        self,
         mock_unlink,
         mock_exists,
-        document_service, 
-        mock_document_repository, 
+        document_service,
+        mock_document_repository,
         sample_document
     ):
         """Test successful document deletion."""
@@ -269,10 +269,10 @@ class TestDocumentService:
         mock_document_repository.get_by_id.return_value = sample_document
         mock_document_repository.delete.return_value = True
         mock_exists.return_value = True
-        
+
         # Act
         result = await document_service.delete_document(document_id)
-        
+
         # Assert
         assert result is True
         mock_unlink.assert_called_once()
@@ -284,10 +284,10 @@ class TestDocumentService:
         # Arrange
         document_id = uuid.uuid4()
         mock_document_repository.get_by_id.return_value = None
-        
+
         # Act
         result = await document_service.delete_document(document_id)
-        
+
         # Assert
         assert result is False
         mock_document_repository.delete.assert_not_called()
@@ -296,7 +296,7 @@ class TestDocumentService:
         """Test getting file path for document."""
         # Act
         result = document_service.get_file_path(sample_document)
-        
+
         # Assert
         expected_path = document_service.upload_dir / sample_document.file_path
         assert result == expected_path

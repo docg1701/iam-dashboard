@@ -2,8 +2,7 @@
 
 import asyncio
 import uuid
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -40,22 +39,22 @@ class TestStatusTracking:
         # Arrange
         repository = DocumentRepository(mock_db_session)
         service = DocumentService(repository)
-        
+
         # Mock repository methods
         repository.update_status = AsyncMock(return_value=True)
         repository.get_by_id = AsyncMock(return_value=sample_document)
-        
+
         # Act
         result = await service.update_document_status(
-            sample_document.id, 
+            sample_document.id,
             DocumentStatus.PROCESSING
         )
-        
+
         # Assert
         assert result is True
         repository.update_status.assert_called_once_with(
-            sample_document.id, 
-            DocumentStatus.PROCESSING, 
+            sample_document.id,
+            DocumentStatus.PROCESSING,
             None
         )
 
@@ -66,21 +65,21 @@ class TestStatusTracking:
         sample_document.status = DocumentStatus.PROCESSING
         repository = DocumentRepository(mock_db_session)
         service = DocumentService(repository)
-        
+
         repository.update_status = AsyncMock(return_value=True)
         repository.get_by_id = AsyncMock(return_value=sample_document)
-        
+
         # Act
         result = await service.update_document_status(
-            sample_document.id, 
+            sample_document.id,
             DocumentStatus.PROCESSED
         )
-        
+
         # Assert
         assert result is True
         repository.update_status.assert_called_once_with(
-            sample_document.id, 
-            DocumentStatus.PROCESSED, 
+            sample_document.id,
+            DocumentStatus.PROCESSED,
             None
         )
 
@@ -91,24 +90,24 @@ class TestStatusTracking:
         sample_document.status = DocumentStatus.PROCESSING
         repository = DocumentRepository(mock_db_session)
         service = DocumentService(repository)
-        
+
         repository.update_status = AsyncMock(return_value=True)
         repository.get_by_id = AsyncMock(return_value=sample_document)
-        
+
         error_message = "Processing failed due to OCR error"
-        
+
         # Act
         result = await service.update_document_status(
-            sample_document.id, 
+            sample_document.id,
             DocumentStatus.FAILED,
             error_message
         )
-        
+
         # Assert
         assert result is True
         repository.update_status.assert_called_once_with(
-            sample_document.id, 
-            DocumentStatus.FAILED, 
+            sample_document.id,
+            DocumentStatus.FAILED,
             error_message
         )
 
@@ -118,12 +117,12 @@ class TestStatusTracking:
         # Arrange
         repository = DocumentRepository(mock_db_session)
         repository.update_task_id = AsyncMock(return_value=True)
-        
+
         task_id = "celery_task_12345"
-        
+
         # Act
         result = await repository.update_task_id(sample_document.id, task_id)
-        
+
         # Assert
         assert result is True
         repository.update_task_id.assert_called_once_with(sample_document.id, task_id)
@@ -135,10 +134,10 @@ class TestStatusTracking:
         sample_document.task_id = "celery_task_12345"
         repository = DocumentRepository(mock_db_session)
         repository.get_by_task_id = AsyncMock(return_value=sample_document)
-        
+
         # Act
         result = await repository.get_by_task_id("celery_task_12345")
-        
+
         # Assert
         assert result == sample_document
         assert result.task_id == "celery_task_12345"
@@ -159,13 +158,13 @@ class TestStatusTracking:
             )
             for i in range(3)
         ]
-        
+
         repository = DocumentRepository(mock_db_session)
         repository.get_by_status = AsyncMock(return_value=processing_docs)
-        
+
         # Act
         result = await repository.get_by_status(DocumentStatus.PROCESSING)
-        
+
         # Assert
         assert len(result) == 3
         assert all(doc.status == DocumentStatus.PROCESSING for doc in result)
@@ -177,15 +176,15 @@ class TestStatusTracking:
         nonexistent_id = uuid.uuid4()
         repository = DocumentRepository(mock_db_session)
         service = DocumentService(repository)
-        
+
         repository.update_status = AsyncMock(return_value=False)  # Document not found
-        
+
         # Act
         result = await service.update_document_status(
-            nonexistent_id, 
+            nonexistent_id,
             DocumentStatus.PROCESSED
         )
-        
+
         # Assert
         assert result is False
 
@@ -195,19 +194,19 @@ class TestStatusTracking:
         # Arrange
         repository = DocumentRepository(mock_db_session)
         service = DocumentService(repository)
-        
+
         # Mock successful updates
         repository.update_status = AsyncMock(return_value=True)
         repository.get_by_id = AsyncMock(return_value=sample_document)
-        
+
         # Act - simulate concurrent updates
         tasks = [
             service.update_document_status(sample_document.id, DocumentStatus.PROCESSING),
             service.update_document_status(sample_document.id, DocumentStatus.PROCESSED),
         ]
-        
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Assert - both updates should succeed (in a real scenario, database constraints would handle conflicts)
         assert all(result is True for result in results if not isinstance(result, Exception))
 
@@ -216,22 +215,22 @@ class TestStatusTracking:
         """Test validation of status transitions."""
         # This test would verify that invalid status transitions are prevented
         # For example, going from PROCESSED back to PROCESSING should be invalid
-        
+
         # Arrange
         sample_document.status = DocumentStatus.PROCESSED
         repository = DocumentRepository(mock_db_session)
         service = DocumentService(repository)
-        
+
         # In a real implementation, this might raise an exception or return False
         # For now, we'll assume all transitions are allowed at the repository level
         repository.update_status = AsyncMock(return_value=True)
-        
+
         # Act
         result = await service.update_document_status(
-            sample_document.id, 
+            sample_document.id,
             DocumentStatus.PROCESSING  # Invalid transition from PROCESSED to PROCESSING
         )
-        
+
         # Assert - this would depend on business logic implementation
         assert result is True  # Current implementation allows all transitions
 
@@ -239,22 +238,22 @@ class TestStatusTracking:
     async def test_processing_timestamp_update(self, mock_db_session, sample_document):
         """Test that processed_at timestamp is updated correctly."""
         # This test would verify that the processed_at field is set when document is marked as processed
-        
+
         # Arrange
         repository = DocumentRepository(mock_db_session)
-        
+
         # Mock the save method to capture the document state
         saved_documents = []
         async def mock_save(document):
             saved_documents.append(document)
             return document
-        
+
         repository.save = mock_save
-        
+
         # Act
         sample_document.status = DocumentStatus.PROCESSED
         await repository.save(sample_document)
-        
+
         # Assert
         assert len(saved_documents) == 1
         assert saved_documents[0].status == DocumentStatus.PROCESSED
@@ -265,24 +264,24 @@ class TestStatusTracking:
         # Arrange
         document_id = uuid.uuid4()
         error_message = "Detailed error message about processing failure"
-        
+
         # Mock document in database
         mock_document = MagicMock()
         mock_document.id = document_id
-        
+
         repository = DocumentRepository(mock_db_session)
-        
+
         # Mock the database operations
         mock_db_session.execute.return_value.scalar_one_or_none.return_value = mock_document
         mock_db_session.commit = AsyncMock()
-        
+
         # Act
         result = await repository.update_status(
-            document_id, 
-            DocumentStatus.FAILED, 
+            document_id,
+            DocumentStatus.FAILED,
             error_message
         )
-        
+
         # Assert
         assert result is True
         assert mock_document.status == DocumentStatus.FAILED
@@ -329,20 +328,20 @@ class TestStatusTracking:
         # Test is_processing property
         sample_document.status = DocumentStatus.PROCESSING
         assert sample_document.is_processing is True
-        
+
         sample_document.status = DocumentStatus.UPLOADED
         assert sample_document.is_processing is False
-        
+
         # Test is_processed property
         sample_document.status = DocumentStatus.PROCESSED
         assert sample_document.is_processed is True
-        
+
         sample_document.status = DocumentStatus.PROCESSING
         assert sample_document.is_processed is False
-        
+
         # Test has_failed property
         sample_document.status = DocumentStatus.FAILED
         assert sample_document.has_failed is True
-        
+
         sample_document.status = DocumentStatus.PROCESSED
         assert sample_document.has_failed is False

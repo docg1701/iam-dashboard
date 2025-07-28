@@ -40,33 +40,33 @@ class TestErrorHandling:
         """Test rollback when security validation fails."""
         # Arrange
         mock_document.status = DocumentStatus.PROCESSING
-        
+
         with patch('app.workers.document_processor.get_async_db') as mock_get_db:
             with patch('app.workers.document_processor.DocumentRepository') as mock_repo_class:
                 with patch('app.workers.document_processor.DocumentService') as mock_service_class:
                     with patch('app.workers.document_processor.get_llama_index_processor') as mock_processor:
-                        
+
                         # Configure mocks
                         mock_db_session = AsyncMock()
                         mock_get_db.return_value = async_context_manager(mock_db_session)
-                        
+
                         mock_repo = AsyncMock()
                         mock_repo_class.return_value = mock_repo
-                        
+
                         mock_service = AsyncMock()
                         mock_service.get_document_by_id.return_value = mock_document
                         mock_service.get_file_path.return_value = mock_file_path
                         mock_service_class.return_value = mock_service
-                        
+
                         # Configure processor to fail on security validation
                         mock_processor_instance = MagicMock()
                         mock_processor.return_value = mock_processor_instance
                         mock_processor_instance.process_document.side_effect = SecurityError("Security validation failed")
-                        
+
                         # Act & Assert
                         with pytest.raises(SecurityError):
                             await _process_document_async(mock_document.id, "task_123")
-                        
+
                         # Verify status was updated to failed
                         mock_service.update_document_status.assert_called_with(
                             mock_document.id, DocumentStatus.FAILED, "Security validation failed"
@@ -80,24 +80,24 @@ class TestErrorHandling:
             with patch('app.workers.document_processor.DocumentRepository') as mock_repo_class:
                 with patch('app.workers.document_processor.DocumentService') as mock_service_class:
                     with patch('app.workers.document_processor.get_llama_index_processor') as mock_processor:
-                        
+
                         # Configure mocks
                         mock_db_session = AsyncMock()
                         mock_get_db.return_value = async_context_manager(mock_db_session)
-                        
+
                         mock_repo = AsyncMock()
                         mock_repo_class.return_value = mock_repo
-                        
+
                         mock_service = AsyncMock()
                         mock_service.get_document_by_id.return_value = mock_document
                         mock_service.get_file_path.return_value = mock_file_path
                         mock_service_class.return_value = mock_service
-                        
+
                         # Configure processor to fail during processing
                         mock_processor_instance = MagicMock()
                         mock_processor.return_value = mock_processor_instance
                         mock_processor_instance.process_document.side_effect = Exception("Llama-Index processing failed")
-                        
+
                         # Act & Assert
                         with pytest.raises(Exception, match="Llama-Index processing failed"):
                             await _process_document_async(mock_document.id, "task_123")
@@ -110,14 +110,14 @@ class TestErrorHandling:
             with patch('app.workers.document_processor.DocumentRepository') as mock_repo_class:
                 with patch('app.workers.document_processor.DocumentService') as mock_service_class:
                     with patch('app.workers.document_processor.get_llama_index_processor') as mock_processor:
-                        
+
                         # Configure mocks
                         mock_db_session = AsyncMock()
                         mock_get_db.return_value = async_context_manager(mock_db_session)
-                        
+
                         mock_repo = AsyncMock()
                         mock_repo_class.return_value = mock_repo
-                        
+
                         # Simulate failure when saving chunks
                         call_count = 0
                         async def failing_save_chunk(chunk):
@@ -126,24 +126,24 @@ class TestErrorHandling:
                             if call_count > 2:  # Fail after saving 2 chunks
                                 raise Exception("Database connection lost")
                             return chunk
-                        
+
                         mock_repo.save_document_chunk.side_effect = failing_save_chunk
-                        
+
                         mock_service = AsyncMock()
                         mock_service.get_document_by_id.return_value = mock_document
                         mock_service.get_file_path.return_value = mock_file_path
                         mock_service_class.return_value = mock_service
-                        
+
                         # Configure processor to return multiple chunks
                         mock_processor_instance = MagicMock()
                         mock_processor.return_value = mock_processor_instance
                         mock_chunks = [MagicMock() for _ in range(5)]  # 5 chunks
                         mock_processor_instance.process_document.return_value = mock_chunks
-                        
+
                         # Act & Assert
                         with pytest.raises(Exception, match="Database connection lost"):
                             await _process_document_async(mock_document.id, "task_123")
-                        
+
                         # Verify only 2 chunks were saved before failure
                         assert mock_repo.save_document_chunk.call_count == 3  # 2 successful + 1 failed
 
@@ -152,22 +152,22 @@ class TestErrorHandling:
         """Test error handling when document is not found."""
         # Arrange
         nonexistent_id = uuid.uuid4()
-        
+
         with patch('app.workers.document_processor.get_async_db') as mock_get_db:
             with patch('app.workers.document_processor.DocumentRepository') as mock_repo_class:
                 with patch('app.workers.document_processor.DocumentService') as mock_service_class:
-                    
+
                     # Configure mocks
                     mock_db_session = AsyncMock()
                     mock_get_db.return_value = async_context_manager(mock_db_session)
-                    
+
                     mock_repo = AsyncMock()
                     mock_repo_class.return_value = mock_repo
-                    
+
                     mock_service = AsyncMock()
                     mock_service.get_document_by_id.return_value = None  # Document not found
                     mock_service_class.return_value = mock_service
-                    
+
                     # Act & Assert
                     with pytest.raises(ValueError, match="not found"):
                         await _process_document_async(nonexistent_id, "task_123")
@@ -179,19 +179,19 @@ class TestErrorHandling:
         with patch('app.workers.document_processor.get_async_db') as mock_get_db:
             with patch('app.workers.document_processor.DocumentRepository') as mock_repo_class:
                 with patch('app.workers.document_processor.DocumentService') as mock_service_class:
-                    
+
                     # Configure mocks
                     mock_db_session = AsyncMock()
                     mock_get_db.return_value = async_context_manager(mock_db_session)
-                    
+
                     mock_repo = AsyncMock()
                     mock_repo_class.return_value = mock_repo
-                    
+
                     mock_service = AsyncMock()
                     mock_service.get_document_by_id.return_value = mock_document
                     mock_service.get_file_path.return_value = Path("/nonexistent/file.pdf")
                     mock_service_class.return_value = mock_service
-                    
+
                     # Act & Assert
                     with pytest.raises(FileNotFoundError):
                         await _process_document_async(mock_document.id, "task_123")
@@ -201,23 +201,23 @@ class TestErrorHandling:
         """Test error handling when OCR processing fails for complex documents."""
         # Arrange
         mock_document.document_type = DocumentType.COMPLEX
-        
+
         with patch('app.workers.llama_index_processor.get_llama_index_config'):
             with patch('app.workers.llama_index_processor.get_document_preprocessor') as mock_preprocessor:
                 with patch('app.workers.llama_index_processor.get_security_validator') as mock_validator:
-                    
+
                     # Configure mocks
                     mock_preprocessor_instance = MagicMock()
                     mock_preprocessor.return_value = mock_preprocessor_instance
                     mock_preprocessor_instance.extract_text_from_complex_document.side_effect = Exception("OCR failed")
-                    
+
                     mock_validator_instance = MagicMock()
                     mock_validator.return_value = mock_validator_instance
                     mock_validator_instance.validate_pdf_file.return_value = {"valid": True}
-                    
+
                     from app.workers.llama_index_processor import LlamaIndexProcessor
                     processor = LlamaIndexProcessor()
-                    
+
                     # Act & Assert
                     with pytest.raises(Exception, match="OCR failed"):
                         await processor.process_document(mock_document, mock_file_path)
@@ -229,41 +229,43 @@ class TestErrorHandling:
         with patch('app.workers.llama_index_processor.get_llama_index_config') as mock_config:
             with patch('app.workers.llama_index_processor.get_document_preprocessor') as mock_preprocessor:
                 with patch('app.workers.llama_index_processor.get_security_validator') as mock_validator:
-                    
+
                     # Configure mocks
                     mock_config_instance = MagicMock()
                     mock_config.return_value = mock_config_instance
-                    
+
                     mock_preprocessor_instance = MagicMock()
                     mock_preprocessor.return_value = mock_preprocessor_instance
-                    
+
                     mock_validator_instance = MagicMock()
                     mock_validator.return_value = mock_validator_instance
                     mock_validator_instance.validate_pdf_file.return_value = {"valid": True}
                     mock_validator_instance.sanitize_extracted_text.return_value = "Test text"
-                    
+
                     # Mock text extraction
                     with patch('app.workers.llama_index_processor.LlamaIndexProcessor._extract_simple_text') as mock_extract:
                         mock_extract.return_value = "Sample text"
-                        
+
                         # Configure text splitter
                         mock_text_splitter = MagicMock()
                         mock_config_instance.get_text_splitter.return_value = mock_text_splitter
-                        
+
                         mock_node = MagicMock()
                         mock_node.node_id = "test_node"
                         mock_node.text = "Sample chunk"
                         mock_node.metadata = {}
                         mock_text_splitter.get_nodes_from_documents.return_value = [mock_node]
-                        
+
                         # Configure embedding model to fail
                         mock_embed_model = MagicMock()
                         mock_config_instance.get_embedding_model.return_value = mock_embed_model
                         mock_embed_model.aget_text_embedding.side_effect = Exception("Embedding API failed")
-                        
-                        from app.workers.llama_index_processor import LlamaIndexProcessor
+
+                        from app.workers.llama_index_processor import (
+                            LlamaIndexProcessor,
+                        )
                         processor = LlamaIndexProcessor()
-                        
+
                         # Act & Assert
                         with pytest.raises(Exception, match="Embedding API failed"):
                             await processor.process_document(mock_document, mock_file_path)
@@ -305,9 +307,9 @@ class TestErrorHandling:
 class async_context_manager:
     def __init__(self, return_value):
         self.return_value = return_value
-    
+
     def __aenter__(self):
         return self.return_value
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass

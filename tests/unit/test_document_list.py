@@ -136,10 +136,10 @@ class TestDocumentListComponent:
 
             assert component.documents == sample_documents
             assert component.last_update_time is not None
-            
+
             # Verify table rows were set
             component.documents_table.rows = []  # Should be populated
-            
+
             # Verify empty state is hidden and table is shown
             component.documents_table.style.assert_called()
             component.empty_state.style.assert_called()
@@ -167,7 +167,7 @@ class TestDocumentListComponent:
             await component._load_documents()
 
             assert component.documents == []
-            
+
             # Verify empty state is shown and table is hidden
             component.documents_table.style.assert_called_with("display: none")
             component.empty_state.style.assert_called_with("display: flex")
@@ -215,7 +215,7 @@ class TestDocumentListComponent:
         """Test auto-refresh when there are no processing documents."""
         client_id = uuid.uuid4()
         component = DocumentListComponent(client_id)
-        
+
         # All documents are processed or failed
         completed_doc = Document(
             id=uuid.uuid4(),
@@ -312,7 +312,7 @@ class TestDocumentListComponent:
              patch("app.ui_components.document_list.DocumentService", return_value=mock_document_service), \
              patch("app.ui_components.document_list.DocumentRepository", return_value=mock_document_repository), \
              patch("app.workers.document_processor.process_document") as mock_process, \
-             patch.object(component, "_load_documents") as mock_load, \
+             patch.object(component, "_load_documents"), \
              patch("app.ui_components.document_list.ui.notify") as mock_notify:
 
             mock_get_db.return_value.__aiter__.return_value = [mock_db_session]

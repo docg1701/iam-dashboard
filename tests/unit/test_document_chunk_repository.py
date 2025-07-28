@@ -145,7 +145,7 @@ class TestDocumentChunkRepository:
         # Verify operations
         mock_db_session.add_all.assert_called_once_with(sample_chunks)
         mock_db_session.commit.assert_called_once()
-        
+
         # Verify refresh was called for each chunk
         assert mock_db_session.refresh.call_count == len(sample_chunks)
         assert result == sample_chunks
@@ -180,7 +180,7 @@ class TestDocumentChunkRepository:
         # Verify operations
         assert result is True
         mock_db_session.execute.assert_called_once()
-        
+
         # Verify delete was called for each chunk
         assert mock_db_session.delete.call_count == len(sample_chunks)
         mock_db_session.commit.assert_called_once()
@@ -241,7 +241,7 @@ class TestDocumentChunkRepository:
     def test_repository_initialization(self, mock_db_session):
         """Test repository initialization."""
         repository = DocumentChunkRepository(mock_db_session)
-        
+
         assert repository.db_session == mock_db_session
 
     @pytest.mark.asyncio
@@ -307,7 +307,7 @@ class TestDocumentChunkRepository:
     def test_chunk_metadata_handling(self, sample_chunks):
         """Test that chunk metadata is properly structured."""
         chunk = sample_chunks[0]
-        
+
         assert isinstance(chunk.metadata, dict)
         assert "page" in chunk.metadata
         assert "section" in chunk.metadata
@@ -317,11 +317,11 @@ class TestDocumentChunkRepository:
     def test_chunk_text_content(self, sample_chunks):
         """Test that chunk text content is properly stored."""
         chunk1, chunk2, chunk3 = sample_chunks
-        
+
         assert chunk1.text == "First chunk of text content."
         assert chunk2.text == "Second chunk of text content with more details."
         assert chunk3.text == "Third chunk containing footer information."
-        
+
         # Verify text lengths
         assert len(chunk1.text) < len(chunk2.text)
         assert all(len(chunk.text) > 0 for chunk in sample_chunks)
@@ -329,14 +329,14 @@ class TestDocumentChunkRepository:
     def test_chunk_node_id_uniqueness(self, sample_chunks):
         """Test that chunk node IDs are unique."""
         node_ids = [chunk.node_id for chunk in sample_chunks]
-        
+
         assert len(node_ids) == len(set(node_ids))  # All unique
         assert all(node_id.startswith("chunk") for node_id in node_ids)
 
     def test_chunk_document_relationship(self, sample_chunks):
         """Test that all chunks belong to the same document."""
         document_ids = [chunk.document_id for chunk in sample_chunks]
-        
+
         # All chunks should have the same document_id
         assert len(set(document_ids)) == 1
         assert all(isinstance(doc_id, uuid.UUID) for doc_id in document_ids)

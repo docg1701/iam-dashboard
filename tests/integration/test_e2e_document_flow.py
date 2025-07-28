@@ -1,8 +1,6 @@
 """Integration tests for end-to-end document ingestion workflow."""
 
-import asyncio
 import uuid
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -51,82 +49,82 @@ class TestE2EDocumentFlow:
         """Test complete workflow for simple document processing."""
         # Arrange
         mock_document.document_type = DocumentType.SIMPLE
-        
+
         # Mock repository and service
         repository = DocumentRepository(mock_db_session)
-        service = DocumentService(repository)
-        
+        DocumentService(repository)
+
         # Mock the repository methods
         repository.get_by_id = AsyncMock(return_value=mock_document)
         repository.save = AsyncMock(return_value=mock_document)
         repository.save_document_chunk = AsyncMock()
-        
+
         # Mock Llama-Index processor
         with patch('app.workers.llama_index_processor.get_llama_index_config') as mock_config:
             with patch('app.workers.llama_index_processor.get_document_preprocessor') as mock_preprocessor:
                 with patch('app.workers.llama_index_processor.get_security_validator') as mock_validator:
-                    
+
                     # Configure mocks
                     mock_config_instance = MagicMock()
                     mock_config.return_value = mock_config_instance
-                    
+
                     mock_preprocessor_instance = MagicMock()
                     mock_preprocessor.return_value = mock_preprocessor_instance
                     mock_preprocessor_instance.is_complex_document.return_value = False
-                    
+
                     mock_validator_instance = MagicMock()
                     mock_validator.return_value = mock_validator_instance
                     mock_validator_instance.validate_pdf_file.return_value = {"valid": True}
                     mock_validator_instance.sanitize_extracted_text.return_value = "Cleaned sample text"
-                    
+
                     # Mock Llama-Index components
                     with patch('app.workers.llama_index_processor.PyMuPDFReader') as mock_reader:
-                        with patch('app.workers.llama_index_processor.LlamaDocument') as mock_llama_doc:
-                            
+                        with patch('app.workers.llama_index_processor.LlamaDocument'):
+
                             # Configure PyMuPDF reader
                             mock_reader_instance = MagicMock()
                             mock_reader.return_value = mock_reader_instance
                             mock_doc = MagicMock()
                             mock_doc.text = "Sample extracted text from PDF"
                             mock_reader_instance.load_data.return_value = [mock_doc]
-                            
+
                             # Configure text splitter
                             mock_text_splitter = MagicMock()
                             mock_config_instance.get_text_splitter.return_value = mock_text_splitter
-                            
+
                             mock_node_1 = MagicMock()
                             mock_node_1.node_id = "node_1"
                             mock_node_1.text = "First chunk of text"
                             mock_node_1.metadata = {}
-                            
+
                             mock_node_2 = MagicMock()
                             mock_node_2.node_id = "node_2"
                             mock_node_2.text = "Second chunk of text"
                             mock_node_2.metadata = {}
-                            
+
                             mock_text_splitter.get_nodes_from_documents.return_value = [mock_node_1, mock_node_2]
-                            
+
                             # Configure embedding model
                             mock_embed_model = MagicMock()
                             mock_config_instance.get_embedding_model.return_value = mock_embed_model
                             mock_embed_model.aget_text_embedding.return_value = [0.1] * 768
-                            
+
                             # Configure vector store
                             mock_vector_store = MagicMock()
                             mock_config_instance.get_vector_store.return_value = mock_vector_store
-                            
+
                             # Initialize processor
                             processor = LlamaIndexProcessor()
-                            
+
                             # Act
                             result_chunks = await processor.process_document(mock_document, sample_pdf_path)
-                            
+
                             # Assert
                             assert len(result_chunks) == 2
                             assert all(isinstance(chunk, DocumentChunk) for chunk in result_chunks)
                             assert result_chunks[0].text == "First chunk of text"
                             assert result_chunks[1].text == "Second chunk of text"
-                            
+
                             # Verify security validation was called
                             mock_validator_instance.validate_pdf_file.assert_called_once_with(sample_pdf_path)
                             mock_validator_instance.sanitize_extracted_text.assert_called_once()
@@ -136,55 +134,55 @@ class TestE2EDocumentFlow:
         """Test complete workflow for complex document requiring OCR."""
         # Arrange
         mock_document.document_type = DocumentType.COMPLEX
-        
+
         # Mock repository
         repository = DocumentRepository(mock_db_session)
         repository.get_by_id = AsyncMock(return_value=mock_document)
         repository.save = AsyncMock(return_value=mock_document)
         repository.save_document_chunk = AsyncMock()
-        
+
         # Mock components
         with patch('app.workers.llama_index_processor.get_llama_index_config') as mock_config:
             with patch('app.workers.llama_index_processor.get_document_preprocessor') as mock_preprocessor:
                 with patch('app.workers.llama_index_processor.get_security_validator') as mock_validator:
-                    
+
                     # Configure mocks for complex document processing
                     mock_config_instance = MagicMock()
                     mock_config.return_value = mock_config_instance
-                    
+
                     mock_preprocessor_instance = MagicMock()
                     mock_preprocessor.return_value = mock_preprocessor_instance
                     mock_preprocessor_instance.extract_text_from_complex_document.return_value = "OCR extracted text"
-                    
+
                     mock_validator_instance = MagicMock()
                     mock_validator.return_value = mock_validator_instance
                     mock_validator_instance.validate_pdf_file.return_value = {"valid": True}
                     mock_validator_instance.sanitize_extracted_text.return_value = "Cleaned OCR text"
-                    
+
                     # Configure text processing pipeline
                     mock_text_splitter = MagicMock()
                     mock_config_instance.get_text_splitter.return_value = mock_text_splitter
-                    
+
                     mock_node = MagicMock()
                     mock_node.node_id = "ocr_node_1"
                     mock_node.text = "OCR processed chunk"
                     mock_node.metadata = {}
                     mock_text_splitter.get_nodes_from_documents.return_value = [mock_node]
-                    
+
                     mock_embed_model = MagicMock()
                     mock_config_instance.get_embedding_model.return_value = mock_embed_model
                     mock_embed_model.aget_text_embedding.return_value = [0.2] * 768
-                    
+
                     # Initialize processor
                     processor = LlamaIndexProcessor()
-                    
+
                     # Act
                     result_chunks = await processor.process_document(mock_document, sample_pdf_path)
-                    
+
                     # Assert
                     assert len(result_chunks) == 1
                     assert result_chunks[0].text == "OCR processed chunk"
-                    
+
                     # Verify OCR path was taken
                     mock_preprocessor_instance.extract_text_from_complex_document.assert_called_once_with(sample_pdf_path)
 
@@ -202,36 +200,36 @@ class TestE2EDocumentFlow:
             file_size=1024,
             file_path="uploads/unclassified_document.pdf"
         )
-        
+
         # Mock repository
         repository = DocumentRepository(mock_db_session)
         repository.get_by_id = AsyncMock(return_value=mock_document)
         repository.save = AsyncMock(return_value=mock_document)
         repository.save_document_chunk = AsyncMock()
-        
+
         with patch('app.workers.llama_index_processor.get_llama_index_config') as mock_config:
             with patch('app.workers.llama_index_processor.get_document_preprocessor') as mock_preprocessor:
                 with patch('app.workers.llama_index_processor.get_security_validator') as mock_validator:
-                    
+
                     # Configure classification
                     mock_preprocessor_instance = MagicMock()
                     mock_preprocessor.return_value = mock_preprocessor_instance
                     mock_preprocessor_instance.is_complex_document.return_value = True  # Classify as complex
-                    
+
                     # Configure other mocks
                     mock_config_instance = MagicMock()
                     mock_config.return_value = mock_config_instance
-                    
+
                     mock_validator_instance = MagicMock()
                     mock_validator.return_value = mock_validator_instance
                     mock_validator_instance.validate_pdf_file.return_value = {"valid": True}
-                    
+
                     # Initialize processor
                     processor = LlamaIndexProcessor()
-                    
+
                     # Act
                     classification = processor.classify_document_complexity(sample_pdf_path)
-                    
+
                     # Assert
                     assert classification == "complex"
                     mock_preprocessor_instance.is_complex_document.assert_called_once_with(sample_pdf_path)
@@ -240,19 +238,19 @@ class TestE2EDocumentFlow:
     async def test_error_handling_in_workflow(self, mock_db_session, sample_pdf_path, mock_document):
         """Test error handling throughout the workflow."""
         # Arrange
-        repository = DocumentRepository(mock_db_session)
-        
-        with patch('app.workers.llama_index_processor.get_llama_index_config') as mock_config:
+        DocumentRepository(mock_db_session)
+
+        with patch('app.workers.llama_index_processor.get_llama_index_config'):
             with patch('app.workers.llama_index_processor.get_security_validator') as mock_validator:
-                
+
                 # Configure validator to fail
                 mock_validator_instance = MagicMock()
                 mock_validator.return_value = mock_validator_instance
                 mock_validator_instance.validate_pdf_file.side_effect = Exception("Security validation failed")
-                
+
                 # Initialize processor
                 processor = LlamaIndexProcessor()
-                
+
                 # Act & Assert
                 with pytest.raises(Exception, match="Security validation failed"):
                     await processor.process_document(mock_document, sample_pdf_path)
@@ -261,45 +259,45 @@ class TestE2EDocumentFlow:
     async def test_chunk_metadata_preservation(self, mock_db_session, sample_pdf_path, mock_document):
         """Test that chunk metadata is properly preserved throughout the workflow."""
         # Arrange
-        repository = DocumentRepository(mock_db_session)
-        
+        DocumentRepository(mock_db_session)
+
         with patch('app.workers.llama_index_processor.get_llama_index_config') as mock_config:
-            with patch('app.workers.llama_index_processor.get_document_preprocessor') as mock_preprocessor:
+            with patch('app.workers.llama_index_processor.get_document_preprocessor'):
                 with patch('app.workers.llama_index_processor.get_security_validator') as mock_validator:
-                    
+
                     # Configure mocks
                     mock_config_instance = MagicMock()
                     mock_config.return_value = mock_config_instance
-                    
+
                     mock_validator_instance = MagicMock()
                     mock_validator.return_value = mock_validator_instance
                     mock_validator_instance.validate_pdf_file.return_value = {"valid": True}
                     mock_validator_instance.sanitize_extracted_text.return_value = "Test text"
-                    
+
                     # Mock text extraction
                     with patch.object(LlamaIndexProcessor, '_extract_simple_text', return_value="Sample text"):
-                        
+
                         # Configure text splitter with metadata
                         mock_text_splitter = MagicMock()
                         mock_config_instance.get_text_splitter.return_value = mock_text_splitter
-                        
+
                         mock_node = MagicMock()
                         mock_node.node_id = "test_node"
                         mock_node.text = "Sample chunk"
                         mock_node.metadata = {"page": 1, "source": "test"}
                         mock_text_splitter.get_nodes_from_documents.return_value = [mock_node]
-                        
+
                         # Configure embedding
                         mock_embed_model = MagicMock()
                         mock_config_instance.get_embedding_model.return_value = mock_embed_model
                         mock_embed_model.aget_text_embedding.return_value = [0.1] * 768
-                        
+
                         # Initialize processor
                         processor = LlamaIndexProcessor()
-                        
+
                         # Act
                         result_chunks = await processor.process_document(mock_document, sample_pdf_path)
-                        
+
                         # Assert
                         assert len(result_chunks) == 1
                         chunk = result_chunks[0]

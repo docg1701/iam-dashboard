@@ -24,6 +24,9 @@ class Client(TimestampedModel):
     documents = relationship(
         "Document", back_populates="client", cascade="all, delete-orphan"
     )
+    questionnaire_drafts = relationship(
+        "QuestionnaireDraft", back_populates="client", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         """String representation of Client."""

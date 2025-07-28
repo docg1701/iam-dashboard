@@ -1,11 +1,14 @@
 """Unit tests for OpenCV preprocessing functions."""
 
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, patch, mock_open
 
-from app.services.document_preprocessing import DocumentPreprocessor, get_document_preprocessor
+from app.services.document_preprocessing import (
+    DocumentPreprocessor,
+    get_document_preprocessor,
+)
 
 
 class TestDocumentPreprocessor:
@@ -32,7 +35,7 @@ class TestDocumentPreprocessor:
         """Test preprocessing with grayscale input image."""
         # Act
         result = preprocessor.preprocess_image_for_ocr(sample_image)
-        
+
         # Assert
         assert result is not None
         assert len(result.shape) == 2  # Should be grayscale
@@ -44,7 +47,7 @@ class TestDocumentPreprocessor:
     @patch('app.services.document_preprocessing.cv2.GaussianBlur')
     @patch('app.services.document_preprocessing.cv2.threshold')
     @patch('app.services.document_preprocessing.cv2.morphologyEx')
-    def test_preprocess_image_color_input(self, mock_morph, mock_threshold, mock_blur, mock_cvt, 
+    def test_preprocess_image_color_input(self, mock_morph, mock_threshold, mock_blur, mock_cvt,
                                         preprocessor, sample_color_image):
         """Test preprocessing with color input image."""
         # Arrange
@@ -52,10 +55,10 @@ class TestDocumentPreprocessor:
         mock_blur.return_value = np.ones((400, 600), dtype=np.uint8)
         mock_threshold.return_value = (127, np.ones((400, 600), dtype=np.uint8))
         mock_morph.return_value = np.ones((400, 600), dtype=np.uint8)
-        
+
         # Act
-        result = preprocessor.preprocess_image_for_ocr(sample_color_image)
-        
+        preprocessor.preprocess_image_for_ocr(sample_color_image)
+
         # Assert
         mock_cvt.assert_called_once()
         mock_blur.assert_called_once()
@@ -73,10 +76,10 @@ class TestDocumentPreprocessor:
         mock_threshold.return_value = (127, sample_image)
         mock_morph.return_value = sample_image
         mock_resize.return_value = sample_image
-        
+
         # Act
         preprocessor.preprocess_image_for_ocr(sample_image)
-        
+
         # Assert
         mock_blur.assert_called_once()
         # Verify it was called with correct parameters (kernel size and sigma)
@@ -90,11 +93,11 @@ class TestDocumentPreprocessor:
         # Arrange
         import cv2
         mock_threshold.return_value = (127, sample_image)
-        
+
         # Act
         with patch('app.services.document_preprocessing.cv2.GaussianBlur', return_value=sample_image):
             preprocessor.preprocess_image_for_ocr(sample_image)
-        
+
         # Assert
         mock_threshold.assert_called_once()
         args, kwargs = mock_threshold.call_args
@@ -111,12 +114,12 @@ class TestDocumentPreprocessor:
         mock_kernel = np.ones((2, 2), np.uint8)
         mock_get_kernel.return_value = mock_kernel
         mock_morph.return_value = sample_image
-        
+
         # Act
         with patch('app.services.document_preprocessing.cv2.GaussianBlur', return_value=sample_image):
             with patch('app.services.document_preprocessing.cv2.threshold', return_value=(127, sample_image)):
                 preprocessor.preprocess_image_for_ocr(sample_image)
-        
+
         # Assert
         mock_get_kernel.assert_called_once_with(cv2.MORPH_RECT, (2, 2))
         mock_morph.assert_called_once_with(sample_image, cv2.MORPH_CLOSE, mock_kernel)
@@ -128,13 +131,13 @@ class TestDocumentPreprocessor:
         # Create a small image that would need upscaling
         small_image = np.ones((100, 150), dtype=np.uint8)
         mock_resize.return_value = np.ones((300, 450), dtype=np.uint8)
-        
+
         # Act
         with patch('app.services.document_preprocessing.cv2.GaussianBlur', return_value=small_image):
             with patch('app.services.document_preprocessing.cv2.threshold', return_value=(127, small_image)):
                 with patch('app.services.document_preprocessing.cv2.morphologyEx', return_value=small_image):
-                    result = preprocessor.preprocess_image_for_ocr(small_image)
-        
+                    preprocessor.preprocess_image_for_ocr(small_image)
+
         # Assert - resize should be called for upscaling
         mock_resize.assert_called_once()
 
@@ -142,10 +145,10 @@ class TestDocumentPreprocessor:
         """Test DPI estimation logic."""
         # Arrange
         test_image = np.ones((2479, 1753), dtype=np.uint8)  # Roughly A4 at 300 DPI
-        
+
         # Act
         dpi = preprocessor._estimate_dpi(test_image)
-        
+
         # Assert
         assert dpi > 200  # Should estimate reasonable DPI
         assert dpi < 400
@@ -154,10 +157,10 @@ class TestDocumentPreprocessor:
         """Test that DPI estimation has minimum threshold."""
         # Arrange
         tiny_image = np.ones((50, 50), dtype=np.uint8)
-        
+
         # Act
         dpi = preprocessor._estimate_dpi(tiny_image)
-        
+
         # Assert
         assert dpi >= 72  # Minimum DPI threshold
 
@@ -168,7 +171,7 @@ class TestDocumentPreprocessor:
         # Arrange
         pdf_path = tmp_path / "test.pdf"
         pdf_path.write_bytes(b"%PDF-1.4\ntest content")
-        
+
         mock_doc = MagicMock()
         mock_page = MagicMock()
         mock_pix = MagicMock()
@@ -177,14 +180,14 @@ class TestDocumentPreprocessor:
         mock_doc.__len__.return_value = 1
         mock_doc.__getitem__.return_value = mock_page
         mock_fitz_open.return_value = mock_doc
-        
+
         mock_tesseract.return_value = "Extracted text from PDF"
-        
+
         # Act
         with patch('app.services.document_preprocessing.Image.open'):
             with patch('app.services.document_preprocessing.cv2.cvtColor'):
                 result = preprocessor.extract_text_from_complex_document(pdf_path)
-        
+
         # Assert
         assert "Extracted text from PDF" in result
         mock_tesseract.assert_called()
@@ -195,17 +198,17 @@ class TestDocumentPreprocessor:
         # Arrange
         pdf_path = tmp_path / "simple.pdf"
         pdf_path.write_bytes(b"%PDF-1.4\ntest content")
-        
+
         mock_doc = MagicMock()
         mock_page = MagicMock()
         mock_page.get_text.return_value = "A" * 1500  # Lots of extractable text
         mock_doc.__len__.return_value = 1
         mock_doc.__getitem__.return_value = mock_page
         mock_fitz_open.return_value = mock_doc
-        
+
         # Act
         result = preprocessor.is_complex_document(pdf_path)
-        
+
         # Assert
         assert result is False  # Should be classified as simple
 
@@ -215,17 +218,17 @@ class TestDocumentPreprocessor:
         # Arrange
         pdf_path = tmp_path / "complex.pdf"
         pdf_path.write_bytes(b"%PDF-1.4\ntest content")
-        
+
         mock_doc = MagicMock()
         mock_page = MagicMock()
         mock_page.get_text.return_value = ""  # No extractable text (scanned image)
         mock_doc.__len__.return_value = 1
         mock_doc.__getitem__.return_value = mock_page
         mock_fitz_open.return_value = mock_doc
-        
+
         # Act
         result = preprocessor.is_complex_document(pdf_path)
-        
+
         # Assert
         assert result is True  # Should be classified as complex
 
@@ -233,10 +236,10 @@ class TestDocumentPreprocessor:
         """Test that preprocessing handles errors gracefully."""
         # Arrange
         invalid_image = "not an image"
-        
+
         # Act
         result = preprocessor.preprocess_image_for_ocr(invalid_image)
-        
+
         # Assert
         assert result == invalid_image  # Should return original on error
 
@@ -244,7 +247,7 @@ class TestDocumentPreprocessor:
         """Test factory function returns DocumentPreprocessor instance."""
         # Act
         result = get_document_preprocessor()
-        
+
         # Assert
         assert isinstance(result, DocumentPreprocessor)
 

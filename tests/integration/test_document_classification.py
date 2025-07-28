@@ -1,6 +1,5 @@
 """Integration tests for "simples" vs "complexos" document processing paths."""
 
-import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -50,16 +49,16 @@ class TestDocumentClassification:
         with patch('app.services.document_preprocessing.fitz.open') as mock_fitz:
             mock_doc = MagicMock()
             mock_page = MagicMock()
-            
+
             # Simulate lots of extractable text (indicates simple document)
             mock_page.get_text.return_value = "A" * 1500  # Lots of text
             mock_doc.__len__.return_value = 1
             mock_doc.__getitem__.return_value = mock_page
             mock_fitz.return_value = mock_doc
-            
+
             # Act
             is_complex = preprocessor.is_complex_document(simple_pdf_path)
-            
+
             # Assert
             assert is_complex is False  # Should be classified as simple
 
@@ -69,16 +68,16 @@ class TestDocumentClassification:
         with patch('app.services.document_preprocessing.fitz.open') as mock_fitz:
             mock_doc = MagicMock()
             mock_page = MagicMock()
-            
+
             # Simulate little to no extractable text (indicates scanned/complex document)
             mock_page.get_text.return_value = ""  # No extractable text
             mock_doc.__len__.return_value = 1
             mock_doc.__getitem__.return_value = mock_page
             mock_fitz.return_value = mock_doc
-            
+
             # Act
             is_complex = preprocessor.is_complex_document(complex_pdf_path)
-            
+
             # Assert
             assert is_complex is True  # Should be classified as complex
 
@@ -89,27 +88,27 @@ class TestDocumentClassification:
         with patch.object(processor, '_extract_simple_text') as mock_simple_extract:
             with patch.object(processor.preprocessor, 'extract_text_from_complex_document') as mock_complex_extract:
                 mock_simple_extract.return_value = "Simple extracted text"
-                
+
                 # Simulate simple document
                 mock_document = MagicMock()
                 mock_document.document_type = "simple"
                 mock_document.id = "test_id"
                 mock_document.filename = "simple.pdf"
-                
+
                 # Mock security validation
                 processor.security_validator.validate_pdf_file.return_value = {"valid": True}
                 processor.security_validator.sanitize_extracted_text.return_value = "Clean text"
-                
+
                 # Mock Llama-Index components
-                with patch('app.workers.llama_index_processor.LlamaDocument') as mock_llama_doc:
+                with patch('app.workers.llama_index_processor.LlamaDocument'):
                     processor.text_splitter.get_nodes_from_documents.return_value = []
-                    
+
                     # Act
                     try:
                         await processor.process_document(mock_document, simple_pdf_path)
                     except Exception:
                         pass  # We're testing the path, not the full execution
-                    
+
                     # Assert
                     mock_simple_extract.assert_called_once_with(simple_pdf_path)
                     mock_complex_extract.assert_not_called()
@@ -121,27 +120,27 @@ class TestDocumentClassification:
         with patch.object(processor, '_extract_simple_text') as mock_simple_extract:
             with patch.object(processor.preprocessor, 'extract_text_from_complex_document') as mock_complex_extract:
                 mock_complex_extract.return_value = "OCR extracted text"
-                
+
                 # Simulate complex document
                 mock_document = MagicMock()
                 mock_document.document_type = "complex"
                 mock_document.id = "test_id"
                 mock_document.filename = "complex.pdf"
-                
+
                 # Mock security validation
                 processor.security_validator.validate_pdf_file.return_value = {"valid": True}
                 processor.security_validator.sanitize_extracted_text.return_value = "Clean OCR text"
-                
+
                 # Mock Llama-Index components
-                with patch('app.workers.llama_index_processor.LlamaDocument') as mock_llama_doc:
+                with patch('app.workers.llama_index_processor.LlamaDocument'):
                     processor.text_splitter.get_nodes_from_documents.return_value = []
-                    
+
                     # Act
                     try:
                         await processor.process_document(mock_document, complex_pdf_path)
                     except Exception:
                         pass  # We're testing the path, not the full execution
-                    
+
                     # Assert
                     mock_complex_extract.assert_called_once_with(complex_pdf_path)
                     mock_simple_extract.assert_not_called()
@@ -153,17 +152,18 @@ class TestDocumentClassification:
         mock_document.document_type = None  # User hasn't specified type yet
         mock_document.id = "test_id"
         mock_document.filename = "unclassified.pdf"
-        
+
         # Act & Assert - System should require user to specify type
-        with patch('app.workers.document_processor._process_document_async') as mock_process:
+        with patch('app.workers.document_processor._process_document_async'):
             # Simulate document processing without user-specified type
             try:
                 # This should fail because document_type is None
-                from app.workers.document_processor import _process_document_async
                 import asyncio
                 import uuid
-                result = asyncio.run(_process_document_async(uuid.uuid4(), "test_task"))
-                assert False, "Should fail when document_type is not set by user"
+
+                from app.workers.document_processor import _process_document_async
+                asyncio.run(_process_document_async(uuid.uuid4(), "test_task"))
+                raise AssertionError("Should fail when document_type is not set by user")
             except (ValueError, Exception) as e:
                 assert "must have type set by user" in str(e) or "Document" in str(e)
 
@@ -174,20 +174,20 @@ class TestDocumentClassification:
         with open(borderline_pdf, 'wb') as f:
             f.write(b'%PDF-1.4\n')
             f.write(b'Borderline document content')
-        
+
         with patch('app.services.document_preprocessing.fitz.open') as mock_fitz:
             mock_doc = MagicMock()
             mock_page = MagicMock()
-            
+
             # Simulate moderate text content (borderline case)
             mock_page.get_text.return_value = "A" * 150  # Moderate amount of text
             mock_doc.__len__.return_value = 1
             mock_doc.__getitem__.return_value = mock_page
             mock_fitz.return_value = mock_doc
-            
+
             # Act
             is_complex = preprocessor.is_complex_document(borderline_pdf)
-            
+
             # Assert
             # With 150 chars out of 2000 expected (~7.5%), should be classified as complex
             assert is_complex is True
@@ -199,27 +199,27 @@ class TestDocumentClassification:
         with open(multi_page_pdf, 'wb') as f:
             f.write(b'%PDF-1.4\n')
             f.write(b'Multi-page document')
-        
+
         with patch('app.services.document_preprocessing.fitz.open') as mock_fitz:
             mock_doc = MagicMock()
-            
+
             # Mock multiple pages with varying text content
             mock_page_1 = MagicMock()
             mock_page_1.get_text.return_value = "A" * 800  # Good text on page 1
-            
+
             mock_page_2 = MagicMock()
             mock_page_2.get_text.return_value = ""  # No text on page 2 (scanned)
-            
+
             mock_page_3 = MagicMock()
             mock_page_3.get_text.return_value = "B" * 500  # Some text on page 3
-            
+
             mock_doc.__len__.return_value = 3
             mock_doc.__getitem__.side_effect = lambda i: [mock_page_1, mock_page_2, mock_page_3][i]
             mock_fitz.return_value = mock_doc
-            
+
             # Act
             is_complex = preprocessor.is_complex_document(multi_page_pdf)
-            
+
             # Assert
             # Total: 1300 chars out of 6000 expected (~21.7%), should be simple
             assert is_complex is False
@@ -230,11 +230,11 @@ class TestDocumentClassification:
         corrupt_pdf = tmp_path / "corrupt.pdf"
         with open(corrupt_pdf, 'wb') as f:
             f.write(b'Not a valid PDF')
-        
+
         with patch('app.services.document_preprocessing.fitz.open', side_effect=Exception("Cannot open PDF")):
             # Act
             is_complex = preprocessor.is_complex_document(corrupt_pdf)
-            
+
             # Assert
             # Should default to complex when classification fails
             assert is_complex is True
@@ -243,14 +243,14 @@ class TestDocumentClassification:
         """Test integration between processor and user-specified document types."""
         # Arrange
         test_path = Path("/test/document.pdf")
-        
+
         # Act & Assert - Test simple processing path (user selected "simple")
         with patch.object(processor, '_extract_simple_text_or_local_ocr') as mock_simple:
             mock_simple.return_value = "Local OCR text"
             result = processor._extract_simple_text_or_local_ocr(test_path)
             assert result == "Local OCR text"
             mock_simple.assert_called_once_with(test_path)
-        
+
         # Act & Assert - Test complex processing path (user selected "complex")
         with patch.object(processor.preprocessor, 'extract_text_from_complex_document') as mock_complex:
             mock_complex.return_value = "Gemini OCR text"
@@ -278,7 +278,7 @@ class TestDocumentClassification:
         with open(consistent_pdf, 'wb') as f:
             f.write(b'%PDF-1.4\n')
             f.write(b'Consistent document for testing')
-        
+
         with patch('app.services.document_preprocessing.fitz.open') as mock_fitz:
             mock_doc = MagicMock()
             mock_page = MagicMock()
@@ -286,11 +286,11 @@ class TestDocumentClassification:
             mock_doc.__len__.return_value = 1
             mock_doc.__getitem__.return_value = mock_page
             mock_fitz.return_value = mock_doc
-            
+
             # Act - run classification multiple times
             results = []
             for _ in range(5):
                 results.append(preprocessor.is_complex_document(consistent_pdf))
-            
+
             # Assert - all results should be the same
             assert len(set(results)) == 1  # All results are identical

@@ -24,7 +24,7 @@ class TestLlamaIndexConfig:
         """Test successful configuration initialization."""
         # Act
         config = LlamaIndexConfig()
-        
+
         # Assert
         assert config.embedding_dimension == 768
         assert config.chunk_size == 512
@@ -48,8 +48,8 @@ class TestLlamaIndexConfig:
     def test_gemini_api_configuration(self, mock_configure, mock_env_vars):
         """Test that Gemini API is configured correctly."""
         # Act
-        config = LlamaIndexConfig()
-        
+        LlamaIndexConfig()
+
         # Assert
         mock_configure.assert_called_once_with(api_key='test_gemini_key')
 
@@ -60,10 +60,10 @@ class TestLlamaIndexConfig:
         config = LlamaIndexConfig()
         mock_embedding = MagicMock()
         mock_gemini_embedding.return_value = mock_embedding
-        
+
         # Act
         result = config.get_embedding_model()
-        
+
         # Assert
         mock_gemini_embedding.assert_called_once_with(
             model_name="models/embedding-001",
@@ -79,10 +79,10 @@ class TestLlamaIndexConfig:
         config = LlamaIndexConfig()
         mock_splitter = MagicMock()
         mock_sentence_splitter.return_value = mock_splitter
-        
+
         # Act
         result = config.get_text_splitter()
-        
+
         # Assert
         mock_sentence_splitter.assert_called_once_with(
             chunk_size=512,
@@ -107,13 +107,13 @@ class TestLlamaIndexConfig:
         mock_engine.url.port = 5432
         mock_engine.url.username = 'user'
         mock_create_engine.return_value = mock_engine
-        
+
         mock_vector_store = MagicMock()
         mock_pg_vector_store.return_value = mock_vector_store
-        
+
         # Act
         result = config.get_vector_store()
-        
+
         # Assert
         mock_create_engine.assert_called_once_with('postgresql://user:pass@localhost:5432/test_db')
         mock_pg_vector_store.assert_called_once_with(
@@ -137,17 +137,17 @@ class TestLlamaIndexConfig:
         """Test global settings setup (replaces deprecated ServiceContext)."""
         # Arrange
         config = LlamaIndexConfig()
-        
+
         with patch.object(config, 'get_embedding_model') as mock_get_embed:
             with patch.object(config, 'get_text_splitter') as mock_get_splitter:
                 mock_embed_model = MagicMock()
                 mock_text_splitter = MagicMock()
                 mock_get_embed.return_value = mock_embed_model
                 mock_get_splitter.return_value = mock_text_splitter
-                
+
                 # Act
                 config.setup_global_settings()
-                
+
                 # Assert
                 assert mock_settings.embed_model == mock_embed_model
                 assert mock_settings.text_splitter == mock_text_splitter
@@ -158,7 +158,7 @@ class TestLlamaIndexConfig:
         """Test factory function returns LlamaIndexConfig instance."""
         # Act
         result = get_llama_index_config()
-        
+
         # Assert
         assert isinstance(result, LlamaIndexConfig)
 
@@ -166,7 +166,7 @@ class TestLlamaIndexConfig:
         """Test that chunk size is optimized for legal documents."""
         # Act
         config = LlamaIndexConfig()
-        
+
         # Assert
         assert config.chunk_size == 512  # Optimized for legal document density
         assert config.chunk_overlap == 50  # 10% overlap for context preservation
@@ -175,6 +175,6 @@ class TestLlamaIndexConfig:
         """Test embedding dimension matches Gemini model specifications."""
         # Act
         config = LlamaIndexConfig()
-        
+
         # Assert
         assert config.embedding_dimension == 768  # Gemini embedding dimension

@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
 
 from app.main import fastapi_app
 from app.models.client import Client
@@ -327,7 +326,7 @@ class TestQuestionnaireAPI:
         """Test date format validation in request model."""
         # Valid date formats
         valid_dates = ["01/01/2024", "31/12/2023", "15/06/2024"]
-        
+
         # Invalid date formats
         invalid_dates = ["2024-01-01", "01-01-2024", "1/1/24", "01/1/2024", "1/01/2024"]
 
@@ -344,13 +343,13 @@ class TestQuestionnaireAPI:
                 "incident_date": valid_date,
                 "medical_date": valid_date
             }
-            
+
             with pytest.MonkeyPatch().context() as mp:
                 # Mock to avoid actual processing
                 def mock_get_db():
                     yield AsyncMock()
                 mp.setattr("app.api.questionnaire.get_async_db", mock_get_db)
-                
+
                 response = test_client.post("/v1/questionnaire/generate", json=request_data)
                 # Should not fail validation (might fail later due to missing client, but not validation)
                 assert response.status_code != 422
@@ -362,6 +361,6 @@ class TestQuestionnaireAPI:
                 "incident_date": invalid_date,
                 "medical_date": "01/01/2024"  # Keep one valid
             }
-            
+
             response = test_client.post("/v1/questionnaire/generate", json=request_data)
             assert response.status_code == 422  # Validation error

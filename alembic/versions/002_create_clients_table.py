@@ -5,9 +5,10 @@ Revises: 001
 Create Date: 2025-01-26 12:00:00.000000
 
 """
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '002'
@@ -17,7 +18,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create clients table  
+    # Create clients table
     op.create_table('clients',
         sa.Column('id', postgresql.UUID(as_uuid=True), nullable=False, server_default=sa.text('gen_random_uuid()')),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),

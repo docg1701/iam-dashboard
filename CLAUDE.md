@@ -1,344 +1,235 @@
-# IAM DASHBOARD - SISTEMA DE ADVOCACIA SAAS
+# IAM Dashboard - Development Guide
 
-Este arquivo fornece orientações completas para trabalhar com o projeto IAM Dashboard, um sistema SaaS de agentes autônomos para escritórios de advocacia.
+SaaS platform for autonomous legal agents with document processing, questionnaire generation, and user management capabilities.
 
-## Visão Geral do Projeto
+## Tech Stack & Architecture
 
-### Contexto e Propósito
-O IAM Dashboard é uma plataforma SaaS modular projetada para escritórios de advocacia, com arquitetura de agentes autônomos acessados através de um painel de ícones. O sistema automatiza tarefas cognitivas complexas como análise de documentos e redação jurídica usando LLMs (Google Gemini API).
+- **Backend**: Python 3.12, FastAPI, SQLAlchemy 2.0, PostgreSQL with pgvector
+- **Frontend**: NiceGUI (web-based Python UI framework)
+- **Async Processing**: Celery + Redis (migrating to Agno autonomous agents)
+- **AI/ML**: Google Gemini API, LlamaIndex for document processing
+- **Container**: Docker with docker-compose
+- **Authentication**: JWT + 2FA (TOTP)
+- **Document Processing**: PyMuPDF, PyTesseract, OpenCV, Pillow
 
-### Tecnologias Principais
-- **Frontend:** NiceGUI (interface web responsiva)
-- **Backend:** FastAPI (API RESTful)
-- **Banco de Dados:** PostgreSQL com extensão pgvector
-- **IA/LLM:** Google Gemini 2.5 Pro e Flash API
-- **Processamento de Documentos:** PyMuPDF, PyTesseract
-- **Indexação:** Llama-Index para RAG (Retrieval-Augmented Generation)
-- **Framework de Agentes:** Agno
-- **Autenticação:** Python-JOSE com 2FA (PyOTP)
-- **Injeção de Dependência:** python-dependency-injector
-- **Processamento Assíncrono:** Celery + Redis
-- **OCR:** Tesseract local ou API Gemini
+## Project Structure
 
-## 🧱 Arquitetura e Estrutura do Código
-
-### Estrutura de Diretórios
 ```
-iam-dashboard/
-├── app/
-│   ├── main.py                 # Entry point da aplicação
-│   ├── core/                   # Módulos fundamentais
-│   │   ├── auth.py            # Sistema de autenticação
-│   │   └── database.py        # Configurações do banco
-│   ├── models/                 # Modelos SQLAlchemy
-│   │   ├── base.py
-│   │   ├── user.py
-│   │   └── client.py
-│   ├── repositories/           # Camada de acesso a dados
-│   ├── services/              # Lógica de negócio
-│   ├── ui_components/         # Componentes NiceGUI
-│   ├── agents/                # Agentes autônomos (Agno)
-│   ├── api/                   # Endpoints FastAPI
-│   └── workers/               # Tarefas Celery
-├── alembic/                   # Migrações do banco
-├── tests/                     # Testes organizados
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
-├── docs/                      # Documentação do projeto
-└── scripts/                   # Scripts utilitários
+app/
+├── main.py                    # FastAPI app entry point
+├── containers.py             # Dependency injection setup
+├── core/                     # Core infrastructure
+│   ├── auth.py              # Authentication & JWT handling
+│   └── database.py          # Database configuration
+├── models/                   # SQLAlchemy models
+├── repositories/            # Data access layer
+├── services/               # Business logic layer
+├── api/                    # FastAPI endpoints
+├── ui_components/          # NiceGUI components
+├── workers/                # Celery workers (being phased out)
+└── utils/                  # Utility functions
+
+docs/                       # Comprehensive project documentation
+├── architecture/           # Architecture decisions & design
+├── prd/                   # Product requirements
+└── reference/             # Technical references
 ```
 
-### Princípios de Arquitetura
-- **Modularidade:** Cada responsabilidade em módulos separados
-- **Processamento Assíncrono:** Celery para operações pesadas
-- **API-First:** FastAPI como contrato central
-- **Arquitetura de Camadas:** Separação clara entre UI, API, serviços e dados
-- **Injeção de Dependência:** Desacoplamento de componentes
+## Development Environment
 
-## 🛠️ Ambiente de Desenvolvimento
+### Package Management
+Uses UV for fast Python package management:
 
-### Configuração Inicial
 ```bash
-# Instalar UV (gerenciador de pacotes Python)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Criar ambiente virtual
-uv venv
-
-# Instalar dependências
+# Install dependencies
 uv sync
 
-# Configurar banco PostgreSQL
-docker-compose up -d postgres redis
+# Add new dependency
+uv add package-name
 
-# Executar migrações
-uv run alembic upgrade head
+# Add dev dependency  
+uv add --dev package-name
+
+# Run commands in environment
+uv run python -m app.main
+uv run pytest
 ```
 
-### Comandos de Desenvolvimento
-```bash
-# Executar aplicação
-uv run python app/main.py
+### Development Commands
 
-# Executar testes
+```bash
+# Run application
+uv run python -m app.main
+
+# Run tests
 uv run pytest
 
-# Executar testes com cobertura
+# Run tests with coverage
 uv run pytest --cov=app --cov-report=html
 
-# Formatação de código
-uv run black app/
-
-# Linting
-uv run ruff check app/
+# Linting & formatting
+uv run ruff check .
+uv run ruff format .
+uv run ruff check --fix .
 
 # Type checking
 uv run mypy app/
 
-# Gerar migração
-uv run python scripts/generate_migration.py "description"
+# Database migrations
+uv run alembic upgrade head
+uv run alembic revision --autogenerate -m "description"
 ```
 
-## 📋 Padrões de Código
+### Docker Environment
 
-### Estilo Python
-- **Formatador:** Black (linha máxima: 88 caracteres)
-- **Linter:** Ruff com regras configuradas
-- **Type Hints:** Obrigatório em todas as funções públicas
-- **Docstrings:** Estilo Google para funções públicas
-- **Convenções de Nomenclatura:**
-  - Variáveis/funções: `snake_case`
-  - Classes: `PascalCase`
-  - Constantes: `UPPER_SNAKE_CASE`
-  - Atributos privados: `_leading_underscore`
-
-### Estrutura de Componentes NiceGUI
-```python
-def component_name() -> None:
-    """Breve descrição do componente."""
-    with ui.column().classes("container-classes"):
-        ui.label("Título").classes("title-classes")
-        
-        with ui.row().classes("row-classes"):
-            ui.button("Ação", on_click=handle_action)
-```
-
-### Padrão de Serviços
-```python
-class ServiceName:
-    """Serviço responsável por [funcionalidade]."""
-    
-    def __init__(self, repository: RepositoryType) -> None:
-        self._repository = repository
-    
-    async def method_name(self, param: Type) -> ReturnType:
-        """Descrição do método."""
-        # Implementação
-```
-
-## 🧪 Estratégia de Testes
-
-### Estrutura de Testes
-- **Testes Unitários:** Testam componentes isoladamente
-- **Testes de Integração:** Testam fluxos completos
-- **Testes E2E:** Testam interface do usuário
-
-### Playwright MCP para Testes de Browser, Interface, UI e UX
-**OBRIGATÓRIO:** Para qualquer teste que necessite de browser automation, SEMPRE use o Playwright via MCP. 
-
-#### Tools disponíveis para testes
-**ACESSE:** https://github.com/microsoft/playwright-mcp/blob/main/README.md#tools
-
-### Padrões de Teste
-```python
-import pytest
-from unittest.mock import AsyncMock
-
-class TestServiceName:
-    """Testes para ServiceName."""
-    
-    @pytest.fixture
-    def service(self, mock_repository):
-        return ServiceName(mock_repository)
-    
-    async def test_method_success(self, service):
-        # Arrange
-        expected_result = "expected"
-        
-        # Act
-        result = await service.method_name("param")
-        
-        # Assert
-        assert result == expected_result
-```
-
-## 🔧 Configuração e Variáveis de Ambiente
-
-### Arquivo .env (Exemplo)
 ```bash
-# Aplicação
-APP_NAME="IAM Dashboard"
-DEBUG=false
-SECRET_KEY="your-secret-key-here"
+# Start full stack
+docker-compose up -d
 
-# Banco de Dados
-DATABASE_URL="postgresql://user:password@localhost:5432/iam_dashboard"
-
-# Redis
-REDIS_URL="redis://localhost:6379/0"
-
-# Google Gemini API
-GEMINI_API_KEY="your-gemini-api-key"
-
-# Autenticação
-JWT_SECRET_KEY="your-jwt-secret"
-JWT_ALGORITHM="HS256"
-JWT_EXPIRE_MINUTES=30
-```
-
-## 🚨 Tratamento de Erros
-
-### Hierarquia de Exceções
-```python
-class IAMDashboardError(Exception):
-    """Exceção base do sistema."""
-
-class AuthenticationError(IAMDashboardError):
-    """Erro de autenticação."""
-
-class DocumentProcessingError(IAMDashboardError):
-    """Erro no processamento de documentos."""
-```
-
-### Logging Estruturado
-```python
-import structlog
-
-logger = structlog.get_logger()
-
-# Log com contexto
-logger.info(
-    "Document processed",
-    user_id=user.id,
-    document_id=doc.id,
-    processing_time=elapsed_time
-)
-```
-
-## 🤖 Agentes Autônomos (Agno Framework)
-
-### Estrutura de um Agente
-```python
-from agno import Agent
-
-class ProcessorAgent(Agent):
-    """Agente processador de PDFs."""
-    
-    def __init__(self, name: str = "pdf_processor"):
-        super().__init__(name)
-        self.gemini_client = GeminiClient()
-    
-    async def process_document(self, document_path: str) -> dict:
-        """Processa um documento PDF."""
-        # Implementação do processamento
-```
-
-### MVP: Agentes Implementados
-1. **Processador de PDFs:** Ingestão e análise de documentos
-2. **Redator de Quesitos:** Geração de quesitos judiciais
-
-## 📊 Banco de Dados e Migrações
-
-### Convenções de Nomenclatura
-- **Tabelas:** `snake_case` (ex: `user_clients`, `legal_documents`)
-- **Primary Keys:** `{entity}_id` (ex: `user_id`, `client_id`)
-- **Foreign Keys:** `{referenced_entity}_id`
-- **Timestamps:** `{action}_at` (ex: `created_at`, `updated_at`)
-- **Booleans:** `is_{state}` (ex: `is_active`, `is_processed`)
-
-### Exemplo de Modelo
-```python
-from sqlalchemy import Column, String, DateTime, Boolean
-from app.models.base import BaseModel
-
-class User(BaseModel):
-    __tablename__ = "users"
-    
-    user_id = Column(String, primary_key=True)
-    email = Column(String, unique=True, nullable=False)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, nullable=False)
-```
-
-## 🔒 Segurança
-
-### Autenticação e Autorização
-- **2FA obrigatório** para todos os usuários
-- **JWT tokens** com expiração configurável
-- **Rate limiting** em endpoints públicos
-- **Validação de entrada** com Pydantic
-
-### Melhores Práticas
-- Nunca commitar secrets no código
-- Usar variáveis de ambiente para configurações sensíveis
-- Validar toda entrada do usuário
-- Logs estruturados sem informações sensíveis
-
-## 🚀 Deploy e Produção
-
-### Ambiente de Produção
-- **Servidor:** VPS Ubuntu Server 24.x
-- **Recursos mínimos:** 4 vCPUs, 4GB RAM
-- **Proxy reverso:** Caddy
-- **Containerização:** Docker + Docker Compose
-
-### Checklist de Deploy
-1. ✅ Todas as variáveis de ambiente configuradas
-2. ✅ Banco de dados migrado
-3. ✅ Redis configurado e funcionando
-4. ✅ Testes passando
-5. ✅ Logs estruturados configurados
-6. ✅ Backup do banco configurado
-
-## 📚 Recursos e Documentação
-
-### Links Importantes
-- [NiceGUI Documentation](https://nicegui.io/)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [Agno Framework](https://github.com/phidatahq/agno)
-- [Google Gemini API](https://ai.google.dev/)
-
-### Comandos Úteis de Desenvolvimento
-```bash
-# Buscar padrões no código
-rg "pattern" --type py
-
-# Listar arquivos Python
-rg --files -g "*.py"
-
-# Ver logs em tempo real
+# View logs
 docker-compose logs -f
 
-# Resetar banco de desenvolvimento
-uv run alembic downgrade base && uv run alembic upgrade head
+# Stop services
+docker-compose down
 ```
 
-## 🎯 Filosofia de Desenvolvimento
+## Code Standards & Conventions
 
-### Princípios Core
-- **KISS:** Soluções simples são preferíveis
-- **YAGNI:** Implementar apenas o que é necessário agora
-- **DRY:** Evitar duplicação de código
-- **Fail Fast:** Detectar erros o mais cedo possível
+### Python Style
+- **Line length**: 88 characters (Black standard)
+- **Type hints**: Required for all functions and class attributes
+- **Formatting**: Use `ruff format` (replaces Black)
+- **Linting**: Ruff with strict configuration
+- **Docstrings**: Google-style for public functions and classes
 
-### Fluxo de Trabalho
-1. **TDD:** Escrever teste primeiro
-2. **Implementação mínima:** Fazer o teste passar
-3. **Refatoração:** Melhorar mantendo testes verdes
-4. **Code Review:** Verificar qualidade e padrões
-5. **Deploy:** Após todos os testes passarem
+### Architecture Patterns
+- **Dependency Injection**: Uses `dependency-injector` for IoC
+- **Repository Pattern**: Data access abstraction
+- **Service Layer**: Business logic separation
+- **Vertical Slice**: Features organized by business capability
+
+### File & Function Limits
+- **Files**: Maximum 500 lines
+- **Functions**: Maximum 50 lines, single responsibility
+- **Classes**: Maximum 100 lines
+
+### Database Standards
+- **Primary Keys**: Entity-specific (e.g., `user_id`, `client_id`)
+- **Foreign Keys**: `{referenced_entity}_id`
+- **Timestamps**: `{action}_at` (e.g., `created_at`, `updated_at`)
+- **Booleans**: `is_{state}` (e.g., `is_active`)
+
+## Testing Strategy
+
+### Test Organization
+- **Unit tests**: `tests/unit/` - Individual components
+- **Integration tests**: `tests/integration/` - Service interactions
+- **E2E tests**: `tests/e2e/` - Full user workflows
+
+### Testing Requirements
+- **Minimum 80% code coverage**
+- **Co-locate tests** with code being tested
+- **Use pytest fixtures** for setup (see `conftest.py`)
+- **Mock external dependencies** (APIs, databases in unit tests)
+
+### Test Commands
+```bash
+# All tests
+uv run pytest
+
+# Specific test types
+uv run pytest tests/unit/
+uv run pytest tests/integration/
+uv run pytest -m "not slow"
+
+# Coverage report
+uv run pytest --cov=app --cov-report=html
+```
+
+## Security Best Practices
+
+- **Input Validation**: All user inputs validated at API boundaries
+- **Authentication**: JWT tokens with proper expiration
+- **2FA**: TOTP implementation for enhanced security
+- **SQL Injection**: Prevented via SQLAlchemy ORM
+- **Environment Variables**: Never commit secrets, use `.env` files
+- **Rate Limiting**: Implemented on public-facing endpoints
+
+## AI & Document Processing
+
+### LlamaIndex Integration
+- **Vector Store**: PostgreSQL with pgvector extension
+- **Embeddings**: Google Gemini embeddings
+- **Document Types**: PDF, images with OCR support
+- **Processing Pipeline**: Async via Celery workers
+
+### Gemini API Usage
+- **Document Analysis**: Content extraction and summarization
+- **Questionnaire Generation**: AI-powered legal questionnaires
+- **Embeddings**: Vector representations for semantic search
+
+## Migration Status: Agno Integration
+
+**Current State**: Traditional Celery workers
+**Target State**: Autonomous agents using Agno framework
+
+The system is in active migration from Celery-based async processing to autonomous agent architecture. See `docs/architecture/` for detailed migration plans.
+
+## Common Workflows
+
+### Adding New Feature
+1. Create feature branch: `git checkout -b feature/feature-name`
+2. Implement in service layer first
+3. Add repository methods if needed
+4. Create API endpoints
+5. Add UI components
+6. Write comprehensive tests
+7. Update documentation
+8. Submit PR with tests passing
+
+### Database Changes
+1. Modify SQLAlchemy models
+2. Generate migration: `uv run alembic revision --autogenerate -m "description"`
+3. Review generated migration
+4. Apply: `uv run alembic upgrade head`
+5. Update repository layer if needed
+
+### Debugging Tips
+- **Logs**: Check `app.log` and `celery.log`
+- **Database**: Use pgAdmin or direct psql connection
+- **Redis**: Use redis-cli for queue inspection
+- **Coverage**: Check `htmlcov/index.html` after test runs
+
+## Key Dependencies
+
+- **FastAPI**: Modern Python web framework
+- **SQLAlchemy 2.0**: ORM with async support
+- **NiceGUI**: Python-based web UI framework
+- **Celery**: Distributed task queue (being phased out)
+- **LlamaIndex**: Document processing and RAG
+- **Dependency Injector**: IoC container
+- **Agno**: Autonomous agent framework (integration in progress)
+
+## Environment Variables
+
+Required environment variables (use `.env` file):
+
+```bash
+DATABASE_URL=postgresql://user:pass@localhost/iam_dashboard
+REDIS_URL=redis://localhost:6379/0
+GEMINI_API_KEY=your_gemini_api_key
+SECRET_KEY=your_secret_key
+```
+
+## Support & Documentation
+
+- **Architecture**: See `docs/architecture/`
+- **API Documentation**: Available at `/docs` when running
+- **Technical References**: `docs/reference/`
+- **Migration Guide**: `docs/prd/epic-1-direct-migration-to-autonomous-agent-architecture.md`
 
 ---
 
-**Lembre-se:** Este projeto visa transformar a produtividade de escritórios de advocacia através da automação inteligente. Mantenha sempre o foco na experiência do usuário e na qualidade do código.
+**Last Updated**: January 2025  
+**Python Version**: 3.12+  
+**Development Status**: Active (Agent Migration Phase)

@@ -1,5 +1,5 @@
-version: 4.32.0
-installed_at: '2025-07-28T02:34:37.412Z'
+version: 4.33.0
+installed_at: '2025-07-28T11:51:19.417Z'
 install_type: full
 agent: null
 ides_setup:
@@ -8,13 +8,16 @@ ides_setup:
 expansion_packs: []
 files:
   - path: .bmad-core/working-in-the-brownfield.md
-    hash: 6009c2da0fd375da
+    hash: 03b4f11efa5abeb5
     modified: false
   - path: .bmad-core/user-guide.md
     hash: a816f42bb2a1a405
     modified: false
+  - path: .bmad-core/install-manifest.yaml.bak
+    hash: 5a3af018991e086f
+    modified: false
   - path: .bmad-core/install-manifest.yaml
-    hash: 97d9ce9710491897
+    hash: 5a3af018991e086f
     modified: false
   - path: .bmad-core/enhanced-ide-development-workflow.md
     hash: 3c3a2383d7772089
@@ -86,16 +89,16 @@ files:
     hash: e38e62f4fc2c1da2
     modified: false
   - path: .bmad-core/tasks/shard-doc.md
-    hash: ed55fdb819d630ca
+    hash: 5abe7f081a225b8a
     modified: false
   - path: .bmad-core/tasks/review-story.md
-    hash: b9dddb500aaaf548
+    hash: 1f9afc5930b0e3f2
     modified: false
   - path: .bmad-core/tasks/kb-mode-interaction.md
     hash: 2c52751f40ae7ef0
     modified: false
   - path: .bmad-core/tasks/index-docs.md
-    hash: f2be9139d8977fc9
+    hash: 688514e079f741e9
     modified: false
   - path: .bmad-core/tasks/generate-ai-frontend-prompt.md
     hash: b0a89d7a4aeaa5f8
@@ -104,10 +107,10 @@ files:
     hash: 9fade39213d767f2
     modified: false
   - path: .bmad-core/tasks/execute-checklist.md
-    hash: e0467201115d500f
+    hash: 96bbb50d21bdbb13
     modified: false
   - path: .bmad-core/tasks/document-project.md
-    hash: 585f55eb261a260f
+    hash: 32903527f7a25f21
     modified: false
   - path: .bmad-core/tasks/create-next-story.md
     hash: fa18ad2a04b6a93f
@@ -116,10 +119,10 @@ files:
     hash: 395719b8a002f7f9
     modified: false
   - path: .bmad-core/tasks/create-deep-research-prompt.md
-    hash: 5716b19ae78b3afb
+    hash: a1592f421540e40e
     modified: false
   - path: .bmad-core/tasks/create-brownfield-story.md
-    hash: b8ace638736a3e28
+    hash: faa0c75a70f2e209
     modified: false
   - path: .bmad-core/tasks/correct-course.md
     hash: 1c9dd46177b0ac6b
@@ -131,7 +134,7 @@ files:
     hash: 1b2b6c8b67a176ee
     modified: false
   - path: .bmad-core/tasks/advanced-elicitation.md
-    hash: 26f26e9ccb8b4aac
+    hash: 28e3b538dc6fe104
     modified: false
   - path: .bmad-core/data/technical-preferences.md
     hash: 6530bed845540b0d
@@ -143,25 +146,25 @@ files:
     hash: 2dae43f4464f1ad2
     modified: false
   - path: .bmad-core/data/bmad-kb.md
-    hash: b1d7e08dd8f74677
+    hash: 8900cde5b6a560e9
     modified: false
   - path: .bmad-core/checklists/story-draft-checklist.md
-    hash: d3a5783fcd5bf5e9
+    hash: 59d7aeacedd9d447
     modified: false
   - path: .bmad-core/checklists/story-dod-checklist.md
-    hash: 06ab7e73a69f930a
+    hash: 1505bd7fa85ec682
     modified: false
   - path: .bmad-core/checklists/po-master-checklist.md
-    hash: 89d2dc785aa0e8a7
+    hash: ae7469522bb1cd69
     modified: false
   - path: .bmad-core/checklists/pm-checklist.md
-    hash: 139209e205a92628
+    hash: 8aebde3d34411236
     modified: false
   - path: .bmad-core/checklists/change-checklist.md
     hash: 3c49c8f5ac96b63c
     modified: false
   - path: .bmad-core/checklists/architect-checklist.md
-    hash: 99f4655b9ff99dd1
+    hash: 24cc8a63ea467636
     modified: false
   - path: .bmad-core/bmad-core/user-guide.md
     hash: e3b0c44298fc1c14
