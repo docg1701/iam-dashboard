@@ -110,7 +110,6 @@ dmypy.json
 
 # Project specific
 *.log
-uploads/
 test_uploads/
 pdf/
 *.egg-info/
@@ -119,7 +118,6 @@ pdf/
 .bmad-core/
 .bmad-infrastructure-devops/
 .claude/
-.custom-prompts/
 .gemini/
 .nicegui/
 .roomodes
