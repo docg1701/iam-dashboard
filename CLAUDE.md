@@ -8,7 +8,7 @@ SaaS platform for autonomous legal agents with document processing, questionnair
 - **Frontend**: NiceGUI (web-based Python UI framework)
 - **Async Processing**: Agno autonomous agents with plugin system
 - **AI/ML**: Google Gemini API, LlamaIndex for document processing
-- **Container**: Docker with docker-compose
+- **Container**: Docker with docker compose (modern syntax)
 - **Authentication**: JWT + 2FA (TOTP)
 - **Document Processing**: PyMuPDF, PyTesseract, OpenCV, Pillow
 - **Testing**: MCP Playwright for E2E testing, pytest with comprehensive coverage
@@ -88,13 +88,13 @@ uv run alembic revision --autogenerate -m "description"
 
 ```bash
 # Start full stack
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
 ## Code Standards & Conventions
@@ -122,6 +122,21 @@ docker-compose down
 - **Foreign Keys**: `{referenced_entity}_id`
 - **Timestamps**: `{action}_at` (e.g., `created_at`, `updated_at`)
 - **Booleans**: `is_{state}` (e.g., `is_active`)
+
+### Docker & Containerization Standards
+- **Docker Commands**: ALWAYS use `docker compose` (without hyphen), never `docker-compose`
+- **Compose Files**: Use `docker-compose.yml` for file names but `docker compose` for commands
+- **Examples**: `docker compose up -d`, `docker compose logs -f`, `docker compose down`
+
+### Dependency Management Standards
+- **Version Pinning**: ALWAYS use `>=` for dependency versions, never `==`
+- **Rationale**: Allows patch updates and security fixes without breaking builds
+- **Examples**: 
+  - ✅ `fastapi>=0.116.0`
+  - ✅ `sqlalchemy>=2.0.41` 
+  - ❌ `fastapi==0.116.0`
+  - ❌ `sqlalchemy==2.0.41`
+- **Exception**: Only use exact versions (`==`) for known incompatible libraries or critical security requirements
 
 ## Testing Strategy
 
