@@ -99,11 +99,8 @@ class TestDocumentService:
     @pytest.mark.asyncio
     @patch("pathlib.Path.mkdir")
     @patch("builtins.open", new_callable=mock_open)
-    @patch("app.workers.document_processor.process_document")
-    @pytest.mark.asyncio
     async def test_create_document_success(
         self,
-        mock_process_document,
         mock_file_open,
         mock_mkdir,
         document_service,
@@ -111,7 +108,7 @@ class TestDocumentService:
         sample_file_content,
         sample_document,
     ):
-        """Test successful document creation."""
+        """Test successful document creation - processing handled by API layer."""
         # Arrange
         client_id = uuid.uuid4()
         filename = "test.pdf"
@@ -119,12 +116,6 @@ class TestDocumentService:
 
         mock_document_repository.check_duplicate_by_hash.return_value = None
         mock_document_repository.create.return_value = sample_document
-        mock_document_repository.update_task_id = AsyncMock()
-
-        # Mock Celery task
-        mock_task_result = Mock()
-        mock_task_result.id = "task_123"
-        mock_process_document.delay.return_value = mock_task_result
 
         # Act
         result = await document_service.create_document(
@@ -134,10 +125,10 @@ class TestDocumentService:
         # Assert
         assert result["success"] is True
         assert "document_id" in result
-        assert "task_id" in result
+        assert "task_id" not in result  # No longer returns task_id
+        assert "message" in result
         mock_document_repository.create.assert_called_once()
         mock_file_open.assert_called_once()
-        mock_process_document.delay.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_create_document_duplicate_found(

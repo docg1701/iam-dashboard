@@ -20,7 +20,7 @@ class DocumentStatus(str, Enum):
     """Document processing status."""
 
     UPLOADED = "uploaded"  # Just uploaded, waiting for processing
-    PROCESSING = "processing"  # Being processed by worker
+    PROCESSING = "processing"  # Being processed by agent
     PROCESSED = "processed"  # Successfully processed
     FAILED = "failed"  # Processing failed
 
@@ -46,7 +46,7 @@ class Document(TimestampedModel):
     )
 
     # Processing information
-    task_id = Column(String(255), nullable=True)  # Celery task ID
+    task_id = Column(String(255), nullable=True)  # Agent processing ID
     processed_at = Column(DateTime(timezone=True), nullable=True)
     error_message = Column(Text, nullable=True)
 

@@ -77,28 +77,12 @@ class DocumentService:
             # Save to database
             saved_document = await self.repository.create(document)
 
-            # Create Celery task for processing
-            try:
-                from app.workers.document_processor import process_document
-
-                task_result = process_document.delay(str(saved_document.id))
-                await self.repository.update_task_id(saved_document.id, task_result.id)
-
-                return {
-                    "success": True,
-                    "document_id": str(saved_document.id),
-                    "task_id": task_result.id,
-                    "message": "Documento criado e processamento iniciado",
-                }
-            except Exception as task_error:
-                # If task creation fails, still return success for document creation
-                # but note the task error
-                return {
-                    "success": True,
-                    "document_id": str(saved_document.id),
-                    "task_id": None,
-                    "message": f"Documento criado, mas erro ao iniciar processamento: {str(task_error)}",
-                }
+            # Document created successfully - processing will be handled by API layer via AgentManager
+            return {
+                "success": True,
+                "document_id": str(saved_document.id),
+                "message": "Documento criado e pronto para processamento",
+            }
 
         except Exception as e:
             return {"success": False, "error": f"Erro ao criar documento: {str(e)}"}
@@ -137,7 +121,7 @@ class DocumentService:
         return success
 
     async def get_document_by_task_id(self, task_id: str) -> Document | None:
-        """Get a document by Celery task ID."""
+        """Get a document by agent processing ID."""
         return await self.repository.get_by_task_id(task_id)
 
     async def get_processing_documents(self) -> list[Document]:

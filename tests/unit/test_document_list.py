@@ -331,12 +331,10 @@ class TestDocumentListComponent:
                 "app.ui_components.document_list.DocumentRepository",
                 return_value=mock_document_repository,
             ),
-            patch("app.workers.document_processor.process_document") as mock_process,
             patch.object(component, "_load_documents"),
             patch("app.ui_components.document_list.ui.notify") as mock_notify,
         ):
             mock_get_db.return_value.__aiter__.return_value = [mock_db_session]
-            mock_process.delay.return_value.id = "task123"
 
             await component._handle_retry_processing(event)
 

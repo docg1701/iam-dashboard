@@ -43,11 +43,9 @@ class TestDocumentFlow:
 
     @patch("pathlib.Path.mkdir")
     @patch("builtins.open", create=True)
-    @patch("app.workers.document_processor.process_document")
     @pytest.mark.asyncio
     async def test_complete_document_upload_flow(
         self,
-        mock_process_document,
         mock_open,
         mock_mkdir,
         mock_db_session,
@@ -63,6 +61,7 @@ class TestDocumentFlow:
 
         # Mock database responses
         mock_db_session.execute = AsyncMock()
+        mock_db_session.add = Mock()
         mock_db_session.commit = AsyncMock()
         mock_db_session.refresh = AsyncMock()
 
@@ -82,19 +81,8 @@ class TestDocumentFlow:
             file_path="uploads/test_document.pdf",
         )
 
-        mock_result_create = Mock()
-        mock_result_create.scalar_one_or_none.return_value = created_document
-
-        # Configure mock responses in order
-        mock_db_session.execute.side_effect = [
-            mock_result_duplicate,  # Duplicate check
-            mock_result_create,  # Document creation
-        ]
-
-        # Mock Celery task
-        mock_task_result = Mock()
-        mock_task_result.id = "task_123"
-        mock_process_document.delay.return_value = mock_task_result
+        # Configure mock responses
+        mock_db_session.execute.return_value = mock_result_duplicate  # Duplicate check
 
         # Mock file operations
         mock_file_handle = Mock()
@@ -111,18 +99,15 @@ class TestDocumentFlow:
         # Assert
         assert result["success"] is True
         assert "document_id" in result
-        assert "task_id" in result
-        assert result["task_id"] == "task_123"
+        assert "task_id" not in result  # No longer returns task_id
+        assert "message" in result
 
         # Verify file operations
         mock_mkdir.assert_called()
         mock_file_handle.write.assert_called_once_with(sample_pdf_content)
 
-        # Verify Celery task creation
-        mock_process_document.delay.assert_called_once()
-
         # Verify database operations
-        assert mock_db_session.execute.call_count == 2  # Duplicate check + create
+        assert mock_db_session.execute.call_count == 1  # Only duplicate check
         mock_db_session.add.assert_called_once()
         mock_db_session.commit.assert_called()
 

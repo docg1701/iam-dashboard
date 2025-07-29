@@ -55,7 +55,7 @@ class DocumentRepository:
         return result.scalar_one_or_none()
 
     async def get_by_task_id(self, task_id: str) -> Document | None:
-        """Get a document by Celery task ID."""
+        """Get a document by agent processing ID."""
         stmt = (
             select(Document)
             .where(Document.task_id == task_id)
@@ -86,7 +86,7 @@ class DocumentRepository:
         return True
 
     async def update_task_id(self, document_id: uuid.UUID, task_id: str) -> bool:
-        """Update the Celery task ID for a document."""
+        """Update the agent processing ID for a document."""
         stmt = select(Document).where(Document.id == document_id)
         result = await self.db_session.execute(stmt)
         document = result.scalar_one_or_none()

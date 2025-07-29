@@ -362,18 +362,11 @@ class DocumentListComponent:
                 document_repository = DocumentRepository(db_session)
                 document_service = DocumentService(document_repository)
 
-                # Reset document to uploaded status and retry processing
-                from app.workers.document_processor import process_document
-
+                # Reset document to uploaded status - processing retry should be handled via API
                 await document_service.update_document_status(
                     uuid.UUID(str(document.id)),
                     DocumentStatus.UPLOADED,
                     error_message=None,
-                )
-
-                task_result = process_document.delay(str(document.id))
-                await document_repository.update_task_id(
-                    uuid.UUID(str(document.id)), task_result.id
                 )
 
                 ui.notify(

@@ -346,7 +346,7 @@ technical_integration:
   backend_api: "FastAPI endpoints for data operations"
   database: "PostgreSQL with pgvector extension"
   ai_integration: "Google Gemini API for document processing and text generation"
-  async_processing: "Celery + Redis for heavy operations"
+  async_processing: "Agno autonomous agents for document processing"
   authentication: "Python-JOSE with 2FA (PyOTP)"
   dependency_injection: "python-dependency-injector framework"
 
