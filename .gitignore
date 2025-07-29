@@ -107,3 +107,38 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Project specific
+*.log
+uploads/
+test_uploads/
+pdf/
+*.egg-info/
+
+# IDE and tooling
+.bmad-core/
+.bmad-infrastructure-devops/
+.claude/
+.custom-prompts/
+.gemini/
+.nicegui/
+.roomodes
+
+# Backup files
+*.bak*
+*.backup
+
+# System files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+
+# Environment files
+.env.local
+.env.*.local
