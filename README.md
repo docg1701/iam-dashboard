@@ -62,29 +62,18 @@ uv run python --version
 
 #### 4. Configure Environment Variables
 ```bash
-# Create environment file
-cat > .env << EOF
-# Database Configuration
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/advocacia_db
+# Copy the example environment file
+cp .env.example .env
 
-# AI Services
-GEMINI_API_KEY=your_gemini_api_key_here
-
-# Security
-SECRET_KEY=your-super-secret-key-change-this-in-production
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-
-# Redis (for caching)
-REDIS_URL=redis://localhost:6379/0
-
-# Environment
-ENVIRONMENT=development
-DEBUG=true
-EOF
+# Edit the .env file to add your API keys and configuration
+nano .env  # or use your preferred editor
 ```
 
-**⚠️ Important**: Replace `your_gemini_api_key_here` with your actual Google Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+**⚠️ Important**: You need to update the `.env` file with:
+- **GEMINI_API_KEY**: Your Google Gemini API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
+- **SECRET_KEY**: A secure secret key for JWT tokens (generate with `openssl rand -base64 32`)
+- **JWT_SECRET_KEY**: Another secure key for JWT signing
+- Other configuration values as needed for your environment
 
 #### 5. Start Database and Services
 ```bash
@@ -141,6 +130,8 @@ For rapid development setup, use this one-liner:
 git clone https://github.com/your-username/iam-dashboard.git && \
 cd iam-dashboard && \
 uv sync && \
+cp .env.example .env && \
+echo "⚠️ Don't forget to edit .env with your API keys!" && \
 docker compose up -d db redis && \
 sleep 30 && \
 uv run alembic upgrade head && \
@@ -223,13 +214,19 @@ app/
 
 ### Environment Variables
 
-Create a `.env` file with:
+Copy the example file and configure your environment:
 
 ```bash
-DATABASE_URL=postgresql://user:pass@localhost/iam_dashboard
-GEMINI_API_KEY=your_gemini_api_key
-SECRET_KEY=your_secret_key
+cp .env.example .env
+# Then edit .env with your specific values
 ```
+
+Key variables to configure:
+- `GEMINI_API_KEY` - Your Google Gemini API key
+- `SECRET_KEY` - JWT secret for authentication  
+- `JWT_SECRET_KEY` - Additional JWT secret
+- `DATABASE_URL` - Database connection string (defaults work for Docker setup)
+- `REDIS_URL` - Redis connection string (defaults work for Docker setup)
 
 ## Testing
 

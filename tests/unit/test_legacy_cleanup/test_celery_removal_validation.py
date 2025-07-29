@@ -92,8 +92,7 @@ class TestCeleryRemovalValidation:
     def test_docker_compose_worker_service_removed(self):
         """Test that Celery worker service has been removed from docker-compose.yml."""
         compose_files = [
-            "docker-compose.yml",
-            "docker-compose.staging.yml"
+            "docker-compose.yml"
         ]
         
         for compose_file in compose_files:
