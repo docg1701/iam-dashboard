@@ -11,6 +11,8 @@ SaaS platform for autonomous legal agents with document processing, questionnair
 - **Container**: Docker with docker-compose
 - **Authentication**: JWT + 2FA (TOTP)
 - **Document Processing**: PyMuPDF, PyTesseract, OpenCV, Pillow
+- **Testing**: MCP Playwright for E2E testing, pytest with comprehensive coverage
+- **Documentation**: MCP Context7 for framework documentation queries
 
 ## Project Structure
 
@@ -126,7 +128,7 @@ docker-compose down
 ### Test Organization
 - **Unit tests**: `tests/unit/` - Individual components, agents, and tools
 - **Integration tests**: `tests/integration/` - Agent workflows and API endpoints
-- **E2E tests**: `tests/e2e/` - Full user workflows
+- **E2E tests**: `tests/e2e/` - Full user workflows using MCP Playwright
 - **Performance tests**: `tests/performance/` - Agent benchmarking and load testing
 
 ### Testing Requirements
@@ -134,6 +136,8 @@ docker-compose down
 - **Co-locate tests** with code being tested
 - **Use pytest fixtures** for setup (see `conftest.py`)
 - **Mock external dependencies** (APIs, databases in unit tests)
+- **E2E tests MUST use MCP Playwright** - no mocked browser interactions
+- **Real browser testing only** - MCP Playwright provides actual browser automation
 
 ### Test Commands
 ```bash
@@ -143,10 +147,14 @@ uv run pytest
 # Specific test types
 uv run pytest tests/unit/
 uv run pytest tests/integration/
+uv run pytest tests/e2e/  # Real E2E with MCP Playwright
 uv run pytest -m "not slow"
 
 # Coverage report
 uv run pytest --cov=app --cov-report=html
+
+# E2E tests only (requires running application)
+uv run pytest tests/e2e/ -m e2e
 ```
 
 ## Security Best Practices
@@ -171,24 +179,39 @@ uv run pytest --cov=app --cov-report=html
 - **Questionnaire Generation**: AI-powered legal questionnaires
 - **Embeddings**: Vector representations for semantic search
 
-## Migration Status: Agno Integration
+### Agno Autonomous Agents
+- **Multi-agent Architecture**: Coordinated autonomous agents for specialized tasks
+- **Plugin System**: Extensible agent capabilities through plugins
+- **Reasoning Capabilities**: Chain-of-thought reasoning for complex problem solving
+- **Memory Management**: Persistent agent memory using SQLite/PostgreSQL
+- **Tool Integration**: PDF processing, OCR, document analysis, and LLM tools
 
-**Current State**: ✅ **COMPLETED** - Autonomous agents using Agno framework
+## Current Implementation Status
+
+**Agno Integration**: ✅ **COMPLETED** - Autonomous agents using Agno framework
+**MCP Integration**: ✅ **ACTIVE** - Context7 for documentation, Playwright for E2E testing
 **Previous State**: Traditional Celery workers (removed)
 
-The system has successfully completed migration from Celery-based async processing to autonomous agent architecture. All legacy components have been removed and comprehensive testing has been implemented. See `docs/architecture/` for technical details.
+The system has successfully completed migration from Celery-based async processing to autonomous agent architecture. All legacy components have been removed and comprehensive testing has been implemented. MCP tools are integrated for enhanced development workflow. See `docs/architecture/` for technical details.
 
 ## Common Workflows
 
 ### Adding New Feature
 1. Create feature branch: `git checkout -b feature/feature-name`
-2. Implement in service layer first
-3. Add repository methods if needed
-4. Create API endpoints
-5. Add UI components
-6. Write comprehensive tests
-7. Update documentation
-8. Submit PR with tests passing
+2. Use MCP Context7 to research framework best practices if needed
+3. Implement in service layer first
+4. Add repository methods if needed
+5. Create API endpoints
+6. Add UI components (NiceGUI)
+7. Write comprehensive tests (unit, integration, E2E with MCP Playwright)
+8. Update documentation
+9. Submit PR with tests passing
+
+### Documentation Research
+1. Use MCP Context7 for framework-specific documentation
+2. Query Context7 for Agno, NiceGUI, SQLAlchemy patterns
+3. Get up-to-date examples and best practices
+4. Apply learned patterns to implementation
 
 ### Database Changes
 1. Modify SQLAlchemy models
@@ -198,20 +221,24 @@ The system has successfully completed migration from Celery-based async processi
 5. Update repository layer if needed
 
 ### Debugging Tips
-- **Logs**: Check `app.log` and `celery.log`
+- **Logs**: Check `app.log` for application logs
 - **Database**: Use pgAdmin or direct psql connection
-- **Redis**: Use redis-cli for queue inspection
+- **Agent Debugging**: Enable debug mode in agent configuration
 - **Coverage**: Check `htmlcov/index.html` after test runs
+- **E2E Testing**: Use MCP Playwright browser tools for real UI debugging
+- **Agent Memory**: Check SQLite database for agent memory persistence
 
 ## Key Dependencies
 
 - **FastAPI**: Modern Python web framework
 - **SQLAlchemy 2.0**: ORM with async support
-- **NiceGUI**: Python-based web UI framework
-- **Celery**: Distributed task queue (being phased out)
+- **NiceGUI**: Python-based web UI framework for rapid UI development
+- **Agno**: Autonomous agent framework with reasoning capabilities
 - **LlamaIndex**: Document processing and RAG
 - **Dependency Injector**: IoC container
-- **Agno**: Autonomous agent framework (integration in progress)
+- **MCP Context7**: Framework documentation queries
+- **MCP Playwright**: Real browser automation for E2E testing
+- **Google Gemini**: AI/ML API for document analysis and embeddings
 
 ## Environment Variables
 
@@ -235,4 +262,31 @@ SECRET_KEY=your_secret_key
 
 **Last Updated**: January 2025  
 **Python Version**: 3.12+  
-**Development Status**: Active (Agent Migration Phase)
+**Development Status**: Active Production (Autonomous Agent Architecture)
+
+## MCP Integration Guide
+
+### Context7 Documentation Queries
+- Use MCP Context7 for researching framework documentation
+- Query patterns: `/zauberzeug/nicegui`, `/agno-agi/agno-docs`, `/sqlalchemy/sqlalchemy`
+- Get current examples and best practices
+- Research integration patterns before implementation
+
+### Playwright E2E Testing
+- **MANDATORY**: All E2E tests must use MCP Playwright functions
+- **NO MOCKED BROWSERS**: Only real browser automation allowed
+- Use `mcp__playwright__browser_*` functions for all browser interactions
+- Test real user workflows with actual browser instances
+- Examples in `tests/e2e/test_playwright_mcp_real.py`
+
+### MCP Testing Workflow
+```bash
+# Start application first
+uv run python -m app.main
+
+# Run E2E tests with real browser automation
+uv run pytest tests/e2e/ -m e2e --slow
+
+# Single E2E test with browser debugging
+uv run pytest tests/e2e/test_playwright_mcp_real.py::TestRealMCPIntegration::test_mcp_browser_navigate -v
+```
