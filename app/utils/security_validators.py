@@ -16,50 +16,48 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB in bytes
 
 # PDF magic bytes for validation
 PDF_MAGIC_BYTES = [
-    b'%PDF-1.0',
-    b'%PDF-1.1',
-    b'%PDF-1.2',
-    b'%PDF-1.3',
-    b'%PDF-1.4',
-    b'%PDF-1.5',
-    b'%PDF-1.6',
-    b'%PDF-1.7',
+    b"%PDF-1.0",
+    b"%PDF-1.1",
+    b"%PDF-1.2",
+    b"%PDF-1.3",
+    b"%PDF-1.4",
+    b"%PDF-1.5",
+    b"%PDF-1.6",
+    b"%PDF-1.7",
 ]
 
 # Patterns that could indicate injection attempts
 INJECTION_PATTERNS = [
     # JavaScript injection
-    r'<script[^>]*>.*?</script>',
-    r'javascript:',
-    r'vbscript:',
-
+    r"<script[^>]*>.*?</script>",
+    r"javascript:",
+    r"vbscript:",
     # SQL injection patterns
     r"(?:'[^']*'[;])|(?:--)|(?:\/\*)|(?:\*\/)",
-    r'union.*select.*from',
-    r'drop\s+table',
-    r'delete\s+from',
-    r'insert\s+into',
-
+    r"union.*select.*from",
+    r"drop\s+table",
+    r"delete\s+from",
+    r"insert\s+into",
     # XSS patterns
-    r'<iframe[^>]*>.*?</iframe>',
-    r'<object[^>]*>.*?</object>',
-    r'<embed[^>]*>.*?</embed>',
-    r'onload\s*=',
-    r'onerror\s*=',
-    r'onclick\s*=',
-
+    r"<iframe[^>]*>.*?</iframe>",
+    r"<object[^>]*>.*?</object>",
+    r"<embed[^>]*>.*?</embed>",
+    r"onload\s*=",
+    r"onerror\s*=",
+    r"onclick\s*=",
     # Command injection
-    r'[;&|`$]',
-    r'\$\(',
-    r'`[^`]*`',
-
+    r"[;&|`$]",
+    r"\$\(",
+    r"`[^`]*`",
     # Path traversal
-    r'\.\./',
-    r'\.\.\\',
+    r"\.\./",
+    r"\.\.\\",
 ]
 
 # Compile patterns for performance
-COMPILED_INJECTION_PATTERNS = [re.compile(pattern, re.IGNORECASE) for pattern in INJECTION_PATTERNS]
+COMPILED_INJECTION_PATTERNS = [
+    re.compile(pattern, re.IGNORECASE) for pattern in INJECTION_PATTERNS
+]
 
 
 class DocumentSecurityValidator:
@@ -88,7 +86,7 @@ class DocumentSecurityValidator:
             "warnings": [],
             "file_size": 0,
             "is_encrypted": False,
-            "page_count": 0
+            "page_count": 0,
         }
 
         try:
@@ -104,17 +102,21 @@ class DocumentSecurityValidator:
             validation_results["file_size"] = file_size
 
             if file_size > self.max_file_size:
-                raise SecurityError(f"File size {file_size} exceeds maximum allowed size {self.max_file_size}")
+                raise SecurityError(
+                    f"File size {file_size} exceeds maximum allowed size {self.max_file_size}"
+                )
 
             if file_size == 0:
                 raise SecurityError("File is empty")
 
             # Check 3: PDF header validation
-            with open(file_path, 'rb') as f:
+            with open(file_path, "rb") as f:
                 header = f.read(10)
 
             if not any(header.startswith(magic) for magic in PDF_MAGIC_BYTES):
-                raise SecurityError("Invalid PDF header - file may be corrupted or not a valid PDF")
+                raise SecurityError(
+                    "Invalid PDF header - file may be corrupted or not a valid PDF"
+                )
 
             # Check 4: PDF structure validation using PyMuPDF
             try:
@@ -124,7 +126,9 @@ class DocumentSecurityValidator:
 
                 # Check for password protection
                 if pdf_document.needs_pass:
-                    validation_results["warnings"].append("Document is password protected")
+                    validation_results["warnings"].append(
+                        "Document is password protected"
+                    )
 
                 # Basic structure validation
                 if len(pdf_document) == 0:
@@ -133,9 +137,13 @@ class DocumentSecurityValidator:
                 pdf_document.close()
 
             except Exception as pdf_error:
-                raise SecurityError(f"PDF structure validation failed: {str(pdf_error)}") from pdf_error
+                raise SecurityError(
+                    f"PDF structure validation failed: {str(pdf_error)}"
+                ) from pdf_error
 
-            logger.info(f"PDF validation successful for {file_path.name}: {validation_results}")
+            logger.info(
+                f"PDF validation successful for {file_path.name}: {validation_results}"
+            )
             return validation_results
 
         except SecurityError:
@@ -167,19 +175,25 @@ class DocumentSecurityValidator:
             matches = pattern.findall(sanitized)
             if matches:
                 removed_patterns.extend(matches)
-                sanitized = pattern.sub('', sanitized)
+                sanitized = pattern.sub("", sanitized)
 
         # Log any sanitization actions
         if removed_patterns:
-            logger.warning(f"Removed {len(removed_patterns)} potential injection patterns from text")
-            logger.debug(f"Removed patterns: {removed_patterns[:5]}...")  # Log first 5 for debugging
+            logger.warning(
+                f"Removed {len(removed_patterns)} potential injection patterns from text"
+            )
+            logger.debug(
+                f"Removed patterns: {removed_patterns[:5]}..."
+            )  # Log first 5 for debugging
 
         # Additional cleanup
         sanitized = self._clean_text(sanitized)
 
         final_length = len(sanitized)
         if final_length != original_length:
-            logger.info(f"Text sanitized: {original_length} -> {final_length} characters")
+            logger.info(
+                f"Text sanitized: {original_length} -> {final_length} characters"
+            )
 
         return sanitized
 
@@ -194,23 +208,25 @@ class DocumentSecurityValidator:
             Cleaned text
         """
         # Remove null bytes
-        text = text.replace('\x00', '')
+        text = text.replace("\x00", "")
 
         # Normalize line endings
-        text = text.replace('\r\n', '\n').replace('\r', '\n')
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
 
         # Remove excessive whitespace but preserve paragraph structure
-        lines = text.split('\n')
+        lines = text.split("\n")
         cleaned_lines = []
 
         for line in lines:
             # Clean each line but preserve intentional spacing
-            cleaned_line = ' '.join(line.split())
+            cleaned_line = " ".join(line.split())
             cleaned_lines.append(cleaned_line)
 
-        return '\n'.join(cleaned_lines)
+        return "\n".join(cleaned_lines)
 
-    def create_audit_log_entry(self, operation: str, document_id: str, details: dict[str, Any]) -> dict[str, Any]:
+    def create_audit_log_entry(
+        self, operation: str, document_id: str, details: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Create an audit log entry for document processing operations.
 
@@ -253,7 +269,7 @@ class DocumentSecurityValidator:
                     # Overwrite file content before deletion for security
                     if file_path.is_file():
                         file_size = file_path.stat().st_size
-                        with open(file_path, 'wb') as f:
+                        with open(file_path, "wb") as f:
                             f.write(os.urandom(file_size))
                         file_path.unlink()
 
@@ -271,11 +287,13 @@ class DocumentSecurityValidator:
     def _get_utc_timestamp(self) -> str:
         """Get current UTC timestamp in ISO format."""
         from datetime import datetime
+
         return datetime.now(UTC).isoformat()
 
 
 class SecurityError(Exception):
     """Custom exception for security validation failures."""
+
     pass
 
 

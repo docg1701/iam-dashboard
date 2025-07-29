@@ -48,7 +48,9 @@ class TestDocumentChunkRepository:
         ]
 
     @pytest.mark.asyncio
-    async def test_get_by_document_id_success(self, repository, mock_db_session, sample_chunks):
+    async def test_get_by_document_id_success(
+        self, repository, mock_db_session, sample_chunks
+    ):
         """Test successful retrieval of chunks by document ID."""
         document_id = sample_chunks[0].document_id
 
@@ -137,7 +139,9 @@ class TestDocumentChunkRepository:
         assert result == chunk
 
     @pytest.mark.asyncio
-    async def test_create_multiple_success(self, repository, mock_db_session, sample_chunks):
+    async def test_create_multiple_success(
+        self, repository, mock_db_session, sample_chunks
+    ):
         """Test successful creation of multiple document chunks."""
         # Execute method
         result = await repository.create_multiple(sample_chunks)
@@ -165,7 +169,9 @@ class TestDocumentChunkRepository:
         assert result == empty_chunks
 
     @pytest.mark.asyncio
-    async def test_delete_by_document_id_success(self, repository, mock_db_session, sample_chunks):
+    async def test_delete_by_document_id_success(
+        self, repository, mock_db_session, sample_chunks
+    ):
         """Test successful deletion of chunks by document ID."""
         document_id = sample_chunks[0].document_id
 
@@ -205,7 +211,9 @@ class TestDocumentChunkRepository:
         mock_db_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_count_by_document_id_success(self, repository, mock_db_session, sample_chunks):
+    async def test_count_by_document_id_success(
+        self, repository, mock_db_session, sample_chunks
+    ):
         """Test successful counting of chunks by document ID."""
         document_id = sample_chunks[0].document_id
 
@@ -257,7 +265,9 @@ class TestDocumentChunkRepository:
             await repository.get_by_document_id(document_id)
 
     @pytest.mark.asyncio
-    async def test_create_commit_error(self, repository, mock_db_session, sample_chunks):
+    async def test_create_commit_error(
+        self, repository, mock_db_session, sample_chunks
+    ):
         """Test error handling during commit in create operation."""
         chunk = sample_chunks[0]
 
@@ -272,7 +282,9 @@ class TestDocumentChunkRepository:
         mock_db_session.add.assert_called_once_with(chunk)
 
     @pytest.mark.asyncio
-    async def test_create_multiple_commit_error(self, repository, mock_db_session, sample_chunks):
+    async def test_create_multiple_commit_error(
+        self, repository, mock_db_session, sample_chunks
+    ):
         """Test error handling during commit in create_multiple operation."""
         # Mock commit error
         mock_db_session.commit.side_effect = Exception("Commit failed")
@@ -285,7 +297,9 @@ class TestDocumentChunkRepository:
         mock_db_session.add_all.assert_called_once_with(sample_chunks)
 
     @pytest.mark.asyncio
-    async def test_delete_commit_error(self, repository, mock_db_session, sample_chunks):
+    async def test_delete_commit_error(
+        self, repository, mock_db_session, sample_chunks
+    ):
         """Test error handling during commit in delete operation."""
         document_id = sample_chunks[0].document_id
 

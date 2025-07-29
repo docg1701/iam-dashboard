@@ -14,10 +14,13 @@ class TestLlamaIndexConfig:
     @pytest.fixture
     def mock_env_vars(self):
         """Mock environment variables for testing."""
-        with patch.dict(os.environ, {
-            'GEMINI_API_KEY': 'test_gemini_key',
-            'DATABASE_URL': 'postgresql://user:pass@localhost:5432/test_db'
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "GEMINI_API_KEY": "test_gemini_key",
+                "DATABASE_URL": "postgresql://user:pass@localhost:5432/test_db",
+            },
+        ):
             yield
 
     def test_config_initialization_success(self, mock_env_vars):
@@ -29,31 +32,35 @@ class TestLlamaIndexConfig:
         assert config.embedding_dimension == 768
         assert config.chunk_size == 512
         assert config.chunk_overlap == 50
-        assert config.gemini_api_key == 'test_gemini_key'
-        assert config.database_url == 'postgresql://user:pass@localhost:5432/test_db'
+        assert config.gemini_api_key == "test_gemini_key"
+        assert config.database_url == "postgresql://user:pass@localhost:5432/test_db"
 
     def test_config_missing_gemini_key(self):
         """Test configuration fails when GEMINI_API_KEY is missing."""
         with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="GEMINI_API_KEY environment variable is required"):
+            with pytest.raises(
+                ValueError, match="GEMINI_API_KEY environment variable is required"
+            ):
                 LlamaIndexConfig()
 
     def test_config_missing_database_url(self):
         """Test configuration fails when DATABASE_URL is missing."""
-        with patch.dict(os.environ, {'GEMINI_API_KEY': 'test_key'}, clear=True):
-            with pytest.raises(ValueError, match="DATABASE_URL environment variable is required"):
+        with patch.dict(os.environ, {"GEMINI_API_KEY": "test_key"}, clear=True):
+            with pytest.raises(
+                ValueError, match="DATABASE_URL environment variable is required"
+            ):
                 LlamaIndexConfig()
 
-    @patch('app.config.llama_index_config.genai.configure')
+    @patch("app.config.llama_index_config.genai.configure")
     def test_gemini_api_configuration(self, mock_configure, mock_env_vars):
         """Test that Gemini API is configured correctly."""
         # Act
         LlamaIndexConfig()
 
         # Assert
-        mock_configure.assert_called_once_with(api_key='test_gemini_key')
+        mock_configure.assert_called_once_with(api_key="test_gemini_key")
 
-    @patch('app.config.llama_index_config.GeminiEmbedding')
+    @patch("app.config.llama_index_config.GeminiEmbedding")
     def test_get_embedding_model(self, mock_gemini_embedding, mock_env_vars):
         """Test embedding model creation."""
         # Arrange
@@ -67,12 +74,12 @@ class TestLlamaIndexConfig:
         # Assert
         mock_gemini_embedding.assert_called_once_with(
             model_name="models/embedding-001",
-            api_key='test_gemini_key',
-            title="Legal Document Embeddings"
+            api_key="test_gemini_key",
+            title="Legal Document Embeddings",
         )
         assert result == mock_embedding
 
-    @patch('app.config.llama_index_config.SentenceSplitter')
+    @patch("app.config.llama_index_config.SentenceSplitter")
     def test_get_text_splitter(self, mock_sentence_splitter, mock_env_vars):
         """Test text splitter creation with legal document optimization."""
         # Arrange
@@ -90,22 +97,24 @@ class TestLlamaIndexConfig:
             paragraph_separator="\n\n",
             secondary_chunking_regex="[.!?]+",
             include_metadata=True,
-            include_prev_next_rel=True
+            include_prev_next_rel=True,
         )
         assert result == mock_splitter
 
-    @patch('app.config.llama_index_config.create_engine')
-    @patch('app.config.llama_index_config.PGVectorStore.from_params')
-    def test_get_vector_store(self, mock_pg_vector_store, mock_create_engine, mock_env_vars):
+    @patch("app.config.llama_index_config.create_engine")
+    @patch("app.config.llama_index_config.PGVectorStore.from_params")
+    def test_get_vector_store(
+        self, mock_pg_vector_store, mock_create_engine, mock_env_vars
+    ):
         """Test vector store creation with proper HNSW configuration."""
         # Arrange
         config = LlamaIndexConfig()
         mock_engine = MagicMock()
-        mock_engine.url.database = 'test_db'
-        mock_engine.url.host = 'localhost'
-        mock_engine.url.password = 'pass'
+        mock_engine.url.database = "test_db"
+        mock_engine.url.host = "localhost"
+        mock_engine.url.password = "pass"
         mock_engine.url.port = 5432
-        mock_engine.url.username = 'user'
+        mock_engine.url.username = "user"
         mock_create_engine.return_value = mock_engine
 
         mock_vector_store = MagicMock()
@@ -115,31 +124,33 @@ class TestLlamaIndexConfig:
         result = config.get_vector_store()
 
         # Assert
-        mock_create_engine.assert_called_once_with('postgresql://user:pass@localhost:5432/test_db')
+        mock_create_engine.assert_called_once_with(
+            "postgresql://user:pass@localhost:5432/test_db"
+        )
         mock_pg_vector_store.assert_called_once_with(
-            database='test_db',
-            host='localhost',
-            password='pass',
+            database="test_db",
+            host="localhost",
+            password="pass",
             port=5432,
-            user='user',
+            user="user",
             table_name="document_chunks",
             embed_dim=768,
             hnsw_kwargs={
                 "hnsw_m": 16,
                 "hnsw_ef_construction": 64,
                 "hnsw_ef_search": 40,
-            }
+            },
         )
         assert result == mock_vector_store
 
-    @patch('app.config.llama_index_config.Settings')
+    @patch("app.config.llama_index_config.Settings")
     def test_setup_global_settings(self, mock_settings, mock_env_vars):
         """Test global settings setup (replaces deprecated ServiceContext)."""
         # Arrange
         config = LlamaIndexConfig()
 
-        with patch.object(config, 'get_embedding_model') as mock_get_embed:
-            with patch.object(config, 'get_text_splitter') as mock_get_splitter:
+        with patch.object(config, "get_embedding_model") as mock_get_embed:
+            with patch.object(config, "get_text_splitter") as mock_get_splitter:
                 mock_embed_model = MagicMock()
                 mock_text_splitter = MagicMock()
                 mock_get_embed.return_value = mock_embed_model

@@ -25,24 +25,24 @@ class TestDocumentSecurityValidator:
         """Create a valid PDF file for testing."""
         pdf_path = tmp_path / "valid.pdf"
         # Write valid PDF header and some content
-        with open(pdf_path, 'wb') as f:
-            f.write(b'%PDF-1.4\n')
-            f.write(b'%PDF content here...\n')
-            f.write(b'A' * 1000)  # Some content to make it non-empty
+        with open(pdf_path, "wb") as f:
+            f.write(b"%PDF-1.4\n")
+            f.write(b"%PDF content here...\n")
+            f.write(b"A" * 1000)  # Some content to make it non-empty
         return pdf_path
 
     @pytest.fixture
     def invalid_pdf_path(self, tmp_path):
         """Create an invalid file for testing."""
         invalid_path = tmp_path / "invalid.pdf"
-        with open(invalid_path, 'wb') as f:
-            f.write(b'Not a PDF file')
+        with open(invalid_path, "wb") as f:
+            f.write(b"Not a PDF file")
         return invalid_path
 
     def test_validate_pdf_file_success(self, validator, valid_pdf_path):
         """Test successful PDF validation."""
         # Arrange
-        with patch('app.utils.security_validators.fitz.open') as mock_fitz:
+        with patch("app.utils.security_validators.fitz.open") as mock_fitz:
             mock_doc = MagicMock()
             mock_doc.__len__.return_value = 5
             mock_doc.needs_pass = False
@@ -81,10 +81,10 @@ class TestDocumentSecurityValidator:
         """Test validation of file exceeding size limit."""
         # Arrange
         large_path = tmp_path / "large.pdf"
-        with open(large_path, 'wb') as f:
-            f.write(b'%PDF-1.4\n')
+        with open(large_path, "wb") as f:
+            f.write(b"%PDF-1.4\n")
             # Write more than 50MB
-            f.write(b'A' * (51 * 1024 * 1024))
+            f.write(b"A" * (51 * 1024 * 1024))
 
         # Act & Assert
         with pytest.raises(SecurityError, match="exceeds maximum allowed size"):
@@ -99,7 +99,7 @@ class TestDocumentSecurityValidator:
     def test_validate_pdf_file_encrypted(self, validator, valid_pdf_path):
         """Test validation of encrypted PDF."""
         # Arrange
-        with patch('app.utils.security_validators.fitz.open') as mock_fitz:
+        with patch("app.utils.security_validators.fitz.open") as mock_fitz:
             mock_doc = MagicMock()
             mock_doc.__len__.return_value = 3
             mock_doc.needs_pass = True  # Encrypted
@@ -256,7 +256,9 @@ class TestDocumentSecurityValidator:
         test_file = tmp_path / "test_file.txt"
         test_file.write_text("content")
 
-        with patch('pathlib.Path.unlink', side_effect=PermissionError("Permission denied")):
+        with patch(
+            "pathlib.Path.unlink", side_effect=PermissionError("Permission denied")
+        ):
             # Act
             result = validator.secure_file_cleanup([test_file])
 
@@ -271,16 +273,16 @@ class TestDocumentSecurityValidator:
     def test_pdf_magic_bytes_validation(self, validator, tmp_path):
         """Test PDF magic bytes validation for different PDF versions."""
         # Test various PDF versions
-        pdf_versions = [b'%PDF-1.0', b'%PDF-1.4', b'%PDF-1.7']
+        pdf_versions = [b"%PDF-1.0", b"%PDF-1.4", b"%PDF-1.7"]
 
         for version in pdf_versions:
             pdf_path = tmp_path / f"test_{version.decode().replace('.', '_')}.pdf"
-            with open(pdf_path, 'wb') as f:
+            with open(pdf_path, "wb") as f:
                 f.write(version)
-                f.write(b'\ncontent')
+                f.write(b"\ncontent")
 
             # Should not raise exception for valid headers
-            with patch('app.utils.security_validators.fitz.open') as mock_fitz:
+            with patch("app.utils.security_validators.fitz.open") as mock_fitz:
                 mock_doc = MagicMock()
                 mock_doc.__len__.return_value = 1
                 mock_doc.needs_pass = False
@@ -310,7 +312,7 @@ class TestDocumentSecurityValidator:
         # Assert
         assert isinstance(result, DocumentSecurityValidator)
 
-    @patch('app.utils.security_validators.logger')
+    @patch("app.utils.security_validators.logger")
     def test_audit_logging_integration(self, mock_logger, validator):
         """Test that audit entries are properly logged."""
         # Act
@@ -325,7 +327,7 @@ class TestDocumentSecurityValidator:
         with pytest.raises(SecurityError):
             raise SecurityError("Test security error")
 
-    @patch('app.utils.security_validators.os.urandom')
+    @patch("app.utils.security_validators.os.urandom")
     def test_secure_overwrite_before_deletion(self, mock_urandom, validator, tmp_path):
         """Test that files are securely overwritten before deletion."""
         # Arrange
@@ -333,7 +335,7 @@ class TestDocumentSecurityValidator:
         test_content = "sensitive information"
         test_file.write_text(test_content)
 
-        mock_urandom.return_value = b'random_data_for_overwrite'
+        mock_urandom.return_value = b"random_data_for_overwrite"
 
         # Act
         validator.secure_file_cleanup([test_file])

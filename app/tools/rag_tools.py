@@ -33,7 +33,7 @@ class RAGRetrieverTool:
         profession: str,
         disease: str,
         incident_date: str,
-        similarity_top_k: int = 10
+        similarity_top_k: int = 10,
     ) -> dict[str, Any]:
         """Retrieve relevant document chunks for the client using RAG.
 
@@ -88,15 +88,25 @@ class RAGRetrieverTool:
                     node_client_id = node.node.metadata.get("client_id")
 
                 if node_client_id == str(client_id):
-                    chunk_text = node.text if hasattr(node, "text") else (
-                        node.node.text if hasattr(node, "node") and hasattr(node.node, "text") else ""
+                    chunk_text = (
+                        node.text
+                        if hasattr(node, "text")
+                        else (
+                            node.node.text
+                            if hasattr(node, "node") and hasattr(node.node, "text")
+                            else ""
+                        )
                     )
                     if chunk_text:
-                        relevant_texts.append({
-                            "text": chunk_text,
-                            "score": node.score if hasattr(node, "score") else 0.0,
-                            "metadata": node.metadata if hasattr(node, "metadata") else {}
-                        })
+                        relevant_texts.append(
+                            {
+                                "text": chunk_text,
+                                "score": node.score if hasattr(node, "score") else 0.0,
+                                "metadata": node.metadata
+                                if hasattr(node, "metadata")
+                                else {},
+                            }
+                        )
 
             result = {
                 "success": True,
@@ -104,10 +114,12 @@ class RAGRetrieverTool:
                 "total_chunks": len(relevant_texts),
                 "query_text": query_text.strip(),
                 "client_id": str(client_id),
-                "similarity_top_k": similarity_top_k
+                "similarity_top_k": similarity_top_k,
             }
 
-            logger.info(f"Retrieved {len(relevant_texts)} relevant chunks for client {client_id}")
+            logger.info(
+                f"Retrieved {len(relevant_texts)} relevant chunks for client {client_id}"
+            )
             return result
 
         except Exception as e:
@@ -118,14 +130,14 @@ class RAGRetrieverTool:
                 "error": error_msg,
                 "context_chunks": [],
                 "total_chunks": 0,
-                "client_id": str(client_id)
+                "client_id": str(client_id),
             }
 
     def search_documents_by_query(
         self,
         query_text: str,
         client_id: uuid.UUID | None = None,
-        similarity_top_k: int = 10
+        similarity_top_k: int = 10,
     ) -> dict[str, Any]:
         """Search documents by free-form query text.
 
@@ -184,12 +196,14 @@ class RAGRetrieverTool:
                     continue
 
                 if node_text:
-                    search_results.append({
-                        "text": node_text,
-                        "score": score,
-                        "metadata": node_metadata,
-                        "client_id": node_client_id
-                    })
+                    search_results.append(
+                        {
+                            "text": node_text,
+                            "score": score,
+                            "metadata": node_metadata,
+                            "client_id": node_client_id,
+                        }
+                    )
 
             result = {
                 "success": True,
@@ -197,7 +211,7 @@ class RAGRetrieverTool:
                 "total_results": len(search_results),
                 "query_text": query_text,
                 "client_filter": str(client_id) if client_id else None,
-                "similarity_top_k": similarity_top_k
+                "similarity_top_k": similarity_top_k,
             }
 
             logger.info(f"Found {len(search_results)} relevant chunks for query")
@@ -210,6 +224,5 @@ class RAGRetrieverTool:
                 "success": False,
                 "error": error_msg,
                 "search_results": [],
-                "total_results": 0
+                "total_results": 0,
             }
-

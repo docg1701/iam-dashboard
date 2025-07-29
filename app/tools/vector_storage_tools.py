@@ -21,7 +21,7 @@ class VectorStorageTool:
         embedding_model: str = "gemini-embedding-001",
         chunk_size: int = 1000,
         chunk_overlap: int = 100,
-        max_chunks_per_document: int = 1000
+        max_chunks_per_document: int = 1000,
     ) -> None:
         """Initialize the vector storage tool.
 
@@ -47,13 +47,15 @@ class VectorStorageTool:
 
             try:
                 # Check if pgvector extension is installed
-                result = db.execute(text("SELECT extname FROM pg_extension WHERE extname = 'vector'"))
+                result = db.execute(
+                    text("SELECT extname FROM pg_extension WHERE extname = 'vector'")
+                )
                 extension_exists = result.fetchone() is not None
 
                 if not extension_exists:
                     return {
                         "valid": False,
-                        "error": "pgvector extension not installed in database"
+                        "error": "pgvector extension not installed in database",
                     }
 
                 # Check if we can create a simple vector
@@ -64,19 +66,18 @@ class VectorStorageTool:
                 return {
                     "valid": True,
                     "pgvector_available": True,
-                    "test_vector": str(test_result[0]) if test_result else None
+                    "test_vector": str(test_result[0]) if test_result else None,
                 }
 
             finally:
                 db.close()
 
         except Exception as e:
-            return {
-                "valid": False,
-                "error": f"pgvector validation failed: {str(e)}"
-            }
+            return {"valid": False, "error": f"pgvector validation failed: {str(e)}"}
 
-    def chunk_text(self, text: str, metadata: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    def chunk_text(
+        self, text: str, metadata: dict[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """Split text into chunks for embedding generation.
 
         Args:
@@ -93,7 +94,7 @@ class VectorStorageTool:
         text = text.strip()
 
         # Simple chunking strategy - split by sentences when possible
-        sentences = text.split('. ')
+        sentences = text.split(". ")
         current_chunk = ""
         chunk_id = 0
 
@@ -107,40 +108,52 @@ class VectorStorageTool:
                 overlap_start = max(0, len(current_chunk) - self.chunk_overlap)
                 overlap_text = current_chunk[overlap_start:]
 
-                chunks.append({
-                    "chunk_id": chunk_id,
-                    "text": current_chunk,
-                    "start_pos": len(chunks) * self.chunk_size,  # Approximate
-                    "end_pos": len(chunks) * self.chunk_size + len(current_chunk),
-                    "char_count": len(current_chunk),
-                    "metadata": metadata or {}
-                })
+                chunks.append(
+                    {
+                        "chunk_id": chunk_id,
+                        "text": current_chunk,
+                        "start_pos": len(chunks) * self.chunk_size,  # Approximate
+                        "end_pos": len(chunks) * self.chunk_size + len(current_chunk),
+                        "char_count": len(current_chunk),
+                        "metadata": metadata or {},
+                    }
+                )
 
-                current_chunk = overlap_text + ". " + sentence if overlap_text else sentence
+                current_chunk = (
+                    overlap_text + ". " + sentence if overlap_text else sentence
+                )
                 chunk_id += 1
 
                 # Prevent too many chunks
                 if len(chunks) >= self.max_chunks_per_document:
-                    logger.warning(f"Reached maximum chunks limit ({self.max_chunks_per_document})")
+                    logger.warning(
+                        f"Reached maximum chunks limit ({self.max_chunks_per_document})"
+                    )
                     break
             else:
                 current_chunk = test_chunk
 
         # Add the last chunk if it exists
         if current_chunk and len(chunks) < self.max_chunks_per_document:
-            chunks.append({
-                "chunk_id": chunk_id,
-                "text": current_chunk,
-                "start_pos": len(chunks) * self.chunk_size,
-                "end_pos": len(chunks) * self.chunk_size + len(current_chunk),
-                "char_count": len(current_chunk),
-                "metadata": metadata or {}
-            })
+            chunks.append(
+                {
+                    "chunk_id": chunk_id,
+                    "text": current_chunk,
+                    "start_pos": len(chunks) * self.chunk_size,
+                    "end_pos": len(chunks) * self.chunk_size + len(current_chunk),
+                    "char_count": len(current_chunk),
+                    "metadata": metadata or {},
+                }
+            )
 
-        logger.info(f"Text chunked into {len(chunks)} chunks (avg {sum(c['char_count'] for c in chunks) / len(chunks):.0f} chars/chunk)")
+        logger.info(
+            f"Text chunked into {len(chunks)} chunks (avg {sum(c['char_count'] for c in chunks) / len(chunks):.0f} chars/chunk)"
+        )
         return chunks
 
-    def generate_embedding(self, text: str, task_type: str = "retrieval_document") -> dict[str, Any]:
+    def generate_embedding(
+        self, text: str, task_type: str = "retrieval_document"
+    ) -> dict[str, Any]:
         """Generate embedding for a single text using Gemini.
 
         Args:
@@ -152,16 +165,11 @@ class VectorStorageTool:
         """
         try:
             if not text or not text.strip():
-                return {
-                    "success": False,
-                    "error": "Empty text provided for embedding"
-                }
+                return {"success": False, "error": "Empty text provided for embedding"}
 
             # Generate embedding using Gemini
             result = genai.embed_content(
-                model=self.embedding_model,
-                content=text,
-                task_type=task_type
+                model=self.embedding_model, content=text, task_type=task_type
             )
 
             embedding_vector = result["embedding"]
@@ -172,21 +180,16 @@ class VectorStorageTool:
                 "dimension": len(embedding_vector),
                 "model": self.embedding_model,
                 "task_type": task_type,
-                "text_length": len(text)
+                "text_length": len(text),
             }
 
         except Exception as e:
             error_msg = f"Failed to generate embedding: {str(e)}"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg
-            }
+            return {"success": False, "error": error_msg}
 
     def generate_embeddings_batch(
-        self,
-        text_chunks: list[dict[str, Any]],
-        task_type: str = "retrieval_document"
+        self, text_chunks: list[dict[str, Any]], task_type: str = "retrieval_document"
     ) -> dict[str, Any]:
         """Generate embeddings for multiple text chunks.
 
@@ -216,15 +219,16 @@ class VectorStorageTool:
                         "start_pos": chunk.get("start_pos", 0),
                         "end_pos": chunk.get("end_pos", 0),
                         "char_count": chunk.get("char_count", len(chunk_text)),
-                        "metadata": chunk.get("metadata", {})
+                        "metadata": chunk.get("metadata", {}),
                     }
                     embeddings.append(embedding_data)
                 else:
-                    failed_chunks.append({
-                        "chunk_id": chunk_id,
-                        "error": embedding_result["error"]
-                    })
-                    logger.warning(f"Failed to generate embedding for chunk {chunk_id}: {embedding_result['error']}")
+                    failed_chunks.append(
+                        {"chunk_id": chunk_id, "error": embedding_result["error"]}
+                    )
+                    logger.warning(
+                        f"Failed to generate embedding for chunk {chunk_id}: {embedding_result['error']}"
+                    )
 
             result = {
                 "success": True,
@@ -233,24 +237,21 @@ class VectorStorageTool:
                 "successful_embeddings": len(embeddings),
                 "failed_chunks": failed_chunks,
                 "embedding_dimension": embeddings[0]["dimension"] if embeddings else 0,
-                "model_used": self.embedding_model
+                "model_used": self.embedding_model,
             }
 
-            logger.info(f"Generated {len(embeddings)}/{len(text_chunks)} embeddings successfully")
+            logger.info(
+                f"Generated {len(embeddings)}/{len(text_chunks)} embeddings successfully"
+            )
             return result
 
         except Exception as e:
             error_msg = f"Batch embedding generation failed: {str(e)}"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg
-            }
+            return {"success": False, "error": error_msg}
 
     def store_document_embeddings(
-        self,
-        document_id: int,
-        embeddings_data: list[dict[str, Any]]
+        self, document_id: int, embeddings_data: list[dict[str, Any]]
     ) -> dict[str, Any]:
         """Store document embeddings in the database.
 
@@ -306,21 +307,28 @@ class VectorStorageTool:
                                    :start_pos, :end_pos, :char_count, :metadata)
                         """)
 
-                        db.execute(insert_query, {
-                            "document_id": document_id,
-                            "chunk_id": embedding_data["chunk_id"],
-                            "text_content": embedding_data["text"],
-                            "embedding": vector_str,
-                            "start_pos": embedding_data.get("start_pos"),
-                            "end_pos": embedding_data.get("end_pos"),
-                            "char_count": embedding_data.get("char_count"),
-                            "metadata": json.dumps(embedding_data.get("metadata", {}))
-                        })
+                        db.execute(
+                            insert_query,
+                            {
+                                "document_id": document_id,
+                                "chunk_id": embedding_data["chunk_id"],
+                                "text_content": embedding_data["text"],
+                                "embedding": vector_str,
+                                "start_pos": embedding_data.get("start_pos"),
+                                "end_pos": embedding_data.get("end_pos"),
+                                "char_count": embedding_data.get("char_count"),
+                                "metadata": json.dumps(
+                                    embedding_data.get("metadata", {})
+                                ),
+                            },
+                        )
 
                         stored_embeddings += 1
 
                     except Exception as chunk_error:
-                        logger.error(f"Failed to store embedding for chunk {embedding_data.get('chunk_id')}: {str(chunk_error)}")
+                        logger.error(
+                            f"Failed to store embedding for chunk {embedding_data.get('chunk_id')}: {str(chunk_error)}"
+                        )
                         continue
 
                 db.commit()
@@ -330,30 +338,30 @@ class VectorStorageTool:
                     "document_id": document_id,
                     "stored_embeddings": stored_embeddings,
                     "total_embeddings": len(embeddings_data),
-                    "failed_embeddings": len(embeddings_data) - stored_embeddings
+                    "failed_embeddings": len(embeddings_data) - stored_embeddings,
                 }
 
-                logger.info(f"Stored {stored_embeddings}/{len(embeddings_data)} embeddings for document {document_id}")
+                logger.info(
+                    f"Stored {stored_embeddings}/{len(embeddings_data)} embeddings for document {document_id}"
+                )
                 return result
 
             finally:
                 db.close()
 
         except Exception as e:
-            error_msg = f"Failed to store embeddings for document {document_id}: {str(e)}"
+            error_msg = (
+                f"Failed to store embeddings for document {document_id}: {str(e)}"
+            )
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "document_id": document_id
-            }
+            return {"success": False, "error": error_msg, "document_id": document_id}
 
     def search_similar_content(
         self,
         query_text: str,
         limit: int = 10,
         similarity_threshold: float = 0.7,
-        document_ids: list[int] | None = None
+        document_ids: list[int] | None = None,
     ) -> dict[str, Any]:
         """Search for similar content using vector similarity.
 
@@ -368,7 +376,9 @@ class VectorStorageTool:
         """
         try:
             # Generate embedding for query
-            query_embedding_result = self.generate_embedding(query_text, "retrieval_query")
+            query_embedding_result = self.generate_embedding(
+                query_text, "retrieval_query"
+            )
 
             if not query_embedding_result["success"]:
                 return query_embedding_result
@@ -384,7 +394,7 @@ class VectorStorageTool:
                 params = {
                     "query_vector": vector_str,
                     "limit": limit,
-                    "threshold": similarity_threshold
+                    "threshold": similarity_threshold,
                 }
 
                 if document_ids:
@@ -416,19 +426,25 @@ class VectorStorageTool:
 
                 search_results = []
                 for row in results:
-                    search_results.append({
-                        "embedding_id": row.id,
-                        "document_id": row.document_id,
-                        "chunk_id": row.chunk_id,
-                        "filename": row.filename,
-                        "text_content": row.text_content,
-                        "start_pos": row.start_pos,
-                        "end_pos": row.end_pos,
-                        "char_count": row.char_count,
-                        "metadata": json.loads(row.metadata) if row.metadata else {},
-                        "similarity_score": float(row.similarity_score),
-                        "created_at": row.created_at.isoformat() if row.created_at else None
-                    })
+                    search_results.append(
+                        {
+                            "embedding_id": row.id,
+                            "document_id": row.document_id,
+                            "chunk_id": row.chunk_id,
+                            "filename": row.filename,
+                            "text_content": row.text_content,
+                            "start_pos": row.start_pos,
+                            "end_pos": row.end_pos,
+                            "char_count": row.char_count,
+                            "metadata": json.loads(row.metadata)
+                            if row.metadata
+                            else {},
+                            "similarity_score": float(row.similarity_score),
+                            "created_at": row.created_at.isoformat()
+                            if row.created_at
+                            else None,
+                        }
+                    )
 
                 result = {
                     "success": True,
@@ -436,10 +452,12 @@ class VectorStorageTool:
                     "results": search_results,
                     "total_results": len(search_results),
                     "similarity_threshold": similarity_threshold,
-                    "query_embedding_dimension": len(query_embedding)
+                    "query_embedding_dimension": len(query_embedding),
                 }
 
-                logger.info(f"Found {len(search_results)} similar content chunks for query")
+                logger.info(
+                    f"Found {len(search_results)} similar content chunks for query"
+                )
                 return result
 
             finally:
@@ -448,16 +466,13 @@ class VectorStorageTool:
         except Exception as e:
             error_msg = f"Vector similarity search failed: {str(e)}"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg
-            }
+            return {"success": False, "error": error_msg}
 
     def process_document_text(
         self,
         document_id: int,
         text_content: str,
-        metadata: dict[str, Any] | None = None
+        metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Complete workflow for processing document text into vector embeddings.
 
@@ -479,7 +494,7 @@ class VectorStorageTool:
                 return {
                     "success": False,
                     "error": "No text chunks generated from document",
-                    "document_id": document_id
+                    "document_id": document_id,
                 }
 
             # Step 2: Generate embeddings
@@ -490,8 +505,7 @@ class VectorStorageTool:
 
             # Step 3: Store embeddings in database
             storage_result = self.store_document_embeddings(
-                document_id,
-                embeddings_result["embeddings"]
+                document_id, embeddings_result["embeddings"]
             )
 
             # Combine results
@@ -503,9 +517,11 @@ class VectorStorageTool:
                     "chunks_generated": len(chunks),
                     "embeddings_generated": embeddings_result["successful_embeddings"],
                     "embeddings_stored": storage_result.get("stored_embeddings", 0),
-                    "embedding_dimension": embeddings_result.get("embedding_dimension", 0),
-                    "model_used": self.embedding_model
-                }
+                    "embedding_dimension": embeddings_result.get(
+                        "embedding_dimension", 0
+                    ),
+                    "model_used": self.embedding_model,
+                },
             }
 
             if not storage_result["success"]:
@@ -517,8 +533,4 @@ class VectorStorageTool:
         except Exception as e:
             error_msg = f"Document vector processing failed for document {document_id}: {str(e)}"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "document_id": document_id
-            }
+            return {"success": False, "error": error_msg, "document_id": document_id}

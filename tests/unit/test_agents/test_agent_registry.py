@@ -23,7 +23,7 @@ class TestAgentCapability:
             name="document_processing",
             description="Process documents",
             category="processing",
-            version="2.0.0"
+            version="2.0.0",
         )
 
         assert capability.name == "document_processing"
@@ -50,7 +50,7 @@ class TestAgentDependency:
             name="document_parser",
             version_requirement=">=1.0.0",
             required=True,
-            description="Document parsing dependency"
+            description="Document parsing dependency",
         )
 
         assert dependency.name == "document_parser"
@@ -79,7 +79,7 @@ class TestRegistryEntry:
             name="Test Agent",
             description="Test agent for registry",
             capabilities=["test"],
-            dependencies=[]
+            dependencies=[],
         )
 
     @pytest.fixture
@@ -87,24 +87,23 @@ class TestRegistryEntry:
         """Create sample capabilities."""
         return [
             AgentCapability("test_capability", "Test capability"),
-            AgentCapability("data_processing", "Process data")
+            AgentCapability("data_processing", "Process data"),
         ]
 
     @pytest.fixture
     def sample_dependencies(self):
         """Create sample dependencies."""
-        return [
-            AgentDependency("dep1", ">=1.0.0"),
-            AgentDependency("dep2", "*", False)
-        ]
+        return [AgentDependency("dep1", ">=1.0.0"), AgentDependency("dep2", "*", False)]
 
-    def test_registry_entry_creation(self, sample_metadata, sample_capabilities, sample_dependencies):
+    def test_registry_entry_creation(
+        self, sample_metadata, sample_capabilities, sample_dependencies
+    ):
         """Test creating registry entry."""
         entry = RegistryEntry(
             agent_id="test_agent",
             metadata=sample_metadata,
             capabilities=sample_capabilities,
-            dependencies=sample_dependencies
+            dependencies=sample_dependencies,
         )
 
         assert entry.agent_id == "test_agent"
@@ -114,13 +113,15 @@ class TestRegistryEntry:
         assert entry.usage_count == 0
         assert entry.last_used is None
 
-    def test_registry_entry_to_dict(self, sample_metadata, sample_capabilities, sample_dependencies):
+    def test_registry_entry_to_dict(
+        self, sample_metadata, sample_capabilities, sample_dependencies
+    ):
         """Test converting registry entry to dictionary."""
         entry = RegistryEntry(
             agent_id="test_agent",
             metadata=sample_metadata,
             capabilities=sample_capabilities,
-            dependencies=sample_dependencies
+            dependencies=sample_dependencies,
         )
 
         entry_dict = entry.to_dict()
@@ -143,7 +144,7 @@ class TestAgentRegistry:
     @pytest.fixture
     def registry_with_persistence(self):
         """Create registry with temporary persistence file."""
-        with tempfile.NamedTemporaryFile(suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             temp_path = f.name
 
         registry = AgentRegistry(persistence_path=temp_path)
@@ -160,7 +161,7 @@ class TestAgentRegistry:
             name="Test Agent",
             description="Test agent",
             capabilities=["test_capability"],
-            dependencies=[]
+            dependencies=[],
         )
 
     @pytest.mark.asyncio
@@ -170,7 +171,7 @@ class TestAgentRegistry:
             agent_id="test_agent",
             metadata=sample_metadata,
             capabilities=["test_capability"],
-            dependencies=[]
+            dependencies=[],
         )
 
         assert result is True
@@ -193,7 +194,7 @@ class TestAgentRegistry:
             agent_id="test_agent",
             metadata=sample_metadata,
             capabilities=["test_capability"],
-            dependencies=["dep_agent"]
+            dependencies=["dep_agent"],
         )
 
         assert result is True
@@ -216,7 +217,9 @@ class TestAgentRegistry:
         await registry.register_agent("agent1", metadata1, dependencies=["agent2"])
 
         # Try to register second agent with circular dependency
-        result = await registry.register_agent("agent2", metadata2, dependencies=["agent1"])
+        result = await registry.register_agent(
+            "agent2", metadata2, dependencies=["agent1"]
+        )
 
         # Should fail due to circular dependency
         assert result is False
@@ -325,7 +328,7 @@ class TestAgentRegistry:
         registry._capability_index = {
             "cap1": {"agent1"},
             "cap2": {"agent1", "agent2"},
-            "cap3": {"agent2"}
+            "cap3": {"agent2"},
         }
 
         summary = registry.get_capabilities_summary()
@@ -336,10 +339,7 @@ class TestAgentRegistry:
 
     def test_get_dependency_graph(self, registry):
         """Test getting dependency graph."""
-        registry._dependency_graph = {
-            "agent1": {"dep1", "dep2"},
-            "agent2": {"dep1"}
-        }
+        registry._dependency_graph = {"agent1": {"dep1", "dep2"}, "agent2": {"dep1"}}
 
         graph = registry.get_dependency_graph()
 
@@ -353,7 +353,7 @@ class TestAgentRegistry:
         registry._dependency_graph = {
             "agent1": {"agent2"},
             "agent2": {"agent3"},
-            "agent3": set()
+            "agent3": set(),
         }
 
         # Add entries to registry
@@ -368,10 +368,7 @@ class TestAgentRegistry:
     async def test_validate_dependency_chain_circular(self, registry):
         """Test detection of circular dependencies."""
         # Setup circular dependency: agent1 -> agent2 -> agent1
-        registry._dependency_graph = {
-            "agent1": {"agent2"},
-            "agent2": {"agent1"}
-        }
+        registry._dependency_graph = {"agent1": {"agent2"}, "agent2": {"agent1"}}
 
         result = await registry.validate_dependency_chain("agent1")
         assert result is False
@@ -380,9 +377,7 @@ class TestAgentRegistry:
     async def test_validate_dependency_chain_missing(self, registry):
         """Test detection of missing dependencies."""
         # Setup dependency to non-existent agent
-        registry._dependency_graph = {
-            "agent1": {"nonexistent"}
-        }
+        registry._dependency_graph = {"agent1": {"nonexistent"}}
 
         # Add agent1 to registry but not the dependency
         metadata = AgentMetadata("agent1", "Agent 1", "", [], [])

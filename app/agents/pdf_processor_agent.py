@@ -44,11 +44,11 @@ class PDFProcessorAgent(Agent):
 
         # Extract tool-specific config before passing to parent
         tool_config = {
-            'max_file_size_mb': kwargs.pop('max_file_size_mb', 50),
-            'embedding_model': kwargs.pop('embedding_model', 'gemini-embedding-001'),
-            'chunk_size': kwargs.pop('chunk_size', 1000),
-            'ocr_confidence': kwargs.pop('ocr_confidence', 50.0),
-            'ocr_preprocessing': kwargs.pop('ocr_preprocessing', True),
+            "max_file_size_mb": kwargs.pop("max_file_size_mb", 50),
+            "embedding_model": kwargs.pop("embedding_model", "gemini-embedding-001"),
+            "chunk_size": kwargs.pop("chunk_size", 1000),
+            "ocr_confidence": kwargs.pop("ocr_confidence", 50.0),
+            "ocr_preprocessing": kwargs.pop("ocr_preprocessing", True),
         }
 
         # Convert model string to Gemini model object

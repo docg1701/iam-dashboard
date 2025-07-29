@@ -71,7 +71,9 @@ class UserService:
             return None
 
         totp = pyotp.TOTP(str(user.totp_secret))
-        return totp.provisioning_uri(name=str(user.username), issuer_name="IAM Dashboard")
+        return totp.provisioning_uri(
+            name=str(user.username), issuer_name="IAM Dashboard"
+        )
 
     async def enable_2fa(self, user: User) -> str:
         """Enable 2FA for a user and return the secret."""

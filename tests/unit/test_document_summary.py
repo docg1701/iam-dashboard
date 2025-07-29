@@ -82,7 +82,9 @@ class TestDocumentSummaryModal:
     @patch("app.ui_components.document_summary.ui.column")
     @patch("app.ui_components.document_summary.ui.label")
     @patch("app.ui_components.document_summary.ui.button")
-    def test_create_header(self, mock_button, mock_label, mock_column, mock_row, sample_document):
+    def test_create_header(
+        self, mock_button, mock_label, mock_column, mock_row, sample_document
+    ):
         """Test modal header creation."""
         modal = DocumentSummaryModal(sample_document)
         modal.dialog = MagicMock()
@@ -99,7 +101,9 @@ class TestDocumentSummaryModal:
     @patch("app.ui_components.document_summary.ui.label")
     @patch("app.ui_components.document_summary.ui.row")
     @patch("app.ui_components.document_summary.ui.column")
-    def test_create_content(self, mock_column, mock_row, mock_label, mock_card, sample_document):
+    def test_create_content(
+        self, mock_column, mock_row, mock_label, mock_card, sample_document
+    ):
         """Test modal content creation."""
         modal = DocumentSummaryModal(sample_document)
 
@@ -142,17 +146,23 @@ class TestDocumentSummaryModal:
         mock_chunk_repository = AsyncMock()
         mock_chunk_repository.get_by_document_id.return_value = sample_chunks
 
-        with patch("app.ui_components.document_summary.get_async_db") as mock_get_db, \
-             patch("app.repositories.document_chunk_repository.DocumentChunkRepository", return_value=mock_chunk_repository), \
-             patch.object(modal, "_display_chunks") as mock_display_chunks, \
-             patch.object(modal, "_display_statistics") as mock_display_stats:
-
+        with (
+            patch("app.ui_components.document_summary.get_async_db") as mock_get_db,
+            patch(
+                "app.repositories.document_chunk_repository.DocumentChunkRepository",
+                return_value=mock_chunk_repository,
+            ),
+            patch.object(modal, "_display_chunks") as mock_display_chunks,
+            patch.object(modal, "_display_statistics") as mock_display_stats,
+        ):
             mock_get_db.return_value.__aiter__.return_value = [mock_db_session]
 
             await modal._load_document_details()
 
             assert modal.chunks == sample_chunks
-            modal.chunks_count_label.text = f"{len(sample_chunks)} blocos de texto encontrados"
+            modal.chunks_count_label.text = (
+                f"{len(sample_chunks)} blocos de texto encontrados"
+            )
             modal.loading_container.style.assert_called_with("display: none")
             mock_display_chunks.assert_called_once()
             mock_display_stats.assert_called_once()
@@ -165,13 +175,19 @@ class TestDocumentSummaryModal:
 
         mock_db_session = AsyncMock()
         mock_chunk_repository = AsyncMock()
-        mock_chunk_repository.get_by_document_id.side_effect = Exception("Database error")
+        mock_chunk_repository.get_by_document_id.side_effect = Exception(
+            "Database error"
+        )
 
-        with patch("app.ui_components.document_summary.get_async_db") as mock_get_db, \
-             patch("app.repositories.document_chunk_repository.DocumentChunkRepository", return_value=mock_chunk_repository), \
-             patch("app.ui_components.document_summary.ui.icon"), \
-             patch("app.ui_components.document_summary.ui.label"):
-
+        with (
+            patch("app.ui_components.document_summary.get_async_db") as mock_get_db,
+            patch(
+                "app.repositories.document_chunk_repository.DocumentChunkRepository",
+                return_value=mock_chunk_repository,
+            ),
+            patch("app.ui_components.document_summary.ui.icon"),
+            patch("app.ui_components.document_summary.ui.label"),
+        ):
             mock_get_db.return_value.__aiter__.return_value = [mock_db_session]
 
             await modal._load_document_details()
@@ -185,13 +201,14 @@ class TestDocumentSummaryModal:
         modal.chunks = sample_chunks
         modal.chunks_container = MagicMock()
 
-        with patch("app.ui_components.document_summary.ui.card"), \
-             patch("app.ui_components.document_summary.ui.row"), \
-             patch("app.ui_components.document_summary.ui.label"), \
-             patch("app.ui_components.document_summary.ui.expansion"), \
-             patch("app.ui_components.document_summary.ui.column"), \
-             patch("app.ui_components.document_summary.ui.button"):
-
+        with (
+            patch("app.ui_components.document_summary.ui.card"),
+            patch("app.ui_components.document_summary.ui.row"),
+            patch("app.ui_components.document_summary.ui.label"),
+            patch("app.ui_components.document_summary.ui.expansion"),
+            patch("app.ui_components.document_summary.ui.column"),
+            patch("app.ui_components.document_summary.ui.button"),
+        ):
             await modal._display_chunks()
 
             # Should display first 3 chunks
@@ -205,7 +222,6 @@ class TestDocumentSummaryModal:
         modal.chunks_container = MagicMock()
 
         with patch("app.ui_components.document_summary.ui.label") as mock_label:
-
             await modal._display_chunks()
 
             mock_label.assert_called()
@@ -216,8 +232,17 @@ class TestDocumentSummaryModal:
     @patch("app.ui_components.document_summary.ui.column")
     @patch("app.ui_components.document_summary.ui.label")
     @patch("app.ui_components.document_summary.ui.button")
-    def test_show_full_content(self, mock_button, mock_label, mock_column, mock_row,
-                              mock_card, mock_dialog, sample_document, sample_chunks):
+    def test_show_full_content(
+        self,
+        mock_button,
+        mock_label,
+        mock_column,
+        mock_row,
+        mock_card,
+        mock_dialog,
+        sample_document,
+        sample_chunks,
+    ):
         """Test showing full content of a chunk."""
         modal = DocumentSummaryModal(sample_document)
         chunk = sample_chunks[0]
@@ -237,10 +262,11 @@ class TestDocumentSummaryModal:
         modal.chunks = sample_chunks
         modal.stats_container = MagicMock()
 
-        with patch("app.ui_components.document_summary.ui.row"), \
-             patch("app.ui_components.document_summary.ui.column"), \
-             patch("app.ui_components.document_summary.ui.label"):
-
+        with (
+            patch("app.ui_components.document_summary.ui.row"),
+            patch("app.ui_components.document_summary.ui.column"),
+            patch("app.ui_components.document_summary.ui.label"),
+        ):
             await modal._display_statistics()
 
             # Verify statistics calculations
@@ -283,13 +309,14 @@ class TestDocumentSummaryModal:
         modal.chunks = sample_chunks
         modal.chunks_container = MagicMock()
 
-        with patch("app.ui_components.document_summary.ui.card"), \
-             patch("app.ui_components.document_summary.ui.row"), \
-             patch("app.ui_components.document_summary.ui.label"), \
-             patch("app.ui_components.document_summary.ui.expansion"), \
-             patch("app.ui_components.document_summary.ui.column"), \
-             patch("app.ui_components.document_summary.ui.button"):
-
+        with (
+            patch("app.ui_components.document_summary.ui.card"),
+            patch("app.ui_components.document_summary.ui.row"),
+            patch("app.ui_components.document_summary.ui.label"),
+            patch("app.ui_components.document_summary.ui.expansion"),
+            patch("app.ui_components.document_summary.ui.column"),
+            patch("app.ui_components.document_summary.ui.button"),
+        ):
             await modal._display_all_chunks()
 
             # Should display all chunks
@@ -305,12 +332,13 @@ class TestDocumentSummaryModal:
         modal.chunks_count_label = MagicMock()
         modal.stats_container = MagicMock()
 
-        with patch("app.ui_components.document_summary.ui.card"), \
-             patch("app.ui_components.document_summary.ui.row"), \
-             patch("app.ui_components.document_summary.ui.column"), \
-             patch("app.ui_components.document_summary.ui.label"), \
-             patch("app.ui_components.document_summary.ui.spinner"):
-
+        with (
+            patch("app.ui_components.document_summary.ui.card"),
+            patch("app.ui_components.document_summary.ui.row"),
+            patch("app.ui_components.document_summary.ui.column"),
+            patch("app.ui_components.document_summary.ui.label"),
+            patch("app.ui_components.document_summary.ui.spinner"),
+        ):
             modal._create_content()
 
             # Verify processing time calculation would be performed

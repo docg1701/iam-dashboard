@@ -35,7 +35,7 @@ class LlamaIndexConfig:
         return GeminiEmbedding(
             model_name="models/embedding-001",
             api_key=self.gemini_api_key,
-            title="Legal Document Embeddings"
+            title="Legal Document Embeddings",
         )
 
     def get_text_splitter(self) -> SentenceSplitter:
@@ -46,7 +46,7 @@ class LlamaIndexConfig:
             paragraph_separator="\n\n",
             secondary_chunking_regex="[.!?]+",
             include_metadata=True,
-            include_prev_next_rel=True
+            include_prev_next_rel=True,
         )
 
     def get_vector_store(self) -> PGVectorStore:
@@ -65,7 +65,7 @@ class LlamaIndexConfig:
                 "hnsw_m": 16,
                 "hnsw_ef_construction": 64,
                 "hnsw_ef_search": 40,
-            }
+            },
         )
 
     def setup_global_settings(self) -> None:
@@ -75,7 +75,9 @@ class LlamaIndexConfig:
 
         # Configure global settings
         Settings.embed_model = embed_model
-        Settings.text_splitter = text_splitter  # Use text_splitter instead of node_parser
+        Settings.text_splitter = (
+            text_splitter  # Use text_splitter instead of node_parser
+        )
         Settings.chunk_size = self.chunk_size
         Settings.chunk_overlap = self.chunk_overlap
 

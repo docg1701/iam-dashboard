@@ -45,7 +45,7 @@ class TestAuthManager:
 
     def test_verify_token_expired(self) -> None:
         """Test JWT token verification with expired token."""
-        with patch('app.core.auth.ACCESS_TOKEN_EXPIRE_MINUTES', -1):  # Force expiration
+        with patch("app.core.auth.ACCESS_TOKEN_EXPIRE_MINUTES", -1):  # Force expiration
             user_id = "123e4567-e89b-12d3-a456-426614174000"
             username = "testuser"
 
@@ -57,7 +57,7 @@ class TestAuthManager:
 
             assert payload is None
 
-    @patch('app.core.auth.app')
+    @patch("app.core.auth.app")
     def test_login_user(self, mock_app) -> None:
         """Test user login."""
         mock_storage = MagicMock()
@@ -79,7 +79,7 @@ class TestAuthManager:
         assert update_call["token"] == token
         assert "login_time" in update_call
 
-    @patch('app.core.auth.app')
+    @patch("app.core.auth.app")
     def test_logout_user(self, mock_app) -> None:
         """Test user logout."""
         mock_storage = MagicMock()
@@ -89,7 +89,7 @@ class TestAuthManager:
 
         mock_storage.clear.assert_called_once()
 
-    @patch('app.core.auth.app')
+    @patch("app.core.auth.app")
     def test_get_current_user_authenticated(self, mock_app) -> None:
         """Test getting current user when authenticated."""
         user_id = "123e4567-e89b-12d3-a456-426614174000"
@@ -105,7 +105,7 @@ class TestAuthManager:
             "user_id": user_id,
             "username": username,
             "token": token,
-            "login_time": login_time
+            "login_time": login_time,
         }.get(key, default)
         mock_app.storage.user = mock_storage
 
@@ -116,7 +116,7 @@ class TestAuthManager:
         assert current_user["username"] == username
         assert current_user["login_time"] == login_time
 
-    @patch('app.core.auth.app')
+    @patch("app.core.auth.app")
     def test_get_current_user_not_authenticated(self, mock_app) -> None:
         """Test getting current user when not authenticated."""
         mock_storage = MagicMock()
@@ -127,13 +127,13 @@ class TestAuthManager:
 
         assert current_user is None
 
-    @patch('app.core.auth.app')
+    @patch("app.core.auth.app")
     def test_get_current_user_invalid_token(self, mock_app) -> None:
         """Test getting current user with invalid token."""
         mock_storage = MagicMock()
         mock_storage.get.side_effect = lambda key: {
             "authenticated": True,
-            "token": "invalid.token.here"
+            "token": "invalid.token.here",
         }.get(key)
         mock_app.storage.user = mock_storage
 
@@ -143,7 +143,7 @@ class TestAuthManager:
         # Should clear session when token is invalid
         mock_storage.clear.assert_called_once()
 
-    @patch('app.core.auth.AuthManager.get_current_user')
+    @patch("app.core.auth.AuthManager.get_current_user")
     def test_is_authenticated_true(self, mock_get_current_user) -> None:
         """Test is_authenticated when user is authenticated."""
         mock_get_current_user.return_value = {"user_id": "123", "username": "test"}
@@ -152,7 +152,7 @@ class TestAuthManager:
 
         assert is_auth is True
 
-    @patch('app.core.auth.AuthManager.get_current_user')
+    @patch("app.core.auth.AuthManager.get_current_user")
     def test_is_authenticated_false(self, mock_get_current_user) -> None:
         """Test is_authenticated when user is not authenticated."""
         mock_get_current_user.return_value = None

@@ -59,7 +59,9 @@ class TestDocumentService:
 
     @pytest.mark.asyncio
     @pytest.mark.asyncio
-    async def test_check_duplicate_found(self, document_service, mock_document_repository, sample_document):
+    async def test_check_duplicate_found(
+        self, document_service, mock_document_repository, sample_document
+    ):
         """Test duplicate check when duplicate found."""
         # Arrange
         client_id = uuid.uuid4()
@@ -71,10 +73,14 @@ class TestDocumentService:
 
         # Assert
         assert result == sample_document
-        mock_document_repository.check_duplicate_by_hash.assert_called_once_with(client_id, content_hash)
+        mock_document_repository.check_duplicate_by_hash.assert_called_once_with(
+            client_id, content_hash
+        )
 
     @pytest.mark.asyncio
-    async def test_check_duplicate_not_found(self, document_service, mock_document_repository):
+    async def test_check_duplicate_not_found(
+        self, document_service, mock_document_repository
+    ):
         """Test duplicate check when no duplicate found."""
         # Arrange
         client_id = uuid.uuid4()
@@ -86,12 +92,14 @@ class TestDocumentService:
 
         # Assert
         assert result is None
-        mock_document_repository.check_duplicate_by_hash.assert_called_once_with(client_id, content_hash)
+        mock_document_repository.check_duplicate_by_hash.assert_called_once_with(
+            client_id, content_hash
+        )
 
     @pytest.mark.asyncio
-    @patch('pathlib.Path.mkdir')
-    @patch('builtins.open', new_callable=mock_open)
-    @patch('app.workers.document_processor.process_document')
+    @patch("pathlib.Path.mkdir")
+    @patch("builtins.open", new_callable=mock_open)
+    @patch("app.workers.document_processor.process_document")
     @pytest.mark.asyncio
     async def test_create_document_success(
         self,
@@ -101,7 +109,7 @@ class TestDocumentService:
         document_service,
         mock_document_repository,
         sample_file_content,
-        sample_document
+        sample_document,
     ):
         """Test successful document creation."""
         # Arrange
@@ -119,12 +127,14 @@ class TestDocumentService:
         mock_process_document.delay.return_value = mock_task_result
 
         # Act
-        result = await document_service.create_document(client_id, filename, sample_file_content, document_type)
+        result = await document_service.create_document(
+            client_id, filename, sample_file_content, document_type
+        )
 
         # Assert
-        assert result['success'] is True
-        assert 'document_id' in result
-        assert 'task_id' in result
+        assert result["success"] is True
+        assert "document_id" in result
+        assert "task_id" in result
         mock_document_repository.create.assert_called_once()
         mock_file_open.assert_called_once()
         mock_process_document.delay.assert_called_once()
@@ -135,7 +145,7 @@ class TestDocumentService:
         document_service,
         mock_document_repository,
         sample_file_content,
-        sample_document
+        sample_document,
     ):
         """Test document creation when duplicate exists."""
         # Arrange
@@ -146,15 +156,19 @@ class TestDocumentService:
         mock_document_repository.check_duplicate_by_hash.return_value = sample_document
 
         # Act
-        result = await document_service.create_document(client_id, filename, sample_file_content, document_type)
+        result = await document_service.create_document(
+            client_id, filename, sample_file_content, document_type
+        )
 
         # Assert
-        assert result['success'] is False
-        assert 'duplicado' in result['error']
+        assert result["success"] is False
+        assert "duplicado" in result["error"]
         mock_document_repository.create.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_get_document_by_id(self, document_service, mock_document_repository, sample_document):
+    async def test_get_document_by_id(
+        self, document_service, mock_document_repository, sample_document
+    ):
         """Test getting document by ID."""
         # Arrange
         document_id = uuid.uuid4()
@@ -168,7 +182,9 @@ class TestDocumentService:
         mock_document_repository.get_by_id.assert_called_once_with(document_id)
 
     @pytest.mark.asyncio
-    async def test_get_documents_by_client(self, document_service, mock_document_repository, sample_document):
+    async def test_get_documents_by_client(
+        self, document_service, mock_document_repository, sample_document
+    ):
         """Test getting documents by client."""
         # Arrange
         client_id = uuid.uuid4()
@@ -182,7 +198,9 @@ class TestDocumentService:
         mock_document_repository.get_by_client_id.assert_called_once_with(client_id)
 
     @pytest.mark.asyncio
-    async def test_update_document_status_success(self, document_service, mock_document_repository):
+    async def test_update_document_status_success(
+        self, document_service, mock_document_repository
+    ):
         """Test successful document status update."""
         # Arrange
         document_id = uuid.uuid4()
@@ -194,10 +212,14 @@ class TestDocumentService:
 
         # Assert
         assert result is True
-        mock_document_repository.update_status.assert_called_once_with(document_id, status, None)
+        mock_document_repository.update_status.assert_called_once_with(
+            document_id, status, None
+        )
 
     @pytest.mark.asyncio
-    async def test_update_document_status_with_error(self, document_service, mock_document_repository):
+    async def test_update_document_status_with_error(
+        self, document_service, mock_document_repository
+    ):
         """Test document status update with error message."""
         # Arrange
         document_id = uuid.uuid4()
@@ -206,14 +228,20 @@ class TestDocumentService:
         mock_document_repository.update_status.return_value = True
 
         # Act
-        result = await document_service.update_document_status(document_id, status, error_message)
+        result = await document_service.update_document_status(
+            document_id, status, error_message
+        )
 
         # Assert
         assert result is True
-        mock_document_repository.update_status.assert_called_once_with(document_id, status, error_message)
+        mock_document_repository.update_status.assert_called_once_with(
+            document_id, status, error_message
+        )
 
     @pytest.mark.asyncio
-    async def test_get_document_by_task_id(self, document_service, mock_document_repository, sample_document):
+    async def test_get_document_by_task_id(
+        self, document_service, mock_document_repository, sample_document
+    ):
         """Test getting document by task ID."""
         # Arrange
         task_id = "task_123"
@@ -227,7 +255,9 @@ class TestDocumentService:
         mock_document_repository.get_by_task_id.assert_called_once_with(task_id)
 
     @pytest.mark.asyncio
-    async def test_get_processing_documents(self, document_service, mock_document_repository, sample_document):
+    async def test_get_processing_documents(
+        self, document_service, mock_document_repository, sample_document
+    ):
         """Test getting processing documents."""
         # Arrange
         mock_document_repository.get_by_status.return_value = [sample_document]
@@ -237,10 +267,14 @@ class TestDocumentService:
 
         # Assert
         assert result == [sample_document]
-        mock_document_repository.get_by_status.assert_called_once_with(DocumentStatus.PROCESSING)
+        mock_document_repository.get_by_status.assert_called_once_with(
+            DocumentStatus.PROCESSING
+        )
 
     @pytest.mark.asyncio
-    async def test_get_failed_documents(self, document_service, mock_document_repository, sample_document):
+    async def test_get_failed_documents(
+        self, document_service, mock_document_repository, sample_document
+    ):
         """Test getting failed documents."""
         # Arrange
         mock_document_repository.get_by_status.return_value = [sample_document]
@@ -250,10 +284,12 @@ class TestDocumentService:
 
         # Assert
         assert result == [sample_document]
-        mock_document_repository.get_by_status.assert_called_once_with(DocumentStatus.FAILED)
+        mock_document_repository.get_by_status.assert_called_once_with(
+            DocumentStatus.FAILED
+        )
 
-    @patch('pathlib.Path.exists')
-    @patch('pathlib.Path.unlink')
+    @patch("pathlib.Path.exists")
+    @patch("pathlib.Path.unlink")
     @pytest.mark.asyncio
     async def test_delete_document_success(
         self,
@@ -261,7 +297,7 @@ class TestDocumentService:
         mock_exists,
         document_service,
         mock_document_repository,
-        sample_document
+        sample_document,
     ):
         """Test successful document deletion."""
         # Arrange
@@ -279,7 +315,9 @@ class TestDocumentService:
         mock_document_repository.delete.assert_called_once_with(document_id)
 
     @pytest.mark.asyncio
-    async def test_delete_document_not_found(self, document_service, mock_document_repository):
+    async def test_delete_document_not_found(
+        self, document_service, mock_document_repository
+    ):
         """Test document deletion when document not found."""
         # Arrange
         document_id = uuid.uuid4()

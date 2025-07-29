@@ -178,7 +178,9 @@ async def get_client_documents_summary(
                 "failed_count": failed_count,
                 "status_counts": status_counts,
                 "completion_rate": (
-                    (processed_count / total_documents * 100) if total_documents > 0 else 0
+                    (processed_count / total_documents * 100)
+                    if total_documents > 0
+                    else 0
                 ),
             },
         }

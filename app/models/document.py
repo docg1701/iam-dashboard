@@ -55,7 +55,9 @@ class Document(TimestampedModel):
 
     # Relationships
     client = relationship("Client", back_populates="documents")
-    chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
+    chunks = relationship(
+        "DocumentChunk", back_populates="document", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         """String representation of Document."""

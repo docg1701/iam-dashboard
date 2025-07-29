@@ -1,7 +1,7 @@
 """Unit tests for QuestionnaireAgent."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -16,11 +16,7 @@ class TestQuestionnaireAgent:
     @pytest.fixture
     def mock_client(self):
         """Create a mock client for testing."""
-        return Client(
-            id=uuid.uuid4(),
-            name="Test Client",
-            cpf="12345678901"
-        )
+        return Client(id=uuid.uuid4(), name="Test Client", cpf="12345678901")
 
     @pytest.fixture
     def agent_config(self):
@@ -30,43 +26,49 @@ class TestQuestionnaireAgent:
             "gemini_api_key": "test_api_key",
             "similarity_top_k": 5,
             "min_context_chunks": 1,
-            "max_context_chunks": 10
+            "max_context_chunks": 10,
         }
 
     @pytest.fixture
     def questionnaire_agent(self, agent_config):
         """Create QuestionnaireAgent instance for testing."""
-        with patch('app.agents.questionnaire_agent.get_async_db'), \
-             patch('app.tools.rag_tools.get_llama_index_config'), \
-             patch('google.generativeai.configure'):
+        with (
+            patch("app.agents.questionnaire_agent.get_async_db"),
+            patch("app.tools.rag_tools.get_llama_index_config"),
+            patch("google.generativeai.configure"),
+        ):
             agent = QuestionnaireAgent(**agent_config)
             return agent
 
     def test_agent_initialization(self, agent_config):
         """Test agent initialization."""
-        with patch('app.agents.questionnaire_agent.get_async_db'), \
-             patch('app.tools.rag_tools.get_llama_index_config'), \
-             patch('google.generativeai.configure'):
+        with (
+            patch("app.agents.questionnaire_agent.get_async_db"),
+            patch("app.tools.rag_tools.get_llama_index_config"),
+            patch("google.generativeai.configure"),
+        ):
             agent = QuestionnaireAgent(**agent_config)
 
             assert agent.similarity_top_k == 5
             assert agent.min_context_chunks == 1
             assert agent.max_context_chunks == 10
-            assert hasattr(agent, 'rag_retriever')
-            assert hasattr(agent, 'llm_processor')
-            assert hasattr(agent, 'template_manager')
+            assert hasattr(agent, "rag_retriever")
+            assert hasattr(agent, "llm_processor")
+            assert hasattr(agent, "template_manager")
 
     @pytest.mark.asyncio
-    @patch('app.agents.questionnaire_agent.get_async_db')
-    @patch('app.repositories.document_chunk_repository.DocumentChunkRepository')
-    async def test_retrieve_client_context_success(self, mock_repo_class, mock_get_db, questionnaire_agent):
+    @patch("app.agents.questionnaire_agent.get_async_db")
+    @patch("app.repositories.document_chunk_repository.DocumentChunkRepository")
+    async def test_retrieve_client_context_success(
+        self, mock_repo_class, mock_get_db, questionnaire_agent
+    ):
         """Test successful context retrieval."""
         # Mock database and repository
         mock_db = MagicMock()
-        
+
         async def mock_async_db_generator():
             yield mock_db
-        
+
         mock_get_db.return_value = mock_async_db_generator()
 
         mock_repo = MagicMock()
@@ -77,11 +79,11 @@ class TestQuestionnaireAgent:
             "success": True,
             "context_chunks": [
                 {"text": "Test context 1", "score": 0.9},
-                {"text": "Test context 2", "score": 0.8}
+                {"text": "Test context 2", "score": 0.8},
             ],
             "total_chunks": 2,
             "query_text": "test query",
-            "client_id": "550e8400-e29b-41d4-a716-446655440000"
+            "client_id": "550e8400-e29b-41d4-a716-446655440000",
         }
 
         questionnaire_agent.rag_retriever.retrieve_client_context = MagicMock(
@@ -93,7 +95,7 @@ class TestQuestionnaireAgent:
             client_id="550e8400-e29b-41d4-a716-446655440000",
             profession="Engineer",
             disease="Back pain",
-            incident_date="01/01/2023"
+            incident_date="01/01/2023",
         )
 
         assert result["success"] is True
@@ -101,8 +103,10 @@ class TestQuestionnaireAgent:
         assert result["total_chunks"] == 2
 
     @pytest.mark.asyncio
-    @patch('app.agents.questionnaire_agent.get_async_db')
-    async def test_retrieve_client_context_failure(self, mock_get_db, questionnaire_agent):
+    @patch("app.agents.questionnaire_agent.get_async_db")
+    async def test_retrieve_client_context_failure(
+        self, mock_get_db, questionnaire_agent
+    ):
         """Test context retrieval failure."""
         # Mock database error
         mock_get_db.side_effect = Exception("Database error")
@@ -112,14 +116,16 @@ class TestQuestionnaireAgent:
             client_id="550e8400-e29b-41d4-a716-446655440000",
             profession="Engineer",
             disease="Back pain",
-            incident_date="01/01/2023"
+            incident_date="01/01/2023",
         )
 
         assert result["success"] is False
         assert "error" in result
         assert result["context_chunks"] == []
 
-    def test_generate_questionnaire_content_success(self, questionnaire_agent, mock_client):
+    def test_generate_questionnaire_content_success(
+        self, questionnaire_agent, mock_client
+    ):
         """Test successful questionnaire content generation."""
         # Mock LLM processor
         mock_llm_result = {
@@ -128,7 +134,7 @@ class TestQuestionnaireAgent:
             "context_chunks_used": 2,
             "model_used": "gemini-1.5-pro",
             "client_name": "Test Client",
-            "has_context": True
+            "has_context": True,
         }
 
         questionnaire_agent.llm_processor.generate_questionnaire = MagicMock(
@@ -139,21 +145,19 @@ class TestQuestionnaireAgent:
         client_data = {
             "id": str(mock_client.id),
             "name": mock_client.name,
-            "cpf": mock_client.cpf
+            "cpf": mock_client.cpf,
         }
         case_data = {
             "profession": "Engineer",
             "disease": "Back pain",
             "incident_date": "01/01/2023",
-            "medical_date": "02/01/2023"
+            "medical_date": "02/01/2023",
         }
         context_chunks = [{"text": "Test context", "score": 0.9}]
 
         # Test content generation
         result = questionnaire_agent.generate_questionnaire_content(
-            client_data=client_data,
-            case_data=case_data,
-            context_chunks=context_chunks
+            client_data=client_data, case_data=case_data, context_chunks=context_chunks
         )
 
         assert result["success"] is True
@@ -171,20 +175,18 @@ class TestQuestionnaireAgent:
         client_data = {
             "id": str(uuid.uuid4()),
             "name": "Test Client",
-            "cpf": "12345678901"
+            "cpf": "12345678901",
         }
         case_data = {
             "profession": "Engineer",
             "disease": "Back pain",
             "incident_date": "01/01/2023",
-            "medical_date": "02/01/2023"
+            "medical_date": "02/01/2023",
         }
 
         # Test content generation
         result = questionnaire_agent.generate_questionnaire_content(
-            client_data=client_data,
-            case_data=case_data,
-            context_chunks=[]
+            client_data=client_data, case_data=case_data, context_chunks=[]
         )
 
         assert result["success"] is False
@@ -196,12 +198,12 @@ class TestQuestionnaireAgent:
         # Mock template manager
         mock_template_result = {
             "success": True,
-            "template": {"name": "medical_examination", "formatting_rules": []}
+            "template": {"name": "medical_examination", "formatting_rules": []},
         }
         mock_formatting_result = {
             "success": True,
             "formatted_questionnaire": "Formatted questionnaire content",
-            "template_applied": "medical_examination"
+            "template_applied": "medical_examination",
         }
 
         questionnaire_agent.template_manager.get_questionnaire_template = MagicMock(
@@ -215,20 +217,20 @@ class TestQuestionnaireAgent:
         client_data = {
             "id": str(mock_client.id),
             "name": mock_client.name,
-            "cpf": mock_client.cpf
+            "cpf": mock_client.cpf,
         }
         case_data = {
             "profession": "Engineer",
             "disease": "Back pain",
             "incident_date": "01/01/2023",
-            "medical_date": "02/01/2023"
+            "medical_date": "02/01/2023",
         }
 
         # Test formatting application
         result = questionnaire_agent.apply_legal_formatting(
             questionnaire_text="Raw questionnaire text",
             client_data=client_data,
-            case_data=case_data
+            case_data=case_data,
         )
 
         assert result["success"] is True
@@ -240,15 +242,11 @@ class TestQuestionnaireAgent:
         # Mock template manager
         mock_template_result = {
             "success": True,
-            "template": {"name": "medical_examination", "validation_rules": []}
+            "template": {"name": "medical_examination", "validation_rules": []},
         }
         mock_validation_result = {
             "success": True,
-            "validation_results": {
-                "is_valid": True,
-                "errors": [],
-                "warnings": []
-            }
+            "validation_results": {"is_valid": True, "errors": [], "warnings": []},
         }
 
         questionnaire_agent.template_manager.get_questionnaire_template = MagicMock(
@@ -267,24 +265,26 @@ class TestQuestionnaireAgent:
         assert result["validation_results"]["is_valid"] is True
 
     @pytest.mark.asyncio
-    @patch('app.agents.questionnaire_agent.get_async_db')
-    @patch('app.models.questionnaire_draft.QuestionnaireDraft')
-    async def test_save_questionnaire_draft_success(self, mock_draft_class, mock_get_db, questionnaire_agent):
+    @patch("app.agents.questionnaire_agent.get_async_db")
+    @patch("app.models.questionnaire_draft.QuestionnaireDraft")
+    async def test_save_questionnaire_draft_success(
+        self, mock_draft_class, mock_get_db, questionnaire_agent
+    ):
         """Test successful questionnaire draft saving."""
         # Mock database
         mock_db = MagicMock()
         mock_db.commit = AsyncMock()
         mock_db.refresh = AsyncMock()
-        
+
         async def mock_async_db_generator():
             yield mock_db
-        
+
         mock_get_db.return_value = mock_async_db_generator()
 
         # Mock draft instance
         mock_draft = MagicMock()
         mock_draft.id = 123
-        mock_draft.created_at = datetime.now(timezone.utc)
+        mock_draft.created_at = datetime.now(UTC)
         mock_draft_class.return_value = mock_draft
 
         # Test draft saving
@@ -295,9 +295,9 @@ class TestQuestionnaireAgent:
                 "profession": "Engineer",
                 "disease": "Back pain",
                 "incident_date": "01/01/2023",
-                "medical_date": "02/01/2023"
+                "medical_date": "02/01/2023",
             },
-            metadata={"test": "data"}
+            metadata={"test": "data"},
         )
 
         assert result["success"] is True
@@ -307,13 +307,15 @@ class TestQuestionnaireAgent:
         mock_db.refresh.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_generate_questionnaire_workflow_success(self, questionnaire_agent, mock_client):
+    async def test_generate_questionnaire_workflow_success(
+        self, questionnaire_agent, mock_client
+    ):
         """Test complete questionnaire generation workflow."""
         # Mock all tools (need AsyncMock for async methods)
         questionnaire_agent.retrieve_client_context = AsyncMock(
             return_value={
                 "success": True,
-                "context_chunks": [{"text": "Test context", "score": 0.9}]
+                "context_chunks": [{"text": "Test context", "score": 0.9}],
             }
         )
 
@@ -321,7 +323,7 @@ class TestQuestionnaireAgent:
             return_value={
                 "success": True,
                 "questionnaire": "Generated questionnaire",
-                "model_used": "gemini-1.5-pro"
+                "model_used": "gemini-1.5-pro",
             }
         )
 
@@ -329,22 +331,16 @@ class TestQuestionnaireAgent:
             return_value={
                 "success": True,
                 "formatted_questionnaire": "Formatted questionnaire",
-                "template_applied": "medical_examination"
+                "template_applied": "medical_examination",
             }
         )
 
         questionnaire_agent.validate_questionnaire = MagicMock(
-            return_value={
-                "success": True,
-                "validation_results": {"is_valid": True}
-            }
+            return_value={"success": True, "validation_results": {"is_valid": True}}
         )
 
         questionnaire_agent.save_questionnaire_draft = AsyncMock(
-            return_value={
-                "success": True,
-                "draft_id": 123
-            }
+            return_value={"success": True, "draft_id": 123}
         )
 
         # Test workflow
@@ -353,7 +349,7 @@ class TestQuestionnaireAgent:
             profession="Engineer",
             disease="Back pain",
             incident_date="01/01/2023",
-            medical_date="02/01/2023"
+            medical_date="02/01/2023",
         )
 
         assert result["success"] is True
@@ -362,7 +358,9 @@ class TestQuestionnaireAgent:
         assert result["processing_summary"]["draft_saved"] is True
 
     @pytest.mark.asyncio
-    async def test_generate_questionnaire_workflow_failure(self, questionnaire_agent, mock_client):
+    async def test_generate_questionnaire_workflow_failure(
+        self, questionnaire_agent, mock_client
+    ):
         """Test questionnaire generation workflow with failure."""
         # Mock context retrieval failure
         questionnaire_agent.retrieve_client_context = MagicMock(
@@ -375,7 +373,7 @@ class TestQuestionnaireAgent:
             profession="Engineer",
             disease="Back pain",
             incident_date="01/01/2023",
-            medical_date="02/01/2023"
+            medical_date="02/01/2023",
         )
 
         assert result["success"] is False
@@ -392,7 +390,7 @@ class TestQuestionnairePlugin:
         return {
             "name": "Test Questionnaire Agent",
             "description": "Test description",
-            "model": "gemini-1.5-pro"
+            "model": "gemini-1.5-pro",
         }
 
     def test_plugin_initialization(self, plugin_config):
@@ -409,7 +407,9 @@ class TestQuestionnairePlugin:
         """Test successful plugin initialization."""
         plugin = QuestionnairePlugin("test_agent", plugin_config)
 
-        with patch('app.agents.questionnaire_agent.QuestionnaireAgent') as mock_agent_class:
+        with patch(
+            "app.agents.questionnaire_agent.QuestionnaireAgent"
+        ) as mock_agent_class:
             mock_agent = MagicMock()
             mock_agent_class.return_value = mock_agent
 
@@ -424,7 +424,9 @@ class TestQuestionnairePlugin:
         """Test plugin initialization failure."""
         plugin = QuestionnairePlugin("test_agent", plugin_config)
 
-        with patch('app.agents.questionnaire_agent.QuestionnaireAgent') as mock_agent_class:
+        with patch(
+            "app.agents.questionnaire_agent.QuestionnaireAgent"
+        ) as mock_agent_class:
             mock_agent_class.side_effect = Exception("Initialization failed")
 
             result = await plugin.initialize()
@@ -444,7 +446,7 @@ class TestQuestionnairePlugin:
             "success": True,
             "questionnaire": "Generated questionnaire",
             "context_chunks": 2,
-            "client_name": "Test Client"
+            "client_name": "Test Client",
         }
         plugin._agent_instance = mock_agent
 
@@ -453,12 +455,12 @@ class TestQuestionnairePlugin:
             "client": {
                 "id": str(uuid.uuid4()),
                 "name": "Test Client",
-                "cpf": "12345678901"
+                "cpf": "12345678901",
             },
             "profession": "Engineer",
             "disease": "Back pain",
             "incident_date": "01/01/2023",
-            "medical_date": "02/01/2023"
+            "medical_date": "02/01/2023",
         }
 
         result = await plugin.process(data)
@@ -478,11 +480,11 @@ class TestQuestionnairePlugin:
             "client": {
                 "id": str(uuid.uuid4()),
                 "name": "Test Client",
-                "cpf": "12345678901"
+                "cpf": "12345678901",
             },
             "disease": "Back pain",
             "incident_date": "01/01/2023",
-            "medical_date": "02/01/2023"
+            "medical_date": "02/01/2023",
         }
 
         result = await plugin.process(data)

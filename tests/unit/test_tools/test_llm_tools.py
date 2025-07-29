@@ -15,17 +15,15 @@ class TestLLMProcessorTool:
     @pytest.fixture
     def mock_client(self):
         """Create a mock client for testing."""
-        return Client(
-            id=uuid.uuid4(),
-            name="João Silva",
-            cpf="12345678901"
-        )
+        return Client(id=uuid.uuid4(), name="João Silva", cpf="12345678901")
 
     @pytest.fixture
     def llm_tool(self):
         """Create LLMProcessorTool instance for testing."""
-        with patch('google.generativeai.configure'), \
-             patch('google.generativeai.GenerativeModel') as mock_model_class:
+        with (
+            patch("google.generativeai.configure"),
+            patch("google.generativeai.GenerativeModel") as mock_model_class,
+        ):
             mock_model = MagicMock()
             mock_model_class.return_value = mock_model
 
@@ -33,9 +31,10 @@ class TestLLMProcessorTool:
 
     def test_tool_initialization(self):
         """Test tool initialization."""
-        with patch('google.generativeai.configure') as mock_configure, \
-             patch('google.generativeai.GenerativeModel') as mock_model_class:
-
+        with (
+            patch("google.generativeai.configure") as mock_configure,
+            patch("google.generativeai.GenerativeModel") as mock_model_class,
+        ):
             tool = LLMProcessorTool(model_name="gemini-1.5-pro", api_key="test_api_key")
 
             mock_configure.assert_called_once_with(api_key="test_api_key")
@@ -44,9 +43,10 @@ class TestLLMProcessorTool:
 
     def test_tool_initialization_without_api_key(self):
         """Test tool initialization without providing API key."""
-        with patch('google.generativeai.configure') as mock_configure, \
-             patch('google.generativeai.GenerativeModel'):
-
+        with (
+            patch("google.generativeai.configure") as mock_configure,
+            patch("google.generativeai.GenerativeModel"),
+        ):
             LLMProcessorTool(model_name="gemini-1.5-pro")
 
             # Should not call configure if no API key provided
@@ -76,7 +76,7 @@ QUESITOS:
 
         context_chunks = [
             {"text": "Exame médico mostra lesão na coluna", "score": 0.9},
-            {"text": "Laudo radiológico indica hérnia de disco", "score": 0.8}
+            {"text": "Laudo radiológico indica hérnia de disco", "score": 0.8},
         ]
 
         result = llm_tool.generate_questionnaire(
@@ -85,7 +85,7 @@ QUESITOS:
             disease="Dor nas costas",
             incident_date="01/01/2023",
             medical_date="02/01/2023",
-            context_chunks=context_chunks
+            context_chunks=context_chunks,
         )
 
         assert result["success"] is True
@@ -107,14 +107,16 @@ QUESITOS:
             profession="Advogado",
             disease="LER/DORT",
             incident_date="15/03/2023",
-            medical_date="20/03/2023"
+            medical_date="20/03/2023",
         )
 
         # Should return fallback questionnaire
         assert result["success"] is True
         assert "fallback_used" in result
         assert result["fallback_used"] is True
-        assert "ATENÇÃO: Quesitos gerados em modo de segurança" in result["questionnaire"]
+        assert (
+            "ATENÇÃO: Quesitos gerados em modo de segurança" in result["questionnaire"]
+        )
 
     def test_generate_questionnaire_api_exception(self, llm_tool, mock_client):
         """Test questionnaire generation with API exception."""
@@ -126,7 +128,7 @@ QUESITOS:
             profession="Médico",
             disease="Estresse",
             incident_date="10/05/2023",
-            medical_date="12/05/2023"
+            medical_date="12/05/2023",
         )
 
         # Should return fallback questionnaire
@@ -147,7 +149,7 @@ QUESITOS:
             disease="Ansiedade",
             incident_date="05/08/2023",
             medical_date="07/08/2023",
-            context_chunks=None
+            context_chunks=None,
         )
 
         assert result["success"] is True
@@ -161,8 +163,7 @@ QUESITOS:
         llm_tool.model.generate_content.return_value = mock_response
 
         result = llm_tool.generate_with_prompt(
-            prompt="Generate a legal document about workplace injuries",
-            temperature=0.5
+            prompt="Generate a legal document about workplace injuries", temperature=0.5
         )
 
         assert result["success"] is True
@@ -173,9 +174,7 @@ QUESITOS:
         """Test content generation failure with custom prompt."""
         llm_tool.model.generate_content.side_effect = Exception("Generation failed")
 
-        result = llm_tool.generate_with_prompt(
-            prompt="Test prompt"
-        )
+        result = llm_tool.generate_with_prompt(prompt="Test prompt")
 
         assert result["success"] is False
         assert "error" in result
@@ -184,9 +183,13 @@ QUESITOS:
     def test_prepare_context_text_with_chunks(self, llm_tool):
         """Test context text preparation with chunks."""
         context_chunks = [
-            {"text": "Medical report text", "score": 0.9, "metadata": {"type": "medical"}},
+            {
+                "text": "Medical report text",
+                "score": 0.9,
+                "metadata": {"type": "medical"},
+            },
             {"text": "X-ray analysis", "score": 0.8, "metadata": {"type": "radiology"}},
-            {"text": "Doctor's notes", "score": 0.7, "metadata": {}}
+            {"text": "Doctor's notes", "score": 0.7, "metadata": {}},
         ]
 
         context_text = llm_tool._prepare_context_text(context_chunks)
@@ -217,7 +220,7 @@ QUESITOS:
             disease="Síndrome do Túnel do Carpo",
             incident_date="12/06/2023",
             medical_date="15/06/2023",
-            context_text=context_text
+            context_text=context_text,
         )
 
         assert "João Silva" in prompt
@@ -236,7 +239,7 @@ QUESITOS:
             profession="Contador",
             disease="Depressão",
             incident_date="20/09/2023",
-            medical_date="25/09/2023"
+            medical_date="25/09/2023",
         )
 
         assert "QUESITOS PARA PERÍCIA MÉDICA" in fallback
@@ -251,11 +254,7 @@ QUESITOS:
     def test_formatted_cpf_in_prompt(self, llm_tool):
         """Test that CPF is properly formatted in generated content."""
         # Create client with specific CPF
-        client = Client(
-            id=uuid.uuid4(),
-            name="Maria Santos",
-            cpf="98765432100"
-        )
+        client = Client(id=uuid.uuid4(), name="Maria Santos", cpf="98765432100")
 
         mock_response = MagicMock()
         mock_response.text = "Test questionnaire"
@@ -266,7 +265,7 @@ QUESITOS:
             profession="Professora",
             disease="Estresse",
             incident_date="01/01/2023",
-            medical_date="02/01/2023"
+            medical_date="02/01/2023",
         )
 
         # Verify that generate_content was called
@@ -301,7 +300,7 @@ QUESITOS:
             profession="Engenheiro",
             disease="Lesão",
             incident_date="01/01/2023",
-            medical_date="02/01/2023"
+            medical_date="02/01/2023",
         )
 
         questionnaire = result["questionnaire"]

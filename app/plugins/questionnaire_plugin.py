@@ -19,4 +19,3 @@ def register_questionnaire_plugin() -> None:
 
 # Auto-register when module is imported
 register_questionnaire_plugin()
-

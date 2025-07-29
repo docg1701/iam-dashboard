@@ -37,7 +37,7 @@ def sample_document():
         client_id=client_id,
         file_path="uploads/test.pdf",
         created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        updated_at=datetime.utcnow(),
     )
 
 
@@ -45,7 +45,9 @@ class TestDocumentRepository:
     """Test cases for DocumentRepository."""
 
     @pytest.mark.asyncio
-    async def test_create_document_success(self, document_repository, mock_db_session, sample_document):
+    async def test_create_document_success(
+        self, document_repository, mock_db_session, sample_document
+    ):
         """Test successful document creation."""
         # Arrange
         mock_db_session.commit = AsyncMock()
@@ -61,7 +63,9 @@ class TestDocumentRepository:
         mock_db_session.refresh.assert_called_once_with(sample_document)
 
     @pytest.mark.asyncio
-    async def test_get_by_id_found(self, document_repository, mock_db_session, sample_document):
+    async def test_get_by_id_found(
+        self, document_repository, mock_db_session, sample_document
+    ):
         """Test getting document by ID when found."""
         # Arrange
         mock_result = Mock()
@@ -91,7 +95,9 @@ class TestDocumentRepository:
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_by_client_id(self, document_repository, mock_db_session, sample_document):
+    async def test_get_by_client_id(
+        self, document_repository, mock_db_session, sample_document
+    ):
         """Test getting documents by client ID."""
         # Arrange
         client_id = uuid.uuid4()
@@ -107,7 +113,9 @@ class TestDocumentRepository:
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_check_duplicate_by_hash_found(self, document_repository, mock_db_session, sample_document):
+    async def test_check_duplicate_by_hash_found(
+        self, document_repository, mock_db_session, sample_document
+    ):
         """Test checking for duplicate document when found."""
         # Arrange
         mock_result = Mock()
@@ -116,8 +124,7 @@ class TestDocumentRepository:
 
         # Act
         result = await document_repository.check_duplicate_by_hash(
-            sample_document.client_id,
-            sample_document.content_hash
+            sample_document.client_id, sample_document.content_hash
         )
 
         # Assert
@@ -125,7 +132,9 @@ class TestDocumentRepository:
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_check_duplicate_by_hash_not_found(self, document_repository, mock_db_session):
+    async def test_check_duplicate_by_hash_not_found(
+        self, document_repository, mock_db_session
+    ):
         """Test checking for duplicate document when not found."""
         # Arrange
         mock_result = Mock()
@@ -133,14 +142,18 @@ class TestDocumentRepository:
         mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         # Act
-        result = await document_repository.check_duplicate_by_hash(uuid.uuid4(), "hash123")
+        result = await document_repository.check_duplicate_by_hash(
+            uuid.uuid4(), "hash123"
+        )
 
         # Assert
         assert result is None
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_status_success(self, document_repository, mock_db_session, sample_document):
+    async def test_update_status_success(
+        self, document_repository, mock_db_session, sample_document
+    ):
         """Test successful status update."""
         # Arrange
         mock_result = Mock()
@@ -150,9 +163,7 @@ class TestDocumentRepository:
 
         # Act
         result = await document_repository.update_status(
-            sample_document.id,
-            DocumentStatus.PROCESSED,
-            None
+            sample_document.id, DocumentStatus.PROCESSED, None
         )
 
         # Assert
@@ -161,7 +172,9 @@ class TestDocumentRepository:
         mock_db_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_status_document_not_found(self, document_repository, mock_db_session):
+    async def test_update_status_document_not_found(
+        self, document_repository, mock_db_session
+    ):
         """Test status update when document not found."""
         # Arrange
         mock_result = Mock()
@@ -169,13 +182,17 @@ class TestDocumentRepository:
         mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         # Act
-        result = await document_repository.update_status(uuid.uuid4(), DocumentStatus.PROCESSED)
+        result = await document_repository.update_status(
+            uuid.uuid4(), DocumentStatus.PROCESSED
+        )
 
         # Assert
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_update_task_id_success(self, document_repository, mock_db_session, sample_document):
+    async def test_update_task_id_success(
+        self, document_repository, mock_db_session, sample_document
+    ):
         """Test successful task ID update."""
         # Arrange
         mock_result = Mock()
@@ -193,7 +210,9 @@ class TestDocumentRepository:
         mock_db_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_by_status(self, document_repository, mock_db_session, sample_document):
+    async def test_get_by_status(
+        self, document_repository, mock_db_session, sample_document
+    ):
         """Test getting documents by status."""
         # Arrange
         mock_result = Mock()
@@ -208,7 +227,9 @@ class TestDocumentRepository:
         mock_db_session.execute.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_delete_success(self, document_repository, mock_db_session, sample_document):
+    async def test_delete_success(
+        self, document_repository, mock_db_session, sample_document
+    ):
         """Test successful document deletion."""
         # Arrange
         mock_result = Mock()

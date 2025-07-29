@@ -65,7 +65,9 @@ class DocumentPreprocessor:
                 morphed = cv2.resize(
                     morphed, (new_width, new_height), interpolation=cv2.INTER_CUBIC
                 )
-                logger.debug(f"Resized image from {width}x{height} to {new_width}x{new_height}")
+                logger.debug(
+                    f"Resized image from {width}x{height} to {new_width}x{new_height}"
+                )
 
             return morphed
 
@@ -94,7 +96,9 @@ class DocumentPreprocessor:
                 page = pdf_document[page_num]
 
                 # Convert page to image
-                pix = page.get_pixmap(matrix=fitz.Matrix(2.0, 2.0))  # 2x zoom for better quality
+                pix = page.get_pixmap(
+                    matrix=fitz.Matrix(2.0, 2.0)
+                )  # 2x zoom for better quality
                 img_data = pix.tobytes("png")
 
                 # Convert to OpenCV format
@@ -107,20 +111,23 @@ class DocumentPreprocessor:
                 # Perform OCR using Tesseract
                 try:
                     # Configure Tesseract for legal documents (Portuguese)
-                    custom_config = r'--oem 3 --psm 6 -l por'
+                    custom_config = r"--oem 3 --psm 6 -l por"
                     text = pytesseract.image_to_string(
-                        preprocessed,
-                        config=custom_config
+                        preprocessed, config=custom_config
                     )
 
                     if text.strip():
                         extracted_text.append(f"--- Página {page_num + 1} ---\n{text}")
-                        logger.debug(f"Successfully extracted text from page {page_num + 1}")
+                        logger.debug(
+                            f"Successfully extracted text from page {page_num + 1}"
+                        )
                     else:
                         logger.warning(f"No text extracted from page {page_num + 1}")
 
                 except Exception as ocr_error:
-                    logger.error(f"OCR failed for page {page_num + 1}: {str(ocr_error)}")
+                    logger.error(
+                        f"OCR failed for page {page_num + 1}: {str(ocr_error)}"
+                    )
                     continue
 
             pdf_document.close()
@@ -128,7 +135,9 @@ class DocumentPreprocessor:
             return "\n\n".join(extracted_text)
 
         except Exception as e:
-            logger.error(f"Error extracting text from complex document {pdf_path}: {str(e)}")
+            logger.error(
+                f"Error extracting text from complex document {pdf_path}: {str(e)}"
+            )
             raise
 
     def _estimate_dpi(self, image: np.ndarray) -> float:
@@ -189,17 +198,27 @@ class DocumentPreprocessor:
                 text_chars_found += len(text.strip())
 
                 # Estimate total possible characters based on page size
-                total_chars_possible += 2000  # Assume ~2000 chars per page for full text
+                total_chars_possible += (
+                    2000  # Assume ~2000 chars per page for full text
+                )
 
             # If sufficient text is found directly, it's simple
-            text_ratio = text_chars_found / total_chars_possible if total_chars_possible > 0 else 0
+            text_ratio = (
+                text_chars_found / total_chars_possible
+                if total_chars_possible > 0
+                else 0
+            )
             if text_ratio >= 0.1:
                 pdf_document.close()
-                logger.info(f"Document {pdf_path.name} has direct text (ratio: {text_ratio:.2f}), classified as: simple")
+                logger.info(
+                    f"Document {pdf_path.name} has direct text (ratio: {text_ratio:.2f}), classified as: simple"
+                )
                 return False
 
             # Step 2: No direct text found, test local OCR capability
-            logger.info(f"Document {pdf_path.name} has no direct text (ratio: {text_ratio:.2f}), testing local OCR...")
+            logger.info(
+                f"Document {pdf_path.name} has no direct text (ratio: {text_ratio:.2f}), testing local OCR..."
+            )
 
             # Test OCR on first page only (for performance)
             if len(pdf_document) > 0:
@@ -208,23 +227,33 @@ class DocumentPreprocessor:
                     pdf_document.close()
 
                     if ocr_success:
-                        logger.info(f"Document {pdf_path.name} OCR test successful, classified as: simple (local OCR)")
+                        logger.info(
+                            f"Document {pdf_path.name} OCR test successful, classified as: simple (local OCR)"
+                        )
                         return False
                     else:
-                        logger.info(f"Document {pdf_path.name} OCR test failed, classified as: complex (Gemini OCR)")
+                        logger.info(
+                            f"Document {pdf_path.name} OCR test failed, classified as: complex (Gemini OCR)"
+                        )
                         return True
 
                 except Exception as ocr_error:
-                    logger.warning(f"OCR test failed for {pdf_path.name}: {str(ocr_error)}, defaulting to: complex")
+                    logger.warning(
+                        f"OCR test failed for {pdf_path.name}: {str(ocr_error)}, defaulting to: complex"
+                    )
                     pdf_document.close()
                     return True
 
             pdf_document.close()
-            logger.info(f"Document {pdf_path.name} has no pages, classified as: complex")
+            logger.info(
+                f"Document {pdf_path.name} has no pages, classified as: complex"
+            )
             return True
 
         except Exception as e:
-            logger.error(f"Error analyzing document complexity for {pdf_path}: {str(e)}")
+            logger.error(
+                f"Error analyzing document complexity for {pdf_path}: {str(e)}"
+            )
             # Default to complex if we can't determine
             return True
 
@@ -251,7 +280,7 @@ class DocumentPreprocessor:
             preprocessed = self.preprocess_image_for_ocr(cv_image)
 
             # Test OCR with Portuguese configuration
-            custom_config = r'--oem 3 --psm 6 -l por'
+            custom_config = r"--oem 3 --psm 6 -l por"
             ocr_text = pytesseract.image_to_string(preprocessed, config=custom_config)
 
             # Evaluate OCR quality
@@ -264,7 +293,9 @@ class DocumentPreprocessor:
                 meaningful_words = [w for w in words if len(w.strip()) >= 3]
 
                 if len(meaningful_words) >= 5:  # At least 5 meaningful words
-                    logger.debug(f"OCR test successful: {ocr_chars} chars, {len(meaningful_words)} meaningful words")
+                    logger.debug(
+                        f"OCR test successful: {ocr_chars} chars, {len(meaningful_words)} meaningful words"
+                    )
                     return True
 
             logger.debug(f"OCR test failed: {ocr_chars} chars, insufficient quality")

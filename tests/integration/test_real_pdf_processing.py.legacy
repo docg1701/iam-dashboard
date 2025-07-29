@@ -30,6 +30,7 @@ class TestRealPDFProcessing:
         """Test that simple PDF can be processed with local OCR (user requirement)."""
         # Load environment variables
         from dotenv import load_dotenv
+
         load_dotenv()
 
         # Arrange
@@ -40,10 +41,14 @@ class TestRealPDFProcessing:
             text = processor._extract_simple_text_or_local_ocr(simple_pdf_path)
             # Assert - Should extract meaningful text with local OCR
             assert text is not None
-            assert len(text.strip()) > 50, "Should extract meaningful text with local OCR"
+            assert len(text.strip()) > 50, (
+                "Should extract meaningful text with local OCR"
+            )
             assert "ESTADO DO MARANHÃO" in text, "Should contain expected content"
         except Exception as e:
-            assert "tesseract" in str(e).lower(), "Only acceptable error is missing Tesseract"
+            assert "tesseract" in str(e).lower(), (
+                "Only acceptable error is missing Tesseract"
+            )
 
     def test_complex_pdf_preprocessing_capability(self, complex_pdf_path):
         """Test that complex PDF can be preprocessed for Gemini OCR (user requirement)."""
@@ -65,6 +70,7 @@ class TestRealPDFProcessing:
         """Test text extraction from PDF (may need OCR if not pure digital text)."""
         # Load environment variables
         from dotenv import load_dotenv
+
         load_dotenv()
 
         # Arrange
@@ -74,14 +80,18 @@ class TestRealPDFProcessing:
         extracted_text = processor._extract_simple_text(simple_pdf_path)
         if not extracted_text.strip():
             # Fall back to OCR for PDFs that look digital but need OCR
-            extracted_text = processor._extract_simple_text_or_local_ocr(simple_pdf_path)
+            extracted_text = processor._extract_simple_text_or_local_ocr(
+                simple_pdf_path
+            )
 
         # Assert
         assert extracted_text is not None
         assert len(extracted_text.strip()) > 0, "Should extract text from PDF"
         assert "---" in extracted_text, "Should include page separators"
         # Check for expected content specific to our test PDF
-        assert "ESTADO DO MARANHÃO" in extracted_text, "Should contain expected document content"
+        assert "ESTADO DO MARANHÃO" in extracted_text, (
+            "Should contain expected document content"
+        )
 
     @pytest.mark.asyncio
     async def test_complex_pdf_ocr_extraction(self, complex_pdf_path):
@@ -91,7 +101,9 @@ class TestRealPDFProcessing:
 
         # Act - This might take a while due to OCR processing
         try:
-            extracted_text = preprocessor.extract_text_from_complex_document(complex_pdf_path)
+            extracted_text = preprocessor.extract_text_from_complex_document(
+                complex_pdf_path
+            )
 
             # Assert
             assert extracted_text is not None
@@ -102,10 +114,13 @@ class TestRealPDFProcessing:
             # If OCR fails (missing Tesseract, etc.), we expect specific errors
             assert "tesseract" in str(e).lower() or "image" in str(e).lower()
 
-    def test_user_driven_document_type_workflow(self, simple_pdf_path, complex_pdf_path):
+    def test_user_driven_document_type_workflow(
+        self, simple_pdf_path, complex_pdf_path
+    ):
         """Test that users choose document type (simple vs complex) not automatic classification."""
         # Load environment variables
         from dotenv import load_dotenv
+
         load_dotenv()
 
         # Arrange
@@ -113,32 +128,42 @@ class TestRealPDFProcessing:
 
         # Act & Assert - Simple processing (user choice)
         simple_text = processor._extract_simple_text_or_local_ocr(simple_pdf_path)
-        assert len(simple_text) > 50, "User-selected simple processing should work with local OCR"
+        assert len(simple_text) > 50, (
+            "User-selected simple processing should work with local OCR"
+        )
 
         # Act & Assert - Complex processing would use Gemini (user choice)
         # Note: We test preprocessing capability rather than full Gemini integration
         preprocessor = get_document_preprocessor()
         try:
-            complex_text = preprocessor.extract_text_from_complex_document(complex_pdf_path)
+            complex_text = preprocessor.extract_text_from_complex_document(
+                complex_pdf_path
+            )
             assert isinstance(complex_text, str)
         except Exception:
             # Expected in test environment - preprocessing logic exists
             pass
 
     @pytest.mark.asyncio
-    async def test_document_security_validation(self, simple_pdf_path, complex_pdf_path):
+    async def test_document_security_validation(
+        self, simple_pdf_path, complex_pdf_path
+    ):
         """Test security validation on real PDF files."""
         # Arrange
         processor = get_llama_index_processor()
 
         # Act & Assert - Simple PDF
-        simple_validation = processor.security_validator.validate_pdf_file(simple_pdf_path)
+        simple_validation = processor.security_validator.validate_pdf_file(
+            simple_pdf_path
+        )
         assert simple_validation["valid"] is True
         assert simple_validation["file_size"] > 0
         assert simple_validation["page_count"] > 0
 
         # Act & Assert - Complex PDF
-        complex_validation = processor.security_validator.validate_pdf_file(complex_pdf_path)
+        complex_validation = processor.security_validator.validate_pdf_file(
+            complex_pdf_path
+        )
         assert complex_validation["valid"] is True
         assert complex_validation["file_size"] > 0
         assert complex_validation["page_count"] > 0
@@ -151,6 +176,7 @@ class TestRealPDFProcessing:
 
         # Create a sample image array (simulating PDF page conversion)
         import numpy as np
+
         sample_image = np.random.randint(0, 255, (400, 600), dtype=np.uint8)
 
         # Act
@@ -164,7 +190,9 @@ class TestRealPDFProcessing:
         assert processed_image.shape[1] >= sample_image.shape[1]
 
     @pytest.mark.asyncio
-    async def test_user_selected_processing_performance(self, simple_pdf_path, complex_pdf_path):
+    async def test_user_selected_processing_performance(
+        self, simple_pdf_path, complex_pdf_path
+    ):
         """Test performance of user-selected processing types."""
         # Arrange
         processor = get_llama_index_processor()
@@ -186,7 +214,9 @@ class TestRealPDFProcessing:
         try:
             preprocessor.extract_text_from_complex_document(complex_pdf_path)
             complex_time = time.time() - start_time
-            assert complex_time < 30.0, "Complex preprocessing should complete in reasonable time"
+            assert complex_time < 30.0, (
+                "Complex preprocessing should complete in reasonable time"
+            )
         except Exception:
             # Performance test passed - preprocessing started
             pass
@@ -199,7 +229,9 @@ class TestRealPDFProcessing:
 
         # Act - Check simple PDF
         simple_stats = simple_pdf_path.stat()
-        simple_validation = processor.security_validator.validate_pdf_file(simple_pdf_path)
+        simple_validation = processor.security_validator.validate_pdf_file(
+            simple_pdf_path
+        )
 
         # Assert simple PDF
         assert simple_stats.st_size > 0
@@ -208,7 +240,9 @@ class TestRealPDFProcessing:
 
         # Act - Check complex PDF
         complex_stats = complex_pdf_path.stat()
-        complex_validation = processor.security_validator.validate_pdf_file(complex_pdf_path)
+        complex_validation = processor.security_validator.validate_pdf_file(
+            complex_pdf_path
+        )
 
         # Assert complex PDF
         assert complex_stats.st_size > 0

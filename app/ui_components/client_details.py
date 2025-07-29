@@ -39,7 +39,7 @@ class ClientDetailsPage:
                 with ui.row().classes("items-center gap-4"):
                     ui.button(
                         "← Voltar para Clientes",
-                        on_click=lambda: ui.navigate.to("/clients")
+                        on_click=lambda: ui.navigate.to("/clients"),
                     ).classes(
                         "bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
                     )
@@ -59,13 +59,12 @@ class ClientDetailsPage:
                 self.document_list_component = DocumentListComponent(
                     client_id=self.client_id,
                     on_view_summary=self._handle_view_summary,
-                    on_download=self._handle_download
+                    on_download=self._handle_download,
                 )
                 self.document_list_component.create()
 
         # Load initial data
         ui.timer(0.1, self._load_client, once=True)
-
 
     async def _load_client(self) -> None:
         """Load client information from database."""
@@ -85,12 +84,18 @@ class ClientDetailsPage:
                 self.client_info_container.clear()
                 with self.client_info_container:
                     with ui.card().classes("w-full p-6"):
-                        ui.label("Informações do Cliente").classes("text-2xl font-bold mb-4")
+                        ui.label("Informações do Cliente").classes(
+                            "text-2xl font-bold mb-4"
+                        )
 
                         with ui.row().classes("w-full gap-8"):
                             with ui.column().classes("flex-1"):
-                                ui.label(f"Nome: {self.client.name}").classes("text-lg font-semibold")
-                                ui.label(f"CPF: {self.client.formatted_cpf}").classes("text-lg")
+                                ui.label(f"Nome: {self.client.name}").classes(
+                                    "text-lg font-semibold"
+                                )
+                                ui.label(f"CPF: {self.client.formatted_cpf}").classes(
+                                    "text-lg"
+                                )
 
                             with ui.column().classes("flex-1"):
                                 birth_date_str = (
@@ -98,13 +103,17 @@ class ClientDetailsPage:
                                     if self.client.birth_date
                                     else "Não informado"
                                 )
-                                ui.label(f"Data de Nascimento: {birth_date_str}").classes("text-lg")
+                                ui.label(
+                                    f"Data de Nascimento: {birth_date_str}"
+                                ).classes("text-lg")
                                 created_at_str = (
                                     self.client.created_at.strftime("%d/%m/%Y às %H:%M")
                                     if self.client.created_at
                                     else "Não informado"
                                 )
-                                ui.label(f"Cliente desde: {created_at_str}").classes("text-lg")
+                                ui.label(f"Cliente desde: {created_at_str}").classes(
+                                    "text-lg"
+                                )
 
         except Exception as e:
             ui.notify(f"Erro ao carregar dados do cliente: {str(e)}", type="negative")
@@ -112,7 +121,9 @@ class ClientDetailsPage:
     def _handle_view_summary(self, document: Document) -> None:
         """Handle view document summary action."""
         if document.status != "processed":
-            ui.notify("Resumo disponível apenas para documentos processados", type="warning")
+            ui.notify(
+                "Resumo disponível apenas para documentos processados", type="warning"
+            )
             return
 
         # Import here to avoid circular imports

@@ -31,14 +31,16 @@ class TestClientDetailsIntegration:
         document_service = DocumentService(document_repository)
 
         # Create a test client
-        timestamp = int(time.time() * 1000000) % 100000000  # Use timestamp for unique CPF
+        timestamp = (
+            int(time.time() * 1000000) % 100000000
+        )  # Use timestamp for unique CPF
         cpf = f"{timestamp:011d}"
         f"{cpf[:3]}.{cpf[3:6]}.{cpf[6:9]}-{cpf[9:11]}"
 
         client = await client_service.create_client(
             name="João Silva",
             cpf="123.456.789-09",  # Use the known working CPF
-            birth_date=datetime(1990, 1, 15).date()
+            birth_date=datetime(1990, 1, 15).date(),
         )
 
         # Create test documents for the client
@@ -47,7 +49,7 @@ class TestClientDetailsIntegration:
             client_id=client.id,
             filename="document1.pdf",
             content=doc1_content,
-            document_type=DocumentType.SIMPLE
+            document_type=DocumentType.SIMPLE,
         )
         assert doc1["success"] is True
 
@@ -56,7 +58,7 @@ class TestClientDetailsIntegration:
             client_id=client.id,
             filename="document2.pdf",
             content=doc2_content,
-            document_type=DocumentType.COMPLEX
+            document_type=DocumentType.COMPLEX,
         )
         assert doc2["success"] is True
 
@@ -64,14 +66,9 @@ class TestClientDetailsIntegration:
         doc1_id = uuid.UUID(doc1["document_id"])
         doc2_id = uuid.UUID(doc2["document_id"])
 
+        await document_service.update_document_status(doc1_id, DocumentStatus.PROCESSED)
         await document_service.update_document_status(
-            doc1_id,
-            DocumentStatus.PROCESSED
-        )
-        await document_service.update_document_status(
-            doc2_id,
-            DocumentStatus.FAILED,
-            error_message="OCR processing failed"
+            doc2_id, DocumentStatus.FAILED, error_message="OCR processing failed"
         )
 
         # Create document chunks for processed document with fake embeddings
@@ -144,7 +141,7 @@ class TestClientDetailsIntegration:
         client = await client_service.create_client(
             name="Maria Santos",
             cpf="987.654.321-00",
-            birth_date=datetime(1985, 5, 20).date()
+            birth_date=datetime(1985, 5, 20).date(),
         )
 
         # Test document listing returns empty
@@ -169,7 +166,7 @@ class TestClientDetailsIntegration:
         client = await client_service.create_client(
             name="Pedro Costa",
             cpf="222.333.444-55",
-            birth_date=datetime(1992, 8, 10).date()
+            birth_date=datetime(1992, 8, 10).date(),
         )
 
         doc_content = b"Test document for status updates"
@@ -177,7 +174,7 @@ class TestClientDetailsIntegration:
             client_id=client.id,
             filename="status_test.pdf",
             content=doc_content,
-            document_type=DocumentType.SIMPLE
+            document_type=DocumentType.SIMPLE,
         )
 
         doc_id = uuid.UUID(doc["document_id"])
@@ -187,10 +184,7 @@ class TestClientDetailsIntegration:
         assert document.status == DocumentStatus.UPLOADED
 
         # Simulate processing start
-        await document_service.update_document_status(
-            doc_id,
-            DocumentStatus.PROCESSING
-        )
+        await document_service.update_document_status(doc_id, DocumentStatus.PROCESSING)
 
         # Verify processing status
         document = await document_service.get_document_by_id(doc_id)
@@ -198,10 +192,7 @@ class TestClientDetailsIntegration:
         assert document.is_processing is True
 
         # Simulate processing completion
-        await document_service.update_document_status(
-            doc_id,
-            DocumentStatus.PROCESSED
-        )
+        await document_service.update_document_status(doc_id, DocumentStatus.PROCESSED)
 
         # Verify completed status
         document = await document_service.get_document_by_id(doc_id)
@@ -222,7 +213,7 @@ class TestClientDetailsIntegration:
         client = await client_service.create_client(
             name="Ana Lima",
             cpf="111.444.777-35",
-            birth_date=datetime(1988, 3, 25).date()
+            birth_date=datetime(1988, 3, 25).date(),
         )
 
         # Create first document
@@ -231,7 +222,7 @@ class TestClientDetailsIntegration:
             client_id=client.id,
             filename="original.pdf",
             content=doc_content,
-            document_type=DocumentType.SIMPLE
+            document_type=DocumentType.SIMPLE,
         )
         assert doc1["success"] is True
 
@@ -240,7 +231,7 @@ class TestClientDetailsIntegration:
             client_id=client.id,
             filename="duplicate.pdf",
             content=doc_content,  # Same content
-            document_type=DocumentType.SIMPLE
+            document_type=DocumentType.SIMPLE,
         )
         assert doc2["success"] is False
         assert "duplicado" in doc2["error"].lower()
@@ -263,7 +254,7 @@ class TestClientDetailsIntegration:
         client = await client_service.create_client(
             name="Carlos Ferreira",
             cpf="333.333.333-33",
-            birth_date=datetime(1975, 12, 5).date()
+            birth_date=datetime(1975, 12, 5).date(),
         )
 
         doc_content = b"Large document content"
@@ -271,7 +262,7 @@ class TestClientDetailsIntegration:
             client_id=client.id,
             filename="large_document.pdf",
             content=doc_content,
-            document_type=DocumentType.COMPLEX
+            document_type=DocumentType.COMPLEX,
         )
 
         doc_id = uuid.UUID(doc["document_id"])
@@ -301,7 +292,7 @@ class TestClientDetailsIntegration:
         avg_chunk_size = total_chars // len(retrieved_chunks)
 
         assert total_chars > 1000  # Should have substantial content
-        assert total_words > 200   # Should have many words
+        assert total_words > 200  # Should have many words
         assert avg_chunk_size > 0  # Average should be calculated
 
     @pytest.mark.asyncio
@@ -335,7 +326,7 @@ class TestClientDetailsIntegration:
         client = await client_service.create_client(
             name="Rita Oliveira",
             cpf="444.444.444-44",
-            birth_date=datetime(1995, 7, 18).date()
+            birth_date=datetime(1995, 7, 18).date(),
         )
 
         doc_content = b"Document that will fail processing"
@@ -343,7 +334,7 @@ class TestClientDetailsIntegration:
             client_id=client.id,
             filename="error_document.pdf",
             content=doc_content,
-            document_type=DocumentType.COMPLEX
+            document_type=DocumentType.COMPLEX,
         )
 
         doc_id = uuid.UUID(doc["document_id"])
@@ -351,9 +342,7 @@ class TestClientDetailsIntegration:
         # Simulate processing failure
         error_message = "OCR engine failed to process document"
         await document_service.update_document_status(
-            doc_id,
-            DocumentStatus.FAILED,
-            error_message=error_message
+            doc_id, DocumentStatus.FAILED, error_message=error_message
         )
 
         # Verify error status and message

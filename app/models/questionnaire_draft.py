@@ -27,10 +27,12 @@ class QuestionnaireDraft(TimestampedModel):
     profession = Column(String(100), nullable=False)
     disease = Column(String(200), nullable=False)
     incident_date = Column(String(10), nullable=False)  # Format: dd/mm/yyyy
-    medical_date = Column(String(10), nullable=False)   # Format: dd/mm/yyyy
+    medical_date = Column(String(10), nullable=False)  # Format: dd/mm/yyyy
 
     # Metadata about generation process
-    metadata_ = Column(JSONB, name="metadata")  # Avoid conflict with SQLAlchemy metadata
+    metadata_ = Column(
+        JSONB, name="metadata"
+    )  # Avoid conflict with SQLAlchemy metadata
 
     # Relationships
     client = relationship("Client", back_populates="questionnaire_drafts")

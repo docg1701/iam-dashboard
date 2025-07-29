@@ -14,7 +14,9 @@ class TestAuthFlow:
     """Integration tests for complete authentication flows."""
 
     @pytest.mark.asyncio
-    async def test_complete_registration_flow(self, async_session: AsyncSession) -> None:
+    async def test_complete_registration_flow(
+        self, async_session: AsyncSession
+    ) -> None:
         """Test complete user registration flow."""
         # Initialize services
         user_repository = UserRepository(async_session)
@@ -27,10 +29,7 @@ class TestAuthFlow:
 
         # Step 1: Create user
         user = await user_service.create_user(
-            username=username,
-            password=password,
-            role=role,
-            enable_2fa=True
+            username=username, password=password, role=role, enable_2fa=True
         )
 
         # Verify user was created correctly
@@ -57,7 +56,9 @@ class TestAuthFlow:
         assert is_2fa_valid is True
 
     @pytest.mark.asyncio
-    async def test_complete_login_flow_with_2fa(self, async_session: AsyncSession) -> None:
+    async def test_complete_login_flow_with_2fa(
+        self, async_session: AsyncSession
+    ) -> None:
         """Test complete login flow with 2FA."""
         # Initialize services
         user_repository = UserRepository(async_session)
@@ -71,7 +72,7 @@ class TestAuthFlow:
             username=username,
             password=password,
             role=UserRole.COMMON_USER,
-            enable_2fa=True
+            enable_2fa=True,
         )
 
         # Step 1: Authenticate with username/password
@@ -85,7 +86,9 @@ class TestAuthFlow:
         # Step 3: Generate and verify 2FA code
         totp = pyotp.TOTP(authenticated_user.totp_secret)
         valid_code = totp.now()
-        is_2fa_valid = await user_service.verify_totp_code(authenticated_user, valid_code)
+        is_2fa_valid = await user_service.verify_totp_code(
+            authenticated_user, valid_code
+        )
         assert is_2fa_valid is True
 
         # Step 4: Complete login (simulate session creation)
@@ -99,7 +102,9 @@ class TestAuthFlow:
         assert payload["username"] == user.username
 
     @pytest.mark.asyncio
-    async def test_complete_login_flow_without_2fa(self, async_session: AsyncSession) -> None:
+    async def test_complete_login_flow_without_2fa(
+        self, async_session: AsyncSession
+    ) -> None:
         """Test complete login flow without 2FA."""
         # Initialize services
         user_repository = UserRepository(async_session)
@@ -113,7 +118,7 @@ class TestAuthFlow:
             username=username,
             password=password,
             role=UserRole.COMMON_USER,
-            enable_2fa=False
+            enable_2fa=False,
         )
 
         # Step 1: Authenticate with username/password
@@ -125,7 +130,9 @@ class TestAuthFlow:
         assert authenticated_user.is_2fa_enabled is False
 
         # Step 3: 2FA verification should pass automatically
-        is_2fa_valid = await user_service.verify_totp_code(authenticated_user, "any_code")
+        is_2fa_valid = await user_service.verify_totp_code(
+            authenticated_user, "any_code"
+        )
         assert is_2fa_valid is True
 
         # Step 4: Complete login
@@ -153,7 +160,7 @@ class TestAuthFlow:
             username=username,
             password=password,
             role=UserRole.COMMON_USER,
-            enable_2fa=False
+            enable_2fa=False,
         )
 
         # Verify 2FA is initially disabled
@@ -200,15 +207,19 @@ class TestAuthFlow:
             username=username,
             password=password,
             role=UserRole.COMMON_USER,
-            enable_2fa=True
+            enable_2fa=True,
         )
 
         # Test 1: Wrong password
-        authenticated_user = await user_service.authenticate_user(username, "wrong_password")
+        authenticated_user = await user_service.authenticate_user(
+            username, "wrong_password"
+        )
         assert authenticated_user is None
 
         # Test 2: Non-existent user
-        authenticated_user = await user_service.authenticate_user("nonexistent", password)
+        authenticated_user = await user_service.authenticate_user(
+            "nonexistent", password
+        )
         assert authenticated_user is None
 
         # Test 3: Correct credentials but wrong 2FA code
@@ -221,11 +232,15 @@ class TestAuthFlow:
         # Test 4: Correct credentials and correct 2FA code
         totp = pyotp.TOTP(authenticated_user.totp_secret)
         valid_code = totp.now()
-        is_2fa_valid = await user_service.verify_totp_code(authenticated_user, valid_code)
+        is_2fa_valid = await user_service.verify_totp_code(
+            authenticated_user, valid_code
+        )
         assert is_2fa_valid is True
 
     @pytest.mark.asyncio
-    async def test_user_roles_and_permissions(self, async_session: AsyncSession) -> None:
+    async def test_user_roles_and_permissions(
+        self, async_session: AsyncSession
+    ) -> None:
         """Test user roles and permission properties."""
         # Initialize services
         user_repository = UserRepository(async_session)
@@ -233,9 +248,9 @@ class TestAuthFlow:
 
         # Test different user roles
         roles_to_test = [
-            (UserRole.SYSADMIN, True, True),      # is_admin, is_sysadmin
-            (UserRole.ADMIN_USER, True, False),   # is_admin, is_sysadmin
-            (UserRole.COMMON_USER, False, False), # is_admin, is_sysadmin
+            (UserRole.SYSADMIN, True, True),  # is_admin, is_sysadmin
+            (UserRole.ADMIN_USER, True, False),  # is_admin, is_sysadmin
+            (UserRole.COMMON_USER, False, False),  # is_admin, is_sysadmin
         ]
 
         for role, expected_is_admin, expected_is_sysadmin in roles_to_test:
@@ -243,7 +258,7 @@ class TestAuthFlow:
                 username=f"user_{role.value}",
                 password="password123",
                 role=role,
-                enable_2fa=False
+                enable_2fa=False,
             )
 
             assert user.role == role

@@ -34,7 +34,7 @@ class LLMProcessorTool:
         disease: str,
         incident_date: str,
         medical_date: str,
-        context_chunks: list[dict[str, Any]] | None = None
+        context_chunks: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Generate questionnaire using Gemini API with retrieved context.
 
@@ -72,10 +72,12 @@ class LLMProcessorTool:
                     "context_chunks_used": len(context_chunks) if context_chunks else 0,
                     "model_used": self.model_name,
                     "client_name": client.name,
-                    "has_context": bool(context_chunks)
+                    "has_context": bool(context_chunks),
                 }
 
-                logger.info(f"Successfully generated questionnaire with {self.model_name}")
+                logger.info(
+                    f"Successfully generated questionnaire with {self.model_name}"
+                )
                 return result
             else:
                 raise ValueError("Gemini API returned empty response")
@@ -97,14 +99,11 @@ class LLMProcessorTool:
                 "client_name": client.name,
                 "has_context": False,
                 "fallback_used": True,
-                "original_error": error_msg
+                "original_error": error_msg,
             }
 
     def generate_with_prompt(
-        self,
-        prompt: str,
-        max_tokens: int | None = None,
-        temperature: float = 0.7
+        self, prompt: str, max_tokens: int | None = None, temperature: float = 0.7
     ) -> dict[str, Any]:
         """Generate content with a custom prompt.
 
@@ -128,7 +127,7 @@ class LLMProcessorTool:
                     "success": True,
                     "generated_text": response.text,
                     "model_used": self.model_name,
-                    "prompt_length": len(prompt)
+                    "prompt_length": len(prompt),
                 }
 
                 logger.info(f"Successfully generated content with {self.model_name}")
@@ -143,7 +142,7 @@ class LLMProcessorTool:
                 "success": False,
                 "error": error_msg,
                 "generated_text": "",
-                "model_used": self.model_name
+                "model_used": self.model_name,
             }
 
     def _prepare_context_text(self, context_chunks: list[dict[str, Any]] | None) -> str:
@@ -182,7 +181,7 @@ class LLMProcessorTool:
         disease: str,
         incident_date: str,
         medical_date: str,
-        context_text: str
+        context_text: str,
     ) -> str:
         """Create detailed prompt for questionnaire generation.
 
@@ -291,4 +290,3 @@ QUESITOS:
 
 [ATENÇÃO: Quesitos gerados em modo de segurança devido a falha na integração com IA]
 """
-

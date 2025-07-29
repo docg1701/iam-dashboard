@@ -113,9 +113,12 @@ class TestClientAPI:
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = sample_documents
 
-        with patch("app.api.clients.ClientService", return_value=mock_client_service), \
-             patch("app.api.clients.DocumentService", return_value=mock_document_service):
-
+        with (
+            patch("app.api.clients.ClientService", return_value=mock_client_service),
+            patch(
+                "app.api.clients.DocumentService", return_value=mock_document_service
+            ),
+        ):
             result = await get_client_documents(str(sample_client.id), mock_db)
 
             assert len(result) == 2
@@ -159,15 +162,20 @@ class TestClientAPI:
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = []
 
-        with patch("app.api.clients.ClientService", return_value=mock_client_service), \
-             patch("app.api.clients.DocumentService", return_value=mock_document_service):
-
+        with (
+            patch("app.api.clients.ClientService", return_value=mock_client_service),
+            patch(
+                "app.api.clients.DocumentService", return_value=mock_document_service
+            ),
+        ):
             result = await get_client_documents(str(sample_client.id), mock_db)
 
             assert len(result) == 0
 
     @pytest.mark.asyncio
-    async def test_get_client_documents_summary_success(self, sample_client, sample_documents):
+    async def test_get_client_documents_summary_success(
+        self, sample_client, sample_documents
+    ):
         """Test successful client documents summary retrieval."""
         mock_db = AsyncMock()
         mock_client_service = AsyncMock()
@@ -176,9 +184,12 @@ class TestClientAPI:
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = sample_documents
 
-        with patch("app.api.clients.ClientService", return_value=mock_client_service), \
-             patch("app.api.clients.DocumentService", return_value=mock_document_service):
-
+        with (
+            patch("app.api.clients.ClientService", return_value=mock_client_service),
+            patch(
+                "app.api.clients.DocumentService", return_value=mock_document_service
+            ),
+        ):
             result = await get_client_documents_summary(str(sample_client.id), mock_db)
 
             assert result["client"]["id"] == str(sample_client.id)
@@ -203,9 +214,12 @@ class TestClientAPI:
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = []
 
-        with patch("app.api.clients.ClientService", return_value=mock_client_service), \
-             patch("app.api.clients.DocumentService", return_value=mock_document_service):
-
+        with (
+            patch("app.api.clients.ClientService", return_value=mock_client_service),
+            patch(
+                "app.api.clients.DocumentService", return_value=mock_document_service
+            ),
+        ):
             result = await get_client_documents_summary(str(sample_client.id), mock_db)
 
             summary = result["summary"]
@@ -215,7 +229,9 @@ class TestClientAPI:
             assert summary["completion_rate"] == 0
 
     @pytest.mark.asyncio
-    async def test_get_client_documents_summary_with_failed_documents(self, sample_client):
+    async def test_get_client_documents_summary_with_failed_documents(
+        self, sample_client
+    ):
         """Test client documents summary with failed documents."""
         failed_document = Document(
             id=uuid.uuid4(),
@@ -237,9 +253,12 @@ class TestClientAPI:
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = [failed_document]
 
-        with patch("app.api.clients.ClientService", return_value=mock_client_service), \
-             patch("app.api.clients.DocumentService", return_value=mock_document_service):
-
+        with (
+            patch("app.api.clients.ClientService", return_value=mock_client_service),
+            patch(
+                "app.api.clients.DocumentService", return_value=mock_document_service
+            ),
+        ):
             result = await get_client_documents_summary(str(sample_client.id), mock_db)
 
             summary = result["summary"]
@@ -253,7 +272,9 @@ class TestClientAPI:
         """Test API error handling for database exceptions."""
         mock_db = AsyncMock()
         mock_client_service = AsyncMock()
-        mock_client_service.get_client_by_id.side_effect = Exception("Database connection error")
+        mock_client_service.get_client_by_id.side_effect = Exception(
+            "Database connection error"
+        )
 
         with patch("app.api.clients.ClientService", return_value=mock_client_service):
             with pytest.raises(HTTPException) as exc_info:
@@ -357,9 +378,12 @@ class TestClientAPI:
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = documents
 
-        with patch("app.api.clients.ClientService", return_value=mock_client_service), \
-             patch("app.api.clients.DocumentService", return_value=mock_document_service):
-
+        with (
+            patch("app.api.clients.ClientService", return_value=mock_client_service),
+            patch(
+                "app.api.clients.DocumentService", return_value=mock_document_service
+            ),
+        ):
             result = await get_client_documents_summary(str(sample_client.id), mock_db)
 
             summary = result["summary"]

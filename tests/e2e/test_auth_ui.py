@@ -176,7 +176,9 @@ class TestAuthUI:
         screen.should_contain("Login")
 
     @pytest.mark.e2e
-    def test_redirect_to_login_when_accessing_protected_page(self, screen: Screen) -> None:
+    def test_redirect_to_login_when_accessing_protected_page(
+        self, screen: Screen
+    ) -> None:
         """Test that accessing protected pages redirects to login."""
         # Try to access dashboard without authentication
         screen.open("/dashboard")

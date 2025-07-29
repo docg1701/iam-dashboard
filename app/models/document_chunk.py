@@ -34,7 +34,7 @@ class DocumentChunk(TimestampedModel):
         UUID(as_uuid=True),
         ForeignKey("documents.id", ondelete="CASCADE"),
         nullable=False,
-        index=True
+        index=True,
     )
 
     # Relationships

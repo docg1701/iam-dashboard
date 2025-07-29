@@ -147,7 +147,9 @@ class PluginDiscovery:
                     # Look for plugin files in the directory
                     if hasattr(module, "__path__"):
                         for module_path_item in module.__path__:
-                            await self._scan_directory_for_plugins(Path(module_path_item))
+                            await self._scan_directory_for_plugins(
+                                Path(module_path_item)
+                            )
 
                 except ImportError as e:
                     logger.debug(

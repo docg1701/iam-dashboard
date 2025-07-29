@@ -142,7 +142,9 @@ class DocumentRepository:
         await self.db_session.refresh(chunk)
         return chunk
 
-    async def get_chunks_by_document_id(self, document_id: uuid.UUID) -> list[DocumentChunk]:
+    async def get_chunks_by_document_id(
+        self, document_id: uuid.UUID
+    ) -> list[DocumentChunk]:
         """Get all chunks for a specific document."""
         stmt = (
             select(DocumentChunk)

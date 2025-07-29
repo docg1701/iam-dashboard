@@ -19,7 +19,9 @@ async def test_gemini_embedding():
         # Create config
         config = get_llama_index_config()
         print("✓ Config created successfully")
-        print(f"  GEMINI_API_KEY: {'***' + config.gemini_api_key[-4:] if config.gemini_api_key else 'NOT SET'}")
+        print(
+            f"  GEMINI_API_KEY: {'***' + config.gemini_api_key[-4:] if config.gemini_api_key else 'NOT SET'}"
+        )
 
         # Get embedding model
         embed_model = config.get_embedding_model()
@@ -40,8 +42,10 @@ async def test_gemini_embedding():
         print(f"❌ Error: {str(e)}")
         print(f"   Error type: {type(e).__name__}")
         import traceback
+
         print(f"   Traceback: {traceback.format_exc()}")
         return False
+
 
 async def main():
     """Main function."""
@@ -54,6 +58,7 @@ async def main():
         print("❌ Test failed!")
 
     return success
+
 
 if __name__ == "__main__":
     result = asyncio.run(main())

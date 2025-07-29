@@ -19,7 +19,7 @@ class DocumentListComponent:
         self,
         client_id: uuid.UUID,
         on_view_summary: Callable[[Document], None] | None = None,
-        on_download: Callable[[Document], None] | None = None
+        on_download: Callable[[Document], None] | None = None,
     ) -> None:
         """Initialize the document list component."""
         self.client_id = client_id
@@ -40,23 +40,31 @@ class DocumentListComponent:
 
                 with ui.row().classes("gap-2"):
                     # Last update indicator
-                    self.last_update_label = ui.label("").classes("text-sm text-gray-500")
+                    self.last_update_label = ui.label("").classes(
+                        "text-sm text-gray-500"
+                    )
 
                     ui.button(
-                        "",
-                        icon="refresh",
-                        on_click=self._manual_refresh
-                    ).classes("bg-blue-500 text-white p-2 rounded hover:bg-blue-600").props("size=sm")
+                        "", icon="refresh", on_click=self._manual_refresh
+                    ).classes(
+                        "bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+                    ).props("size=sm")
 
             # Documents table
             self._create_documents_table()
 
             # Empty state message
-            self.empty_state = ui.column().classes("w-full text-center py-8").style("display: none")
+            self.empty_state = (
+                ui.column().classes("w-full text-center py-8").style("display: none")
+            )
             with self.empty_state:
                 ui.icon("description", size="3em").classes("text-gray-400")
-                ui.label("Nenhum documento encontrado").classes("text-lg text-gray-500 mt-2")
-                ui.label("Faça upload de documentos para este cliente").classes("text-sm text-gray-400")
+                ui.label("Nenhum documento encontrado").classes(
+                    "text-lg text-gray-500 mt-2"
+                )
+                ui.label("Faça upload de documentos para este cliente").classes(
+                    "text-sm text-gray-400"
+                )
 
         # Load initial data
         ui.timer(0.1, self._load_documents, once=True)
@@ -117,7 +125,7 @@ class DocumentListComponent:
             columns=columns,
             rows=[],
             row_key="id",
-            pagination=10  # Enable pagination for large lists
+            pagination=10,  # Enable pagination for large lists
         ).classes("w-full")
 
         # Enhanced status cell with animations and better indicators
@@ -180,7 +188,9 @@ class DocumentListComponent:
                 document_repository = DocumentRepository(db_session)
                 document_service = DocumentService(document_repository)
 
-                self.documents = await document_service.get_documents_by_client(self.client_id)
+                self.documents = await document_service.get_documents_by_client(
+                    self.client_id
+                )
 
                 # Update table data with enhanced formatting
                 rows = []
@@ -197,7 +207,9 @@ class DocumentListComponent:
                     processed_at_str = (
                         document.processed_at.strftime("%d/%m/%Y às %H:%M")
                         if document.processed_at
-                        else ("Processando..." if document.status == "processing" else "-")
+                        else (
+                            "Processando..." if document.status == "processing" else "-"
+                        )
                     )
 
                     rows.append(
@@ -236,33 +248,23 @@ class DocumentListComponent:
     def _get_status_config(self, status: str) -> dict[str, str]:
         """Get status display configuration."""
         status_configs = {
-            "uploaded": {
-                "text": "Enviado",
-                "color": "blue",
-                "icon": "cloud_upload"
-            },
+            "uploaded": {"text": "Enviado", "color": "blue", "icon": "cloud_upload"},
             "processing": {
                 "text": "Processando",
                 "color": "orange",
-                "icon": "hourglass_empty"
+                "icon": "hourglass_empty",
             },
             "processed": {
                 "text": "Concluído",
                 "color": "green",
-                "icon": "check_circle"
+                "icon": "check_circle",
             },
-            "failed": {
-                "text": "Falha",
-                "color": "red",
-                "icon": "error"
-            }
+            "failed": {"text": "Falha", "color": "red", "icon": "error"},
         }
 
-        return status_configs.get(status, {
-            "text": status.title(),
-            "color": "grey",
-            "icon": "help"
-        })
+        return status_configs.get(
+            status, {"text": status.title(), "color": "grey", "icon": "help"}
+        )
 
     async def _auto_refresh(self) -> None:
         """Auto-refresh document status for processing documents."""
@@ -271,7 +273,11 @@ class DocumentListComponent:
 
         # Only refresh if there are documents being processed
         from app.models.document import DocumentStatus
-        has_processing = any(doc.status in [DocumentStatus.UPLOADED, DocumentStatus.PROCESSING] for doc in self.documents)
+
+        has_processing = any(
+            doc.status in [DocumentStatus.UPLOADED, DocumentStatus.PROCESSING]
+            for doc in self.documents
+        )
 
         if has_processing:
             try:
@@ -282,8 +288,13 @@ class DocumentListComponent:
                     # Check for status updates
                     updated_documents = []
                     for document in self.documents:
-                        if document.status in [DocumentStatus.UPLOADED, DocumentStatus.PROCESSING]:
-                            current_doc = await document_service.get_document_by_id(uuid.UUID(str(document.id)))
+                        if document.status in [
+                            DocumentStatus.UPLOADED,
+                            DocumentStatus.PROCESSING,
+                        ]:
+                            current_doc = await document_service.get_document_by_id(
+                                uuid.UUID(str(document.id))
+                            )
                             if current_doc and current_doc.status != document.status:
                                 updated_documents.append(current_doc)
 
@@ -297,13 +308,13 @@ class DocumentListComponent:
                                 ui.notify(
                                     f"✅ Documento processado: {doc.filename}",
                                     type="positive",
-                                    timeout=3000
+                                    timeout=3000,
                                 )
                             elif doc.status == DocumentStatus.FAILED:
                                 ui.notify(
                                     f"❌ Erro ao processar: {doc.filename}",
                                     type="negative",
-                                    timeout=5000
+                                    timeout=5000,
                                 )
 
             except Exception:
@@ -324,9 +335,7 @@ class DocumentListComponent:
     def _handle_view_summary(self, event: object) -> None:
         """Handle view document summary action."""
         document_id = event.args["id"]
-        document = next(
-            (d for d in self.documents if str(d.id) == document_id), None
-        )
+        document = next((d for d in self.documents if str(d.id) == document_id), None)
 
         if document and self.on_view_summary:
             self.on_view_summary(document)
@@ -334,9 +343,7 @@ class DocumentListComponent:
     def _handle_download(self, event: object) -> None:
         """Handle document download action."""
         document_id = event.args["id"]
-        document = next(
-            (d for d in self.documents if str(d.id) == document_id), None
-        )
+        document = next((d for d in self.documents if str(d.id) == document_id), None)
 
         if document and self.on_download:
             self.on_download(document)
@@ -344,9 +351,7 @@ class DocumentListComponent:
     async def _handle_retry_processing(self, event: object) -> None:
         """Handle retry document processing action."""
         document_id = event.args["id"]
-        document = next(
-            (d for d in self.documents if str(d.id) == document_id), None
-        )
+        document = next((d for d in self.documents if str(d.id) == document_id), None)
 
         if not document:
             ui.notify("Documento não encontrado", type="negative")
@@ -363,13 +368,17 @@ class DocumentListComponent:
                 await document_service.update_document_status(
                     uuid.UUID(str(document.id)),
                     DocumentStatus.UPLOADED,
-                    error_message=None
+                    error_message=None,
                 )
 
                 task_result = process_document.delay(str(document.id))
-                await document_repository.update_task_id(uuid.UUID(str(document.id)), task_result.id)
+                await document_repository.update_task_id(
+                    uuid.UUID(str(document.id)), task_result.id
+                )
 
-                ui.notify(f"Reprocessamento iniciado: {document.filename}", type="positive")
+                ui.notify(
+                    f"Reprocessamento iniciado: {document.filename}", type="positive"
+                )
                 await self._load_documents()
 
         except Exception as e:

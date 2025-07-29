@@ -56,10 +56,7 @@ class TestConfigModels:
     def test_agent_config_validation(self):
         """Test AgentConfig validation."""
         # Valid config
-        config = AgentConfig(
-            plugin_name="TestPlugin",
-            name="Test Agent"
-        )
+        config = AgentConfig(plugin_name="TestPlugin", name="Test Agent")
 
         assert config.plugin_name == "TestPlugin"
         assert config.name == "Test Agent"
@@ -110,11 +107,11 @@ class TestConfigManager:
                 "health_check_interval": 45,
                 "max_retries": 2,
                 "timeout": 20,
-                "log_level": "DEBUG"
+                "log_level": "DEBUG",
             },
             "discovery": {
                 "plugin_directories": ["app.plugins", "custom.plugins"],
-                "auto_discovery": False
+                "auto_discovery": False,
             },
             "agents": {
                 "test_agent": {
@@ -124,23 +121,14 @@ class TestConfigManager:
                     "description": "Test agent for testing",
                     "capabilities": ["test", "debug"],
                     "dependencies": ["dep1"],
-                    "config": {
-                        "model": "gpt-4",
-                        "temperature": 0.5
-                    }
+                    "config": {"model": "gpt-4", "temperature": 0.5},
                 }
             },
-            "security": {
-                "validate_plugins": False,
-                "sandbox_plugins": True
-            },
-            "monitoring": {
-                "enable_metrics": False,
-                "log_level": "WARNING"
-            }
+            "security": {"validate_plugins": False, "sandbox_plugins": True},
+            "monitoring": {"enable_metrics": False, "log_level": "WARNING"},
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             yaml.dump(config_data, f)
             temp_path = f.name
 
@@ -212,8 +200,12 @@ class TestConfigManager:
 
         finally:
             # Cleanup environment variables
-            for key in ["AGENT_GLOBAL_HEALTH_CHECK_INTERVAL", "AGENT_GLOBAL_LOG_LEVEL",
-                       "AGENT_DISCOVERY_AUTO_DISCOVERY", "AGENT_SECURITY_VALIDATE_PLUGINS"]:
+            for key in [
+                "AGENT_GLOBAL_HEALTH_CHECK_INTERVAL",
+                "AGENT_GLOBAL_LOG_LEVEL",
+                "AGENT_DISCOVERY_AUTO_DISCOVERY",
+                "AGENT_SECURITY_VALIDATE_PLUGINS",
+            ]:
                 os.environ.pop(key, None)
 
     def test_agent_specific_overrides(self, temp_config_file):
@@ -275,7 +267,7 @@ class TestConfigManager:
             "enabled": True,
             "plugin_name": "TestPlugin",
             "name": "Test Agent",
-            "capabilities": ["test"]
+            "capabilities": ["test"],
         }
 
         # Valid config
@@ -290,7 +282,7 @@ class TestConfigManager:
 
     def test_invalid_yaml_file(self):
         """Test handling of invalid YAML file."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write("invalid: yaml: content: [")
             temp_path = f.name
 

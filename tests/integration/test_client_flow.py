@@ -20,7 +20,7 @@ async def test_complete_client_flow(async_session: AsyncSession):
     client = await client_service.create_client(
         name="Maria Silva",
         cpf="123.456.789-09",  # Valid CPF
-        birth_date=date(1985, 3, 20)
+        birth_date=date(1985, 3, 20),
     )
 
     assert client.name == "Maria Silva"
@@ -40,9 +40,7 @@ async def test_complete_client_flow(async_session: AsyncSession):
 
     # Test 4: Update client
     updated_client = await client_service.update_client(
-        client.id,
-        name="Maria Silva Santos",
-        birth_date=date(1985, 3, 21)
+        client.id, name="Maria Silva Santos", birth_date=date(1985, 3, 21)
     )
     assert updated_client.name == "Maria Silva Santos"
     assert updated_client.birth_date == date(1985, 3, 21)
@@ -57,7 +55,7 @@ async def test_complete_client_flow(async_session: AsyncSession):
     await client_service.create_client(
         name="João Santos",
         cpf="987.654.321-00",  # Valid CPF
-        birth_date=date(1980, 12, 15)
+        birth_date=date(1980, 12, 15),
     )
 
     # Test 7: List all clients again
@@ -93,7 +91,7 @@ async def test_client_validation_flow(async_session: AsyncSession):
         await client_service.create_client(
             name="Invalid Client",
             cpf="123.456.789-00",  # Invalid check digits
-            birth_date=date(1980, 1, 1)
+            birth_date=date(1980, 1, 1),
         )
 
     # Test 2: Create client with invalid name should fail
@@ -101,14 +99,12 @@ async def test_client_validation_flow(async_session: AsyncSession):
         await client_service.create_client(
             name="A",  # Too short
             cpf="123.456.789-09",
-            birth_date=date(1980, 1, 1)
+            birth_date=date(1980, 1, 1),
         )
 
     # Test 3: Create valid client
     client = await client_service.create_client(
-        name="Valid Client",
-        cpf="123.456.789-09",
-        birth_date=date(1980, 1, 1)
+        name="Valid Client", cpf="123.456.789-09", birth_date=date(1980, 1, 1)
     )
 
     # Test 4: Try to create another client with same CPF should fail
@@ -116,7 +112,7 @@ async def test_client_validation_flow(async_session: AsyncSession):
         await client_service.create_client(
             name="Duplicate CPF Client",
             cpf="123.456.789-09",  # Same CPF
-            birth_date=date(1985, 1, 1)
+            birth_date=date(1985, 1, 1),
         )
 
     # Test 5: Update client with invalid data should fail
@@ -137,9 +133,7 @@ async def test_client_cpf_formatting_flow(async_session: AsyncSession):
 
     # Test 1: Create client with formatted CPF
     client1 = await client_service.create_client(
-        name="Client 1",
-        cpf="111.444.777-35",
-        birth_date=date(1980, 1, 1)
+        name="Client 1", cpf="111.444.777-35", birth_date=date(1980, 1, 1)
     )
 
     # Verify CPF is stored clean
@@ -163,7 +157,7 @@ async def test_client_cpf_formatting_flow(async_session: AsyncSession):
     client2 = await client_service.create_client(
         name="Client 2",
         cpf="987 654 321 00",  # Space-separated format
-        birth_date=date(1985, 1, 1)
+        birth_date=date(1985, 1, 1),
     )
 
     # Verify second client
@@ -180,21 +174,15 @@ async def test_sequential_client_operations(async_session: AsyncSession):
 
     # Test sequential creation of different clients
     client1 = await client_service.create_client(
-        name="Client 1",
-        cpf="111.444.777-35",
-        birth_date=date(1980, 1, 1)
+        name="Client 1", cpf="111.444.777-35", birth_date=date(1980, 1, 1)
     )
 
     client2 = await client_service.create_client(
-        name="Client 2",
-        cpf="987.654.321-00",
-        birth_date=date(1985, 1, 1)
+        name="Client 2", cpf="987.654.321-00", birth_date=date(1985, 1, 1)
     )
 
     client3 = await client_service.create_client(
-        name="Client 3",
-        cpf="12345678909",
-        birth_date=date(1990, 1, 1)
+        name="Client 3", cpf="12345678909", birth_date=date(1990, 1, 1)
     )
 
     # Verify all clients were created

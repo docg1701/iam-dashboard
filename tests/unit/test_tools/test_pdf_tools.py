@@ -30,9 +30,11 @@ class TestPDFReaderTool:
         assert pdf_tool.max_file_size_mb == 10
         assert pdf_tool.max_file_size_bytes == 10 * 1024 * 1024
 
-    def test_validate_file_exists(self, pdf_tool: PDFReaderTool, sample_pdf_path: str) -> None:
+    def test_validate_file_exists(
+        self, pdf_tool: PDFReaderTool, sample_pdf_path: str
+    ) -> None:
         """Test file validation for existing file."""
-        with patch('fitz.open') as mock_fitz_open:
+        with patch("fitz.open") as mock_fitz_open:
             # Mock PyMuPDF document
             mock_doc = Mock()
             mock_doc.__len__ = Mock(return_value=1)  # 1 page
@@ -51,7 +53,9 @@ class TestPDFReaderTool:
         assert result["valid"] is False
         assert "does not exist" in result["error"]
 
-    def test_validate_file_not_pdf(self, pdf_tool: PDFReaderTool, tmp_path: Path) -> None:
+    def test_validate_file_not_pdf(
+        self, pdf_tool: PDFReaderTool, tmp_path: Path
+    ) -> None:
         """Test file validation for non-PDF file."""
         txt_file = tmp_path / "test.txt"
         txt_file.write_text("This is not a PDF")
@@ -73,8 +77,10 @@ class TestPDFReaderTool:
         assert result["valid"] is False
         assert "too large" in result["error"]
 
-    @patch('fitz.open')
-    def test_extract_metadata_success(self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str) -> None:
+    @patch("fitz.open")
+    def test_extract_metadata_success(
+        self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str
+    ) -> None:
         """Test successful metadata extraction."""
         # Mock PyMuPDF document
         mock_doc = Mock()
@@ -99,8 +105,10 @@ class TestPDFReaderTool:
         assert result["document_info"]["is_encrypted"] is False
         assert len(result["page_info"]) > 0
 
-    @patch('fitz.open')
-    def test_extract_text_content_success(self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str) -> None:
+    @patch("fitz.open")
+    def test_extract_text_content_success(
+        self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str
+    ) -> None:
         """Test successful text content extraction."""
         # Mock PyMuPDF document
         mock_doc = Mock()
@@ -124,13 +132,17 @@ class TestPDFReaderTool:
 
         assert result["success"] is True
         assert result["total_pages"] == 2
-        assert result["total_chars"] == len("This is page 1 content") + len("This is page 2 content")
+        assert result["total_chars"] == len("This is page 1 content") + len(
+            "This is page 2 content"
+        )
         assert len(result["text_content"]) == 2
         assert result["text_content"][0]["text"] == "This is page 1 content"
         assert result["text_content"][1]["has_images"] is True
 
-    @patch('fitz.open')
-    def test_extract_images_info_success(self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str) -> None:
+    @patch("fitz.open")
+    def test_extract_images_info_success(
+        self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str
+    ) -> None:
         """Test successful image information extraction."""
         # Mock PyMuPDF document
         mock_doc = Mock()
@@ -138,7 +150,9 @@ class TestPDFReaderTool:
 
         # Mock page with images
         mock_page = Mock()
-        mock_page.get_images.return_value = [(1, 0, 100, 200, 8, "DeviceRGB", "", "image1", "")]
+        mock_page.get_images.return_value = [
+            (1, 0, 100, 200, 8, "DeviceRGB", "", "image1", "")
+        ]
 
         # Mock pixmap
         mock_pixmap = Mock()
@@ -147,7 +161,7 @@ class TestPDFReaderTool:
         mock_pixmap.colorspace = Mock(name="DeviceRGB")
         mock_pixmap.n = 3  # 3 components (RGB)
 
-        with patch('fitz.Pixmap', return_value=mock_pixmap):
+        with patch("fitz.Pixmap", return_value=mock_pixmap):
             mock_doc.load_page.return_value = mock_page
             mock_fitz_open.return_value = mock_doc
 
@@ -175,46 +189,79 @@ class TestPDFReaderTool:
         mock_page.get_text.return_value = {"blocks": mock_blocks}
 
         # This is a private method, so we test it through process_document
-        with patch.object(pdf_tool, 'validate_file', return_value={"valid": True, "file_size": 1000, "page_count": 1}), \
-             patch.object(pdf_tool, 'extract_metadata', return_value={"success": True, "metadata": {}, "document_info": {}, "page_info": []}), \
-             patch.object(pdf_tool, 'extract_text_content') as mock_extract_text, \
-             patch.object(pdf_tool, 'extract_images_info', return_value={"success": True, "total_images": 0, "images_by_page": []}):
-
+        with (
+            patch.object(
+                pdf_tool,
+                "validate_file",
+                return_value={"valid": True, "file_size": 1000, "page_count": 1},
+            ),
+            patch.object(
+                pdf_tool,
+                "extract_metadata",
+                return_value={
+                    "success": True,
+                    "metadata": {},
+                    "document_info": {},
+                    "page_info": [],
+                },
+            ),
+            patch.object(pdf_tool, "extract_text_content") as mock_extract_text,
+            patch.object(
+                pdf_tool,
+                "extract_images_info",
+                return_value={"success": True, "total_images": 0, "images_by_page": []},
+            ),
+        ):
             mock_extract_text.return_value = {
                 "success": True,
                 "text_content": [{"page_number": 1, "has_tables": True}],
                 "total_pages": 1,
                 "total_chars": 100,
-                "average_chars_per_page": 100
+                "average_chars_per_page": 100,
             }
 
             result = pdf_tool.process_document("/test/path.pdf")
             assert result["success"] is True
 
-    @patch('fitz.open')
-    def test_process_document_complete_success(self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str) -> None:
+    @patch("fitz.open")
+    def test_process_document_complete_success(
+        self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str
+    ) -> None:
         """Test complete document processing workflow."""
         # Mock successful operations
-        with patch.object(pdf_tool, 'validate_file', return_value={"valid": True, "file_size": 1000, "page_count": 1}), \
-             patch.object(pdf_tool, 'extract_metadata', return_value={
-                 "success": True,
-                 "metadata": {"title": "Test"},
-                 "document_info": {"page_count": 1},
-                 "page_info": []
-             }), \
-             patch.object(pdf_tool, 'extract_text_content', return_value={
-                 "success": True,
-                 "text_content": [{"page_number": 1, "text": "Test content"}],
-                 "total_pages": 1,
-                 "total_chars": 12,
-                 "average_chars_per_page": 12
-             }), \
-             patch.object(pdf_tool, 'extract_images_info', return_value={
-                 "success": True,
-                 "total_images": 0,
-                 "images_by_page": []
-             }):
-
+        with (
+            patch.object(
+                pdf_tool,
+                "validate_file",
+                return_value={"valid": True, "file_size": 1000, "page_count": 1},
+            ),
+            patch.object(
+                pdf_tool,
+                "extract_metadata",
+                return_value={
+                    "success": True,
+                    "metadata": {"title": "Test"},
+                    "document_info": {"page_count": 1},
+                    "page_info": [],
+                },
+            ),
+            patch.object(
+                pdf_tool,
+                "extract_text_content",
+                return_value={
+                    "success": True,
+                    "text_content": [{"page_number": 1, "text": "Test content"}],
+                    "total_pages": 1,
+                    "total_chars": 12,
+                    "average_chars_per_page": 12,
+                },
+            ),
+            patch.object(
+                pdf_tool,
+                "extract_images_info",
+                return_value={"success": True, "total_images": 0, "images_by_page": []},
+            ),
+        ):
             result = pdf_tool.process_document(sample_pdf_path)
 
             assert result["success"] is True
@@ -225,22 +272,30 @@ class TestPDFReaderTool:
 
     def test_process_document_validation_failure(self, pdf_tool: PDFReaderTool) -> None:
         """Test document processing with validation failure."""
-        with patch.object(pdf_tool, 'validate_file', return_value={"valid": False, "error": "File not found"}):
+        with patch.object(
+            pdf_tool,
+            "validate_file",
+            return_value={"valid": False, "error": "File not found"},
+        ):
             result = pdf_tool.process_document("/nonexistent.pdf")
 
             assert result["success"] is False
             assert result["error"] == "File not found"
 
-    @patch('fitz.open', side_effect=Exception("PDF open failed"))
-    def test_extract_metadata_failure(self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str) -> None:
+    @patch("fitz.open", side_effect=Exception("PDF open failed"))
+    def test_extract_metadata_failure(
+        self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str
+    ) -> None:
         """Test metadata extraction failure."""
         result = pdf_tool.extract_metadata(sample_pdf_path)
 
         assert result["success"] is False
         assert "Failed to extract metadata" in result["error"]
 
-    @patch('fitz.open', side_effect=Exception("PDF open failed"))
-    def test_extract_text_content_failure(self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str) -> None:
+    @patch("fitz.open", side_effect=Exception("PDF open failed"))
+    def test_extract_text_content_failure(
+        self, mock_fitz_open: Mock, pdf_tool: PDFReaderTool, sample_pdf_path: str
+    ) -> None:
         """Test text content extraction failure."""
         result = pdf_tool.extract_text_content(sample_pdf_path)
 

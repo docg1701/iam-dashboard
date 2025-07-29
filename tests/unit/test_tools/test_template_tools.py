@@ -15,11 +15,7 @@ class TestTemplateManagerTool:
     @pytest.fixture
     def mock_client(self):
         """Create a mock client for testing."""
-        return Client(
-            id=uuid.uuid4(),
-            name="Ana Costa",
-            cpf="11122233344"
-        )
+        return Client(id=uuid.uuid4(), name="Ana Costa", cpf="11122233344")
 
     @pytest.fixture
     def template_tool(self):
@@ -70,9 +66,7 @@ class TestTemplateManagerTool:
 
     def test_get_questionnaire_template_unknown_type(self, template_tool):
         """Test getting unknown template type falls back to default."""
-        result = template_tool.get_questionnaire_template(
-            template_type="unknown_type"
-        )
+        result = template_tool.get_questionnaire_template(template_type="unknown_type")
 
         assert result["success"] is True
         assert result["template"]["name"] == "Medical Examination Questionnaire"
@@ -83,14 +77,15 @@ class TestTemplateManagerTool:
         template_data = {
             "name": "Custom Template",
             "description": "Custom template from file",
-            "required_sections": ["CUSTOM_SECTION"]
+            "required_sections": ["CUSTOM_SECTION"],
         }
 
         template_tool_with_directory.templates_directory / "custom_template.json"
 
-        with patch("builtins.open", mock_open(read_data='{"name": "Custom Template"}')), \
-             patch("json.load", return_value=template_data):
-
+        with (
+            patch("builtins.open", mock_open(read_data='{"name": "Custom Template"}')),
+            patch("json.load", return_value=template_data),
+        ):
             result = template_tool_with_directory.get_questionnaire_template(
                 template_type="custom_template"
             )
@@ -106,13 +101,13 @@ class TestTemplateManagerTool:
             "profession": "Advogada",
             "disease": "Síndrome do Pânico",
             "incident_date": "10/04/2023",
-            "medical_date": "12/04/2023"
+            "medical_date": "12/04/2023",
         }
 
         result = template_tool.apply_template_formatting(
             questionnaire_text=questionnaire_text,
             client=mock_client,
-            case_data=case_data
+            case_data=case_data,
         )
 
         assert result["success"] is True
@@ -129,14 +124,14 @@ class TestTemplateManagerTool:
             "name": "custom_template",
             "header_template": "CUSTOM HEADER\n\n",
             "footer_template": "\n\nCUSTOM FOOTER",
-            "formatting_rules": ["rule1", "rule2"]
+            "formatting_rules": ["rule1", "rule2"],
         }
 
         result = template_tool.apply_template_formatting(
             questionnaire_text=questionnaire_text,
             client=mock_client,
             case_data=case_data,
-            template_config=template_config
+            template_config=template_config,
         )
 
         assert result["success"] is True
@@ -150,13 +145,15 @@ class TestTemplateManagerTool:
         result = template_tool.apply_template_formatting(
             questionnaire_text=questionnaire_text,
             client=mock_client,
-            case_data=case_data
+            case_data=case_data,
         )
 
         formatted_text = result["formatted_questionnaire"]
         assert "QUESITOS PARA PERÍCIA MÉDICA" in formatted_text
 
-    def test_apply_template_formatting_preserves_existing_header(self, template_tool, mock_client):
+    def test_apply_template_formatting_preserves_existing_header(
+        self, template_tool, mock_client
+    ):
         """Test that formatting preserves existing header."""
         questionnaire_text = "QUESITOS PARA PERÍCIA MÉDICA\n\nExisting content"
         case_data = {"profession": "Doctor", "disease": "Burnout"}
@@ -164,7 +161,7 @@ class TestTemplateManagerTool:
         result = template_tool.apply_template_formatting(
             questionnaire_text=questionnaire_text,
             client=mock_client,
-            case_data=case_data
+            case_data=case_data,
         )
 
         formatted_text = result["formatted_questionnaire"]
@@ -174,16 +171,20 @@ class TestTemplateManagerTool:
 
     def test_apply_template_formatting_exception(self, template_tool, mock_client):
         """Test template formatting with exception."""
-        with patch.object(template_tool, '_apply_header_formatting', side_effect=Exception("Format error")):
+        with patch.object(
+            template_tool,
+            "_apply_header_formatting",
+            side_effect=Exception("Format error"),
+        ):
             result = template_tool.apply_template_formatting(
-                questionnaire_text="test",
-                client=mock_client,
-                case_data={}
+                questionnaire_text="test", client=mock_client, case_data={}
             )
 
             assert result["success"] is False
             assert "error" in result
-            assert result["formatted_questionnaire"] == "test"  # Returns original on error
+            assert (
+                result["formatted_questionnaire"] == "test"
+            )  # Returns original on error
 
     def test_validate_questionnaire_format_success(self, template_tool):
         """Test successful questionnaire format validation."""
@@ -231,7 +232,10 @@ QUESITOS:
 
         assert result["success"] is True
         assert result["validation_results"]["is_valid"] is False
-        assert any("Insufficient questions" in error for error in result["validation_results"]["errors"])
+        assert any(
+            "Insufficient questions" in error
+            for error in result["validation_results"]["errors"]
+        )
 
     def test_validate_questionnaire_format_with_custom_config(self, template_tool):
         """Test validation with custom template configuration."""
@@ -245,7 +249,7 @@ QUESITOS:
         template_config = {
             "required_sections": ["CUSTOM SECTION"],
             "min_questions": 2,
-            "required_legal_terms": ["legal_term"]
+            "required_legal_terms": ["legal_term"],
         }
 
         result = template_tool.validate_questionnaire_format(
@@ -254,11 +258,15 @@ QUESITOS:
 
         assert result["success"] is True
         assert result["validation_results"]["is_valid"] is True
-        assert len(result["validation_results"]["suggestions"]) > 0  # Missing legal terms
+        assert (
+            len(result["validation_results"]["suggestions"]) > 0
+        )  # Missing legal terms
 
     def test_validate_questionnaire_format_exception(self, template_tool):
         """Test validation with exception."""
-        with patch.object(template_tool, '_count_questions', side_effect=Exception("Count error")):
+        with patch.object(
+            template_tool, "_count_questions", side_effect=Exception("Count error")
+        ):
             result = template_tool.validate_questionnaire_format("test text")
 
             assert result["success"] is False
@@ -334,7 +342,9 @@ Some conclusion text
     def test_get_default_template_selection(self, template_tool):
         """Test default template selection logic."""
         # Test with known template type
-        template = template_tool._get_default_template("occupational_disease", None, None)
+        template = template_tool._get_default_template(
+            "occupational_disease", None, None
+        )
         assert template["name"] == "Occupational Disease Questionnaire"
 
         # Test with unknown template type (should fallback)

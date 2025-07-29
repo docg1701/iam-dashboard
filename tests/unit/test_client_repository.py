@@ -62,6 +62,7 @@ async def test_get_by_id_not_found(client_repository: ClientRepository):
     """Test getting client by non-existent ID returns None."""
     # Arrange
     import uuid
+
     non_existent_id = uuid.uuid4()
 
     # Act
@@ -111,8 +112,12 @@ async def test_get_all_empty(client_repository: ClientRepository):
 async def test_get_all_with_clients(client_repository: ClientRepository):
     """Test getting all clients when some exist."""
     # Arrange
-    client1 = await client_repository.create("Client 1", "11144477735", date(1980, 1, 1))
-    client2 = await client_repository.create("Client 2", "98765432100", date(1985, 1, 1))
+    client1 = await client_repository.create(
+        "Client 1", "11144477735", date(1980, 1, 1)
+    )
+    client2 = await client_repository.create(
+        "Client 2", "98765432100", date(1985, 1, 1)
+    )
 
     # Act
     clients = await client_repository.get_all()
@@ -128,7 +133,9 @@ async def test_get_all_with_clients(client_repository: ClientRepository):
 async def test_update_client(client_repository: ClientRepository):
     """Test updating a client."""
     # Arrange
-    client = await client_repository.create("Original Name", "11144477735", date(1980, 1, 1))
+    client = await client_repository.create(
+        "Original Name", "11144477735", date(1980, 1, 1)
+    )
     original_updated_at = client.updated_at
 
     # Act
@@ -144,7 +151,9 @@ async def test_update_client(client_repository: ClientRepository):
 async def test_delete_client(client_repository: ClientRepository):
     """Test deleting a client."""
     # Arrange
-    client = await client_repository.create("To Delete", "11144477735", date(1980, 1, 1))
+    client = await client_repository.create(
+        "To Delete", "11144477735", date(1980, 1, 1)
+    )
     client_id = client.id
 
     # Act

@@ -30,11 +30,13 @@ class TestStatusTracking:
             client_id=uuid.uuid4(),
             content_hash="status_hash",
             file_size=1024,
-            file_path="uploads/status_test.pdf"
+            file_path="uploads/status_test.pdf",
         )
 
     @pytest.mark.asyncio
-    async def test_status_progression_uploaded_to_processing(self, mock_db_session, sample_document):
+    async def test_status_progression_uploaded_to_processing(
+        self, mock_db_session, sample_document
+    ):
         """Test status progression from UPLOADED to PROCESSING."""
         # Arrange
         repository = DocumentRepository(mock_db_session)
@@ -46,20 +48,19 @@ class TestStatusTracking:
 
         # Act
         result = await service.update_document_status(
-            sample_document.id,
-            DocumentStatus.PROCESSING
+            sample_document.id, DocumentStatus.PROCESSING
         )
 
         # Assert
         assert result is True
         repository.update_status.assert_called_once_with(
-            sample_document.id,
-            DocumentStatus.PROCESSING,
-            None
+            sample_document.id, DocumentStatus.PROCESSING, None
         )
 
     @pytest.mark.asyncio
-    async def test_status_progression_processing_to_processed(self, mock_db_session, sample_document):
+    async def test_status_progression_processing_to_processed(
+        self, mock_db_session, sample_document
+    ):
         """Test status progression from PROCESSING to PROCESSED."""
         # Arrange
         sample_document.status = DocumentStatus.PROCESSING
@@ -71,20 +72,19 @@ class TestStatusTracking:
 
         # Act
         result = await service.update_document_status(
-            sample_document.id,
-            DocumentStatus.PROCESSED
+            sample_document.id, DocumentStatus.PROCESSED
         )
 
         # Assert
         assert result is True
         repository.update_status.assert_called_once_with(
-            sample_document.id,
-            DocumentStatus.PROCESSED,
-            None
+            sample_document.id, DocumentStatus.PROCESSED, None
         )
 
     @pytest.mark.asyncio
-    async def test_status_progression_to_failed_with_error_message(self, mock_db_session, sample_document):
+    async def test_status_progression_to_failed_with_error_message(
+        self, mock_db_session, sample_document
+    ):
         """Test status progression to FAILED with error message."""
         # Arrange
         sample_document.status = DocumentStatus.PROCESSING
@@ -98,17 +98,13 @@ class TestStatusTracking:
 
         # Act
         result = await service.update_document_status(
-            sample_document.id,
-            DocumentStatus.FAILED,
-            error_message
+            sample_document.id, DocumentStatus.FAILED, error_message
         )
 
         # Assert
         assert result is True
         repository.update_status.assert_called_once_with(
-            sample_document.id,
-            DocumentStatus.FAILED,
-            error_message
+            sample_document.id, DocumentStatus.FAILED, error_message
         )
 
     @pytest.mark.asyncio
@@ -128,7 +124,9 @@ class TestStatusTracking:
         repository.update_task_id.assert_called_once_with(sample_document.id, task_id)
 
     @pytest.mark.asyncio
-    async def test_document_retrieval_by_task_id(self, mock_db_session, sample_document):
+    async def test_document_retrieval_by_task_id(
+        self, mock_db_session, sample_document
+    ):
         """Test retrieving document by Celery task ID."""
         # Arrange
         sample_document.task_id = "celery_task_12345"
@@ -154,7 +152,7 @@ class TestStatusTracking:
                 client_id=uuid.uuid4(),
                 content_hash=f"hash_{i}",
                 file_size=1024,
-                file_path=f"uploads/doc_{i}.pdf"
+                file_path=f"uploads/doc_{i}.pdf",
             )
             for i in range(3)
         ]
@@ -181,8 +179,7 @@ class TestStatusTracking:
 
         # Act
         result = await service.update_document_status(
-            nonexistent_id,
-            DocumentStatus.PROCESSED
+            nonexistent_id, DocumentStatus.PROCESSED
         )
 
         # Assert
@@ -201,14 +198,20 @@ class TestStatusTracking:
 
         # Act - simulate concurrent updates
         tasks = [
-            service.update_document_status(sample_document.id, DocumentStatus.PROCESSING),
-            service.update_document_status(sample_document.id, DocumentStatus.PROCESSED),
+            service.update_document_status(
+                sample_document.id, DocumentStatus.PROCESSING
+            ),
+            service.update_document_status(
+                sample_document.id, DocumentStatus.PROCESSED
+            ),
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Assert - both updates should succeed (in a real scenario, database constraints would handle conflicts)
-        assert all(result is True for result in results if not isinstance(result, Exception))
+        assert all(
+            result is True for result in results if not isinstance(result, Exception)
+        )
 
     @pytest.mark.asyncio
     async def test_status_transition_validation(self, mock_db_session, sample_document):
@@ -228,7 +231,7 @@ class TestStatusTracking:
         # Act
         result = await service.update_document_status(
             sample_document.id,
-            DocumentStatus.PROCESSING  # Invalid transition from PROCESSED to PROCESSING
+            DocumentStatus.PROCESSING,  # Invalid transition from PROCESSED to PROCESSING
         )
 
         # Assert - this would depend on business logic implementation
@@ -244,6 +247,7 @@ class TestStatusTracking:
 
         # Mock the save method to capture the document state
         saved_documents = []
+
         async def mock_save(document):
             saved_documents.append(document)
             return document
@@ -272,14 +276,14 @@ class TestStatusTracking:
         repository = DocumentRepository(mock_db_session)
 
         # Mock the database operations
-        mock_db_session.execute.return_value.scalar_one_or_none.return_value = mock_document
+        mock_db_session.execute.return_value.scalar_one_or_none.return_value = (
+            mock_document
+        )
         mock_db_session.commit = AsyncMock()
 
         # Act
         result = await repository.update_status(
-            document_id,
-            DocumentStatus.FAILED,
-            error_message
+            document_id, DocumentStatus.FAILED, error_message
         )
 
         # Assert

@@ -31,7 +31,10 @@ def get_database_url() -> str:
     """Get database URL from environment variable or config."""
     return os.getenv(
         "DATABASE_URL",
-        config.get_main_option("sqlalchemy.url", "postgresql://postgres:postgres@localhost:5432/advocacia_db")
+        config.get_main_option(
+            "sqlalchemy.url",
+            "postgresql://postgres:postgres@localhost:5432/advocacia_db",
+        ),
     )
 
 
@@ -78,9 +81,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

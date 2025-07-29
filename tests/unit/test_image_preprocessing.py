@@ -43,12 +43,19 @@ class TestDocumentPreprocessor:
         assert result.shape[0] >= sample_image.shape[0]  # Height may increase
         assert result.shape[1] >= sample_image.shape[1]  # Width may increase
 
-    @patch('app.services.document_preprocessing.cv2.cvtColor')
-    @patch('app.services.document_preprocessing.cv2.GaussianBlur')
-    @patch('app.services.document_preprocessing.cv2.threshold')
-    @patch('app.services.document_preprocessing.cv2.morphologyEx')
-    def test_preprocess_image_color_input(self, mock_morph, mock_threshold, mock_blur, mock_cvt,
-                                        preprocessor, sample_color_image):
+    @patch("app.services.document_preprocessing.cv2.cvtColor")
+    @patch("app.services.document_preprocessing.cv2.GaussianBlur")
+    @patch("app.services.document_preprocessing.cv2.threshold")
+    @patch("app.services.document_preprocessing.cv2.morphologyEx")
+    def test_preprocess_image_color_input(
+        self,
+        mock_morph,
+        mock_threshold,
+        mock_blur,
+        mock_cvt,
+        preprocessor,
+        sample_color_image,
+    ):
         """Test preprocessing with color input image."""
         # Arrange
         mock_cvt.return_value = np.ones((400, 600), dtype=np.uint8)
@@ -65,11 +72,19 @@ class TestDocumentPreprocessor:
         mock_threshold.assert_called_once()
         mock_morph.assert_called_once()
 
-    @patch('app.services.document_preprocessing.cv2.GaussianBlur')
-    @patch('app.services.document_preprocessing.cv2.threshold')
-    @patch('app.services.document_preprocessing.cv2.morphologyEx')
-    @patch('app.services.document_preprocessing.cv2.resize')
-    def test_gaussian_blur_applied(self, mock_resize, mock_morph, mock_threshold, mock_blur, preprocessor, sample_image):
+    @patch("app.services.document_preprocessing.cv2.GaussianBlur")
+    @patch("app.services.document_preprocessing.cv2.threshold")
+    @patch("app.services.document_preprocessing.cv2.morphologyEx")
+    @patch("app.services.document_preprocessing.cv2.resize")
+    def test_gaussian_blur_applied(
+        self,
+        mock_resize,
+        mock_morph,
+        mock_threshold,
+        mock_blur,
+        preprocessor,
+        sample_image,
+    ):
         """Test that Gaussian blur is applied for noise reduction."""
         # Arrange
         mock_blur.return_value = sample_image
@@ -85,17 +100,23 @@ class TestDocumentPreprocessor:
         # Verify it was called with correct parameters (kernel size and sigma)
         args, kwargs = mock_blur.call_args
         assert args[1] == (5, 5)  # kernel size
-        assert args[2] == 0       # sigma
+        assert args[2] == 0  # sigma
 
-    @patch('app.services.document_preprocessing.cv2.threshold')
-    def test_otsu_thresholding_applied(self, mock_threshold, preprocessor, sample_image):
+    @patch("app.services.document_preprocessing.cv2.threshold")
+    def test_otsu_thresholding_applied(
+        self, mock_threshold, preprocessor, sample_image
+    ):
         """Test that THRESH_BINARY + THRESH_OTSU thresholding is applied."""
         # Arrange
         import cv2
+
         mock_threshold.return_value = (127, sample_image)
 
         # Act
-        with patch('app.services.document_preprocessing.cv2.GaussianBlur', return_value=sample_image):
+        with patch(
+            "app.services.document_preprocessing.cv2.GaussianBlur",
+            return_value=sample_image,
+        ):
             preprocessor.preprocess_image_for_ocr(sample_image)
 
         # Assert
@@ -105,26 +126,35 @@ class TestDocumentPreprocessor:
         assert args[2] == 255  # max value
         assert args[3] == cv2.THRESH_BINARY + cv2.THRESH_OTSU
 
-    @patch('app.services.document_preprocessing.cv2.morphologyEx')
-    @patch('app.services.document_preprocessing.cv2.getStructuringElement')
-    def test_morphological_operations_applied(self, mock_get_kernel, mock_morph, preprocessor, sample_image):
+    @patch("app.services.document_preprocessing.cv2.morphologyEx")
+    @patch("app.services.document_preprocessing.cv2.getStructuringElement")
+    def test_morphological_operations_applied(
+        self, mock_get_kernel, mock_morph, preprocessor, sample_image
+    ):
         """Test that morphological operations are applied for character connection."""
         # Arrange
         import cv2
+
         mock_kernel = np.ones((2, 2), np.uint8)
         mock_get_kernel.return_value = mock_kernel
         mock_morph.return_value = sample_image
 
         # Act
-        with patch('app.services.document_preprocessing.cv2.GaussianBlur', return_value=sample_image):
-            with patch('app.services.document_preprocessing.cv2.threshold', return_value=(127, sample_image)):
+        with patch(
+            "app.services.document_preprocessing.cv2.GaussianBlur",
+            return_value=sample_image,
+        ):
+            with patch(
+                "app.services.document_preprocessing.cv2.threshold",
+                return_value=(127, sample_image),
+            ):
                 preprocessor.preprocess_image_for_ocr(sample_image)
 
         # Assert
         mock_get_kernel.assert_called_once_with(cv2.MORPH_RECT, (2, 2))
         mock_morph.assert_called_once_with(sample_image, cv2.MORPH_CLOSE, mock_kernel)
 
-    @patch('app.services.document_preprocessing.cv2.resize')
+    @patch("app.services.document_preprocessing.cv2.resize")
     def test_dpi_normalization_upscaling(self, mock_resize, preprocessor):
         """Test DPI normalization when image needs upscaling."""
         # Arrange
@@ -133,9 +163,18 @@ class TestDocumentPreprocessor:
         mock_resize.return_value = np.ones((300, 450), dtype=np.uint8)
 
         # Act
-        with patch('app.services.document_preprocessing.cv2.GaussianBlur', return_value=small_image):
-            with patch('app.services.document_preprocessing.cv2.threshold', return_value=(127, small_image)):
-                with patch('app.services.document_preprocessing.cv2.morphologyEx', return_value=small_image):
+        with patch(
+            "app.services.document_preprocessing.cv2.GaussianBlur",
+            return_value=small_image,
+        ):
+            with patch(
+                "app.services.document_preprocessing.cv2.threshold",
+                return_value=(127, small_image),
+            ):
+                with patch(
+                    "app.services.document_preprocessing.cv2.morphologyEx",
+                    return_value=small_image,
+                ):
                     preprocessor.preprocess_image_for_ocr(small_image)
 
         # Assert - resize should be called for upscaling
@@ -164,9 +203,11 @@ class TestDocumentPreprocessor:
         # Assert
         assert dpi >= 72  # Minimum DPI threshold
 
-    @patch('app.services.document_preprocessing.fitz.open')
-    @patch('app.services.document_preprocessing.pytesseract.image_to_string')
-    def test_extract_text_from_complex_document(self, mock_tesseract, mock_fitz_open, preprocessor, tmp_path):
+    @patch("app.services.document_preprocessing.fitz.open")
+    @patch("app.services.document_preprocessing.pytesseract.image_to_string")
+    def test_extract_text_from_complex_document(
+        self, mock_tesseract, mock_fitz_open, preprocessor, tmp_path
+    ):
         """Test OCR text extraction from complex documents."""
         # Arrange
         pdf_path = tmp_path / "test.pdf"
@@ -184,16 +225,18 @@ class TestDocumentPreprocessor:
         mock_tesseract.return_value = "Extracted text from PDF"
 
         # Act
-        with patch('app.services.document_preprocessing.Image.open'):
-            with patch('app.services.document_preprocessing.cv2.cvtColor'):
+        with patch("app.services.document_preprocessing.Image.open"):
+            with patch("app.services.document_preprocessing.cv2.cvtColor"):
                 result = preprocessor.extract_text_from_complex_document(pdf_path)
 
         # Assert
         assert "Extracted text from PDF" in result
         mock_tesseract.assert_called()
 
-    @patch('app.services.document_preprocessing.fitz.open')
-    def test_is_complex_document_simple_case(self, mock_fitz_open, preprocessor, tmp_path):
+    @patch("app.services.document_preprocessing.fitz.open")
+    def test_is_complex_document_simple_case(
+        self, mock_fitz_open, preprocessor, tmp_path
+    ):
         """Test document complexity classification for simple documents."""
         # Arrange
         pdf_path = tmp_path / "simple.pdf"
@@ -212,8 +255,10 @@ class TestDocumentPreprocessor:
         # Assert
         assert result is False  # Should be classified as simple
 
-    @patch('app.services.document_preprocessing.fitz.open')
-    def test_is_complex_document_complex_case(self, mock_fitz_open, preprocessor, tmp_path):
+    @patch("app.services.document_preprocessing.fitz.open")
+    def test_is_complex_document_complex_case(
+        self, mock_fitz_open, preprocessor, tmp_path
+    ):
         """Test document complexity classification for complex documents."""
         # Arrange
         pdf_path = tmp_path / "complex.pdf"

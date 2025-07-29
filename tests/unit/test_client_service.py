@@ -39,7 +39,9 @@ async def test_create_client_invalid_cpf(client_service: ClientService):
 
 
 @pytest.mark.asyncio
-async def test_create_client_duplicate_cpf(client_service: ClientService, test_client: Client):
+async def test_create_client_duplicate_cpf(
+    client_service: ClientService, test_client: Client
+):
     """Test creating client with duplicate CPF."""
     # Arrange
     name = "Another Client"
@@ -78,7 +80,9 @@ async def test_create_client_short_name(client_service: ClientService):
 
 
 @pytest.mark.asyncio
-async def test_get_client_by_id_existing(client_service: ClientService, test_client: Client):
+async def test_get_client_by_id_existing(
+    client_service: ClientService, test_client: Client
+):
     """Test getting existing client by ID."""
     # Act
     client = await client_service.get_client_by_id(test_client.id)
@@ -94,6 +98,7 @@ async def test_get_client_by_id_non_existent(client_service: ClientService):
     """Test getting non-existent client by ID."""
     # Arrange
     import uuid
+
     non_existent_id = uuid.uuid4()
 
     # Act
@@ -104,7 +109,9 @@ async def test_get_client_by_id_non_existent(client_service: ClientService):
 
 
 @pytest.mark.asyncio
-async def test_get_client_by_cpf_existing(client_service: ClientService, test_client: Client):
+async def test_get_client_by_cpf_existing(
+    client_service: ClientService, test_client: Client
+):
     """Test getting existing client by CPF."""
     # Act
     client = await client_service.get_client_by_cpf("111.444.777-35")  # Formatted CPF
@@ -135,7 +142,9 @@ async def test_get_all_clients_empty(client_service: ClientService):
 
 
 @pytest.mark.asyncio
-async def test_get_all_clients_with_data(client_service: ClientService, test_client: Client):
+async def test_get_all_clients_with_data(
+    client_service: ClientService, test_client: Client
+):
     """Test getting all clients when some exist."""
     # Act
     clients = await client_service.get_all_clients()
@@ -146,7 +155,9 @@ async def test_get_all_clients_with_data(client_service: ClientService, test_cli
 
 
 @pytest.mark.asyncio
-async def test_update_client_success(client_service: ClientService, test_client: Client):
+async def test_update_client_success(
+    client_service: ClientService, test_client: Client
+):
     """Test updating client successfully."""
     # Arrange
     new_name = "Updated Name"
@@ -155,10 +166,7 @@ async def test_update_client_success(client_service: ClientService, test_client:
 
     # Act
     updated_client = await client_service.update_client(
-        test_client.id,
-        name=new_name,
-        cpf=new_cpf,
-        birth_date=new_birth_date
+        test_client.id, name=new_name, cpf=new_cpf, birth_date=new_birth_date
     )
 
     # Assert
@@ -173,6 +181,7 @@ async def test_update_client_non_existent(client_service: ClientService):
     """Test updating non-existent client."""
     # Arrange
     import uuid
+
     non_existent_id = uuid.uuid4()
 
     # Act
@@ -183,23 +192,26 @@ async def test_update_client_non_existent(client_service: ClientService):
 
 
 @pytest.mark.asyncio
-async def test_update_client_duplicate_cpf(client_service: ClientService, test_client: Client):
+async def test_update_client_duplicate_cpf(
+    client_service: ClientService, test_client: Client
+):
     """Test updating client with CPF that belongs to another client."""
     # Arrange - Create another client
     await client_service.create_client(
-        "Another Client", "987.654.321-00", date(1985, 1, 1)  # Valid CPF
+        "Another Client",
+        "987.654.321-00",
+        date(1985, 1, 1),  # Valid CPF
     )
 
     # Act & Assert - Try to update test_client with another_client's CPF
     with pytest.raises(ValueError, match="CPF .* is already registered"):
-        await client_service.update_client(
-            test_client.id,
-            cpf="987.654.321-00"
-        )
+        await client_service.update_client(test_client.id, cpf="987.654.321-00")
 
 
 @pytest.mark.asyncio
-async def test_delete_client_success(client_service: ClientService, test_client: Client):
+async def test_delete_client_success(
+    client_service: ClientService, test_client: Client
+):
     """Test deleting client successfully."""
     # Act
     result = await client_service.delete_client(test_client.id)
@@ -217,6 +229,7 @@ async def test_delete_client_non_existent(client_service: ClientService):
     """Test deleting non-existent client."""
     # Arrange
     import uuid
+
     non_existent_id = uuid.uuid4()
 
     # Act
@@ -250,7 +263,7 @@ def test_is_valid_cpf():
     # Invalid CPFs
     assert service._is_valid_cpf("12345678901") is False  # Invalid check digits
     assert service._is_valid_cpf("11111111111") is False  # All same digits
-    assert service._is_valid_cpf("123456789") is False    # Too short
-    assert service._is_valid_cpf("123456789012") is False # Too long
-    assert service._is_valid_cpf("") is False             # Empty
+    assert service._is_valid_cpf("123456789") is False  # Too short
+    assert service._is_valid_cpf("123456789012") is False  # Too long
+    assert service._is_valid_cpf("") is False  # Empty
     assert service._is_valid_cpf("abcdefghijk") is False  # Non-numeric

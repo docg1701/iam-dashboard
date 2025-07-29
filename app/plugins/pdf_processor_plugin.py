@@ -30,7 +30,7 @@ def get_plugin_info() -> dict[str, Any]:
             "ocr_processing",
             "vector_embedding_generation",
             "document_storage",
-            "metadata_extraction"
+            "metadata_extraction",
         ],
         "dependencies": [],
         "supported_file_types": ["pdf"],
@@ -38,8 +38,8 @@ def get_plugin_info() -> dict[str, Any]:
             "model": "gemini-1.5-flash",
             "max_file_size_mb": 50,
             "chunk_size": 1000,
-            "perform_ocr": True
-        }
+            "perform_ocr": True,
+        },
     }
 
 

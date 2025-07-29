@@ -22,14 +22,17 @@ class TestRAGRetrieverTool:
     @pytest.fixture
     def rag_tool(self, mock_llama_config):
         """Create RAGRetrieverTool instance for testing."""
-        with patch('app.tools.rag_tools.get_llama_index_config', return_value=mock_llama_config):
+        with patch(
+            "app.tools.rag_tools.get_llama_index_config", return_value=mock_llama_config
+        ):
             return RAGRetrieverTool()
 
-    @patch('app.tools.rag_tools.VectorStoreIndex')
-    @patch('app.tools.rag_tools.VectorIndexRetriever')
-    @patch('app.tools.rag_tools.QueryBundle')
-    def test_retrieve_client_context_success(self, mock_query_bundle, mock_retriever_class,
-                                           mock_index_class, rag_tool):
+    @patch("app.tools.rag_tools.VectorStoreIndex")
+    @patch("app.tools.rag_tools.VectorIndexRetriever")
+    @patch("app.tools.rag_tools.QueryBundle")
+    def test_retrieve_client_context_success(
+        self, mock_query_bundle, mock_retriever_class, mock_index_class, rag_tool
+    ):
         """Test successful client context retrieval."""
         # Mock retrieval results
         mock_node1 = MagicMock()
@@ -54,7 +57,7 @@ class TestRAGRetrieverTool:
             client_id=uuid.UUID("12345678-1234-5678-9012-123456789012"),
             profession="Engineer",
             disease="Back pain",
-            incident_date="01/01/2023"
+            incident_date="01/01/2023",
         )
 
         assert result["success"] is True
@@ -63,7 +66,7 @@ class TestRAGRetrieverTool:
         assert result["context_chunks"][0]["score"] == 0.9
         assert result["total_chunks"] == 2
 
-    @patch('app.tools.rag_tools.VectorStoreIndex')
+    @patch("app.tools.rag_tools.VectorStoreIndex")
     def test_retrieve_client_context_no_results(self, mock_index_class, rag_tool):
         """Test context retrieval with no results."""
         # Mock empty retrieval results
@@ -73,20 +76,24 @@ class TestRAGRetrieverTool:
         mock_index = MagicMock()
         mock_index_class.from_vector_store.return_value = mock_index
 
-        with patch('app.tools.rag_tools.VectorIndexRetriever', return_value=mock_retriever):
+        with patch(
+            "app.tools.rag_tools.VectorIndexRetriever", return_value=mock_retriever
+        ):
             result = rag_tool.retrieve_client_context(
                 client_id=uuid.UUID("12345678-1234-5678-9012-123456789012"),
                 profession="Engineer",
                 disease="Back pain",
-                incident_date="01/01/2023"
+                incident_date="01/01/2023",
             )
 
         assert result["success"] is True
         assert len(result["context_chunks"]) == 0
         assert result["total_chunks"] == 0
 
-    @patch('app.tools.rag_tools.VectorStoreIndex')
-    def test_retrieve_client_context_filter_other_clients(self, mock_index_class, rag_tool):
+    @patch("app.tools.rag_tools.VectorStoreIndex")
+    def test_retrieve_client_context_filter_other_clients(
+        self, mock_index_class, rag_tool
+    ):
         """Test context retrieval filters out other clients."""
         # Mock retrieval results with mixed client IDs
         mock_node1 = MagicMock()
@@ -105,12 +112,14 @@ class TestRAGRetrieverTool:
         mock_index = MagicMock()
         mock_index_class.from_vector_store.return_value = mock_index
 
-        with patch('app.tools.rag_tools.VectorIndexRetriever', return_value=mock_retriever):
+        with patch(
+            "app.tools.rag_tools.VectorIndexRetriever", return_value=mock_retriever
+        ):
             result = rag_tool.retrieve_client_context(
                 client_id=uuid.UUID("12345678-1234-5678-9012-123456789012"),
                 profession="Engineer",
                 disease="Back pain",
-                incident_date="01/01/2023"
+                incident_date="01/01/2023",
             )
 
         # Should only include the matching client
@@ -120,31 +129,37 @@ class TestRAGRetrieverTool:
 
     def test_retrieve_client_context_exception(self, rag_tool):
         """Test context retrieval with exception."""
-        with patch('app.tools.rag_tools.VectorStoreIndex') as mock_index_class:
-            mock_index_class.from_vector_store.side_effect = Exception("Vector store error")
+        with patch("app.tools.rag_tools.VectorStoreIndex") as mock_index_class:
+            mock_index_class.from_vector_store.side_effect = Exception(
+                "Vector store error"
+            )
 
             result = rag_tool.retrieve_client_context(
                 client_id=uuid.UUID("12345678-1234-5678-9012-123456789012"),
                 profession="Engineer",
                 disease="Back pain",
-                incident_date="01/01/2023"
+                incident_date="01/01/2023",
             )
 
         assert result["success"] is False
         assert "error" in result
         assert result["context_chunks"] == []
 
-    @patch('app.tools.rag_tools.VectorStoreIndex')
-    @patch('app.tools.rag_tools.VectorIndexRetriever')
-    @patch('app.tools.rag_tools.QueryBundle')
-    def test_search_documents_by_query_success(self, mock_query_bundle, mock_retriever_class,
-                                             mock_index_class, rag_tool):
+    @patch("app.tools.rag_tools.VectorStoreIndex")
+    @patch("app.tools.rag_tools.VectorIndexRetriever")
+    @patch("app.tools.rag_tools.QueryBundle")
+    def test_search_documents_by_query_success(
+        self, mock_query_bundle, mock_retriever_class, mock_index_class, rag_tool
+    ):
         """Test successful document search by query."""
         # Mock search results
         mock_node1 = MagicMock()
         mock_node1.text = "Relevant document content"
         mock_node1.score = 0.9
-        mock_node1.metadata = {"client_id": "test-client-id", "document_type": "medical"}
+        mock_node1.metadata = {
+            "client_id": "test-client-id",
+            "document_type": "medical",
+        }
 
         mock_retriever = MagicMock()
         mock_retriever.retrieve.return_value = [mock_node1]
@@ -157,7 +172,7 @@ class TestRAGRetrieverTool:
         result = rag_tool.search_documents_by_query(
             query_text="medical examination results",
             client_id=uuid.UUID("12345678-1234-5678-9012-123456789012"),
-            similarity_top_k=5
+            similarity_top_k=5,
         )
 
         assert result["success"] is True
@@ -166,10 +181,11 @@ class TestRAGRetrieverTool:
         assert result["search_results"][0]["score"] == 0.9
         assert result["total_results"] == 1
 
-    @patch('app.tools.rag_tools.VectorStoreIndex')
-    @patch('app.tools.rag_tools.VectorIndexRetriever')
-    def test_search_documents_by_query_no_client_filter(self, mock_retriever_class,
-                                                       mock_index_class, rag_tool):
+    @patch("app.tools.rag_tools.VectorStoreIndex")
+    @patch("app.tools.rag_tools.VectorIndexRetriever")
+    def test_search_documents_by_query_no_client_filter(
+        self, mock_retriever_class, mock_index_class, rag_tool
+    ):
         """Test document search without client filtering."""
         # Mock search results from multiple clients
         mock_node1 = MagicMock()
@@ -191,9 +207,7 @@ class TestRAGRetrieverTool:
 
         # Test document search without client filter
         result = rag_tool.search_documents_by_query(
-            query_text="medical examination results",
-            client_id=None,
-            similarity_top_k=5
+            query_text="medical examination results", client_id=None, similarity_top_k=5
         )
 
         assert result["success"] is True
@@ -202,12 +216,10 @@ class TestRAGRetrieverTool:
 
     def test_search_documents_by_query_exception(self, rag_tool):
         """Test document search with exception."""
-        with patch('app.tools.rag_tools.VectorStoreIndex') as mock_index_class:
+        with patch("app.tools.rag_tools.VectorStoreIndex") as mock_index_class:
             mock_index_class.from_vector_store.side_effect = Exception("Search error")
 
-            result = rag_tool.search_documents_by_query(
-                query_text="test query"
-            )
+            result = rag_tool.search_documents_by_query(query_text="test query")
 
         assert result["success"] is False
         assert "error" in result
@@ -218,7 +230,7 @@ class TestRAGRetrieverTool:
         """Test tool initialization with document repository."""
         mock_repository = MagicMock()
 
-        with patch('app.tools.rag_tools.get_llama_index_config'):
+        with patch("app.tools.rag_tools.get_llama_index_config"):
             tool = RAGRetrieverTool(chunk_repository=mock_repository)
 
             assert tool.chunk_repository == mock_repository
@@ -226,13 +238,16 @@ class TestRAGRetrieverTool:
     def test_query_text_generation(self, rag_tool):
         """Test query text generation for context retrieval."""
         # This tests the internal query formatting
-        with patch.object(rag_tool, 'config') as mock_config:
+        with patch.object(rag_tool, "config") as mock_config:
             mock_vector_store = MagicMock()
             mock_config.get_vector_store.return_value = mock_vector_store
 
-            with patch('app.tools.rag_tools.VectorStoreIndex'), \
-                 patch('app.tools.rag_tools.VectorIndexRetriever') as mock_retriever_class:
-
+            with (
+                patch("app.tools.rag_tools.VectorStoreIndex"),
+                patch(
+                    "app.tools.rag_tools.VectorIndexRetriever"
+                ) as mock_retriever_class,
+            ):
                 mock_retriever = MagicMock()
                 mock_retriever.retrieve.return_value = []
                 mock_retriever_class.return_value = mock_retriever
@@ -241,7 +256,7 @@ class TestRAGRetrieverTool:
                     client_id=uuid.UUID("12345678-1234-5678-9012-123456789012"),
                     profession="Software Engineer",
                     disease="Carpal Tunnel Syndrome",
-                    incident_date="15/03/2023"
+                    incident_date="15/03/2023",
                 )
 
                 # Verify query was created

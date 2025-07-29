@@ -57,7 +57,8 @@
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "WebFetch(domain:python-dependency-injector.ets-labs.org)",
-      "WebFetch(domain:docs.agno.com)"
+      "WebFetch(domain:docs.agno.com)",
+      "mcp__playwright__browser_resize"
     ],
     "deny": []
   }

@@ -28,7 +28,7 @@ def sample_client():
         cpf="12345678901",
         birth_date=datetime(1990, 1, 1).date(),
         created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        updated_at=datetime.utcnow(),
     )
 
 
@@ -41,9 +41,9 @@ def sample_pdf_content():
 class TestDocumentFlow:
     """Integration tests for document upload and processing flow."""
 
-    @patch('pathlib.Path.mkdir')
-    @patch('builtins.open', create=True)
-    @patch('app.workers.document_processor.process_document')
+    @patch("pathlib.Path.mkdir")
+    @patch("builtins.open", create=True)
+    @patch("app.workers.document_processor.process_document")
     @pytest.mark.asyncio
     async def test_complete_document_upload_flow(
         self,
@@ -52,12 +52,14 @@ class TestDocumentFlow:
         mock_mkdir,
         mock_db_session,
         sample_client,
-        sample_pdf_content
+        sample_pdf_content,
     ):
         """Test complete document upload flow from UI to processing."""
         # Arrange
         document_repository = DocumentRepository(mock_db_session)
-        document_service = DocumentService(document_repository, upload_dir="test_uploads")
+        document_service = DocumentService(
+            document_repository, upload_dir="test_uploads"
+        )
 
         # Mock database responses
         mock_db_session.execute = AsyncMock()
@@ -77,7 +79,7 @@ class TestDocumentFlow:
             document_type=DocumentType.SIMPLE,
             status=DocumentStatus.UPLOADED,
             client_id=sample_client.id,
-            file_path="uploads/test_document.pdf"
+            file_path="uploads/test_document.pdf",
         )
 
         mock_result_create = Mock()
@@ -86,7 +88,7 @@ class TestDocumentFlow:
         # Configure mock responses in order
         mock_db_session.execute.side_effect = [
             mock_result_duplicate,  # Duplicate check
-            mock_result_create,     # Document creation
+            mock_result_create,  # Document creation
         ]
 
         # Mock Celery task
@@ -103,14 +105,14 @@ class TestDocumentFlow:
             client_id=sample_client.id,
             filename="test_document.pdf",
             content=sample_pdf_content,
-            document_type=DocumentType.SIMPLE
+            document_type=DocumentType.SIMPLE,
         )
 
         # Assert
-        assert result['success'] is True
-        assert 'document_id' in result
-        assert 'task_id' in result
-        assert result['task_id'] == "task_123"
+        assert result["success"] is True
+        assert "document_id" in result
+        assert "task_id" in result
+        assert result["task_id"] == "task_123"
 
         # Verify file operations
         mock_mkdir.assert_called()
@@ -126,15 +128,14 @@ class TestDocumentFlow:
 
     @pytest.mark.asyncio
     async def test_duplicate_document_detection(
-        self,
-        mock_db_session,
-        sample_client,
-        sample_pdf_content
+        self, mock_db_session, sample_client, sample_pdf_content
     ):
         """Test duplicate document detection prevents upload."""
         # Arrange
         document_repository = DocumentRepository(mock_db_session)
-        document_service = DocumentService(document_repository, upload_dir="test_uploads")
+        document_service = DocumentService(
+            document_repository, upload_dir="test_uploads"
+        )
 
         # Mock existing document found
         existing_document = Document(
@@ -145,7 +146,7 @@ class TestDocumentFlow:
             document_type=DocumentType.SIMPLE,
             status=DocumentStatus.PROCESSED,
             client_id=sample_client.id,
-            file_path="uploads/existing_document.pdf"
+            file_path="uploads/existing_document.pdf",
         )
 
         mock_result = Mock()
@@ -157,27 +158,26 @@ class TestDocumentFlow:
             client_id=sample_client.id,
             filename="duplicate_document.pdf",
             content=sample_pdf_content,
-            document_type=DocumentType.SIMPLE
+            document_type=DocumentType.SIMPLE,
         )
 
         # Assert
-        assert result['success'] is False
-        assert 'duplicado' in result['error']
-        assert existing_document.filename in result['error']
+        assert result["success"] is False
+        assert "duplicado" in result["error"]
+        assert existing_document.filename in result["error"]
 
         # Verify no document was created
         mock_db_session.add.assert_not_called()
         mock_db_session.commit.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_document_status_updates_during_processing(
-        self,
-        mock_db_session
-    ):
+    async def test_document_status_updates_during_processing(self, mock_db_session):
         """Test document status updates during processing lifecycle."""
         # Arrange
         document_repository = DocumentRepository(mock_db_session)
-        document_service = DocumentService(document_repository, upload_dir="test_uploads")
+        document_service = DocumentService(
+            document_repository, upload_dir="test_uploads"
+        )
 
         document_id = uuid.uuid4()
         document = Document(
@@ -188,7 +188,7 @@ class TestDocumentFlow:
             document_type=DocumentType.COMPLEX,
             status=DocumentStatus.UPLOADED,
             client_id=uuid.uuid4(),
-            file_path="uploads/processing_document.pdf"
+            file_path="uploads/processing_document.pdf",
         )
 
         # Mock document retrieval
@@ -201,25 +201,21 @@ class TestDocumentFlow:
 
         # 1. Update to PROCESSING
         success = await document_service.update_document_status(
-            document_id,
-            DocumentStatus.PROCESSING
+            document_id, DocumentStatus.PROCESSING
         )
         assert success is True
         assert document.status == DocumentStatus.PROCESSING
 
         # 2. Update to PROCESSED
         success = await document_service.update_document_status(
-            document_id,
-            DocumentStatus.PROCESSED
+            document_id, DocumentStatus.PROCESSED
         )
         assert success is True
         assert document.status == DocumentStatus.PROCESSED
 
         # 3. Test failure case
         success = await document_service.update_document_status(
-            document_id,
-            DocumentStatus.FAILED,
-            "OCR processing failed"
+            document_id, DocumentStatus.FAILED, "OCR processing failed"
         )
         assert success is True
         assert document.status == DocumentStatus.FAILED
@@ -231,14 +227,14 @@ class TestDocumentFlow:
 
     @pytest.mark.asyncio
     async def test_get_client_documents_with_filtering(
-        self,
-        mock_db_session,
-        sample_client
+        self, mock_db_session, sample_client
     ):
         """Test retrieving documents for a specific client."""
         # Arrange
         document_repository = DocumentRepository(mock_db_session)
-        document_service = DocumentService(document_repository, upload_dir="test_uploads")
+        document_service = DocumentService(
+            document_repository, upload_dir="test_uploads"
+        )
 
         # Create sample documents
         documents = [
@@ -250,7 +246,7 @@ class TestDocumentFlow:
                 document_type=DocumentType.SIMPLE,
                 status=DocumentStatus.PROCESSED,
                 client_id=sample_client.id,
-                file_path="uploads/doc1.pdf"
+                file_path="uploads/doc1.pdf",
             ),
             Document(
                 id=uuid.uuid4(),
@@ -260,8 +256,8 @@ class TestDocumentFlow:
                 document_type=DocumentType.COMPLEX,
                 status=DocumentStatus.PROCESSING,
                 client_id=sample_client.id,
-                file_path="uploads/doc2.pdf"
-            )
+                file_path="uploads/doc2.pdf",
+            ),
         ]
 
         mock_result = Mock()
@@ -282,15 +278,14 @@ class TestDocumentFlow:
 
     @pytest.mark.asyncio
     async def test_error_handling_during_file_operations(
-        self,
-        mock_db_session,
-        sample_client,
-        sample_pdf_content
+        self, mock_db_session, sample_client, sample_pdf_content
     ):
         """Test error handling when file operations fail."""
         # Arrange
         document_repository = DocumentRepository(mock_db_session)
-        document_service = DocumentService(document_repository, upload_dir="test_uploads")
+        document_service = DocumentService(
+            document_repository, upload_dir="test_uploads"
+        )
 
         # Mock no duplicate found
         mock_result = Mock()
@@ -298,18 +293,18 @@ class TestDocumentFlow:
         mock_db_session.execute = AsyncMock(return_value=mock_result)
 
         # Mock file operation failure
-        with patch('builtins.open', side_effect=OSError("Disk full")):
+        with patch("builtins.open", side_effect=OSError("Disk full")):
             # Act
             result = await document_service.create_document(
                 client_id=sample_client.id,
                 filename="test_document.pdf",
                 content=sample_pdf_content,
-                document_type=DocumentType.SIMPLE
+                document_type=DocumentType.SIMPLE,
             )
 
         # Assert
-        assert result['success'] is False
-        assert "Disk full" in result['error']
+        assert result["success"] is False
+        assert "Disk full" in result["error"]
 
         # Verify no document was added to database
         mock_db_session.add.assert_not_called()

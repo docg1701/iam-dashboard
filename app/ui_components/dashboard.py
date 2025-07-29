@@ -89,7 +89,7 @@ class DashboardPage:
                             "w-full bg-purple-500 text-white py-2 rounded hover:bg-purple-600"
                         )
 
-                # User Management
+                # User Management and Admin
                 with ui.row().classes("w-full gap-4 mt-6"):
                     with ui.card().classes("flex-1 p-4"):
                         ui.icon("security", size="2rem").classes("text-orange-500 mb-2")
@@ -105,6 +105,25 @@ class DashboardPage:
                         ).classes(
                             "text-sm bg-orange-500 text-white px-3 py-1 rounded hover:bg-orange-600"
                         )
+
+                    # Admin Panel - only show for admin users
+                    if current_user.get("role") in ["admin_user", "sysadmin"]:
+                        with ui.card().classes("flex-1 p-4"):
+                            ui.icon("admin_panel_settings", size="2rem").classes(
+                                "text-red-500 mb-2"
+                            )
+                            ui.label("Painel Administrativo").classes(
+                                "font-semibold mb-2"
+                            )
+                            ui.label("Gerenciar agentes e sistema").classes(
+                                "text-sm text-gray-600 mb-2"
+                            )
+                            ui.button(
+                                "Acessar Admin",
+                                on_click=lambda: ui.navigate.to("/admin"),
+                            ).classes(
+                                "text-sm bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                            )
 
                 # User info
                 with ui.expansion("Informações da Sessão").classes("w-full mt-6"):

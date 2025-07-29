@@ -80,7 +80,9 @@ class TestClientDetailsPage:
     @pytest.mark.asyncio
     @patch("app.ui_components.client_details.AuthManager")
     @patch("app.ui_components.client_details.get_async_db")
-    async def test_client_not_found(self, mock_get_db, mock_auth_manager, sample_client):
+    async def test_client_not_found(
+        self, mock_get_db, mock_auth_manager, sample_client
+    ):
         """Test behavior when client is not found."""
         # Setup mocks
         mock_auth_manager.require_auth.return_value = True
@@ -96,15 +98,19 @@ class TestClientDetailsPage:
         page = ClientDetailsPage(client_id)
 
         # Create mock UI components
-        with patch("app.ui_components.client_details.ui.column"), \
-             patch("app.ui_components.client_details.ui.row"), \
-             patch("app.ui_components.client_details.ui.button"), \
-             patch("app.ui_components.client_details.ui.label"), \
-             patch("app.ui_components.client_details.ui.timer"), \
-             patch("app.ui_components.client_details.ui.notify") as mock_notify, \
-             patch("app.ui_components.client_details.ui.navigate") as mock_navigate, \
-             patch("app.ui_components.client_details.ClientService", return_value=mock_client_service):
-
+        with (
+            patch("app.ui_components.client_details.ui.column"),
+            patch("app.ui_components.client_details.ui.row"),
+            patch("app.ui_components.client_details.ui.button"),
+            patch("app.ui_components.client_details.ui.label"),
+            patch("app.ui_components.client_details.ui.timer"),
+            patch("app.ui_components.client_details.ui.notify") as mock_notify,
+            patch("app.ui_components.client_details.ui.navigate") as mock_navigate,
+            patch(
+                "app.ui_components.client_details.ClientService",
+                return_value=mock_client_service,
+            ),
+        ):
             # Mock the client_info_container
             page.client_info_container = MagicMock()
 
@@ -112,7 +118,9 @@ class TestClientDetailsPage:
             await page._load_client()
 
             # Verify navigation to clients page occurs
-            mock_notify.assert_called_once_with("Cliente não encontrado", type="negative")
+            mock_notify.assert_called_once_with(
+                "Cliente não encontrado", type="negative"
+            )
             mock_navigate.to.assert_called_once_with("/clients")
 
     def test_handle_view_summary_processed_document(self, sample_documents):
@@ -122,7 +130,9 @@ class TestClientDetailsPage:
 
         processed_doc = sample_documents[0]  # Status: PROCESSED
 
-        with patch("app.ui_components.document_summary.DocumentSummaryModal") as mock_modal:
+        with patch(
+            "app.ui_components.document_summary.DocumentSummaryModal"
+        ) as mock_modal:
             mock_modal_instance = MagicMock()
             mock_modal.return_value = mock_modal_instance
 
@@ -186,13 +196,16 @@ class TestClientDetailsPage:
         client_id = str(uuid.uuid4())
         page = ClientDetailsPage(client_id)
 
-        with patch("app.ui_components.client_details.ui.notify") as mock_notify, \
-             patch("app.ui_components.client_details.ui.navigate") as mock_navigate:
-
+        with (
+            patch("app.ui_components.client_details.ui.notify") as mock_notify,
+            patch("app.ui_components.client_details.ui.navigate") as mock_navigate,
+        ):
             page._handle_logout()
 
             mock_auth_manager.logout_user.assert_called_once()
-            mock_notify.assert_called_once_with("Saída realizada com sucesso", type="positive")
+            mock_notify.assert_called_once_with(
+                "Saída realizada com sucesso", type="positive"
+            )
             mock_navigate.to.assert_called_once_with("/login")
 
     @pytest.mark.asyncio
@@ -208,19 +221,25 @@ class TestClientDetailsPage:
         mock_client_service = AsyncMock()
         mock_client_service.get_client_by_id.return_value = sample_client
 
-        with patch("app.ui_components.client_details.get_async_db") as mock_get_db, \
-             patch("app.ui_components.client_details.ClientService", return_value=mock_client_service), \
-             patch("app.ui_components.client_details.ui.card"), \
-             patch("app.ui_components.client_details.ui.label"), \
-             patch("app.ui_components.client_details.ui.row"), \
-             patch("app.ui_components.client_details.ui.column"):
-
+        with (
+            patch("app.ui_components.client_details.get_async_db") as mock_get_db,
+            patch(
+                "app.ui_components.client_details.ClientService",
+                return_value=mock_client_service,
+            ),
+            patch("app.ui_components.client_details.ui.card"),
+            patch("app.ui_components.client_details.ui.label"),
+            patch("app.ui_components.client_details.ui.row"),
+            patch("app.ui_components.client_details.ui.column"),
+        ):
             mock_get_db.return_value.__aiter__.return_value = [mock_db_session]
 
             await page._load_client()
 
             assert page.client == sample_client
-            mock_client_service.get_client_by_id.assert_called_once_with(sample_client.id)
+            mock_client_service.get_client_by_id.assert_called_once_with(
+                sample_client.id
+            )
             page.client_info_container.clear.assert_called_once()
 
     @pytest.mark.asyncio
@@ -233,10 +252,14 @@ class TestClientDetailsPage:
         mock_client_service = AsyncMock()
         mock_client_service.get_client_by_id.side_effect = Exception("Database error")
 
-        with patch("app.ui_components.client_details.get_async_db") as mock_get_db, \
-             patch("app.ui_components.client_details.ClientService", return_value=mock_client_service), \
-             patch("app.ui_components.client_details.ui.notify") as mock_notify:
-
+        with (
+            patch("app.ui_components.client_details.get_async_db") as mock_get_db,
+            patch(
+                "app.ui_components.client_details.ClientService",
+                return_value=mock_client_service,
+            ),
+            patch("app.ui_components.client_details.ui.notify") as mock_notify,
+        ):
             mock_get_db.return_value.__aiter__.return_value = [mock_db_session]
 
             await page._load_client()

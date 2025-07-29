@@ -3,10 +3,14 @@
 from fastapi import FastAPI
 from nicegui import app, ui
 
+from app.api.admin import router as admin_router
 from app.api.clients import router as clients_router
 from app.api.documents import router as documents_router
+from app.api.middleware.agent_error_handler import agent_error_handler
+from app.api.middleware.performance_middleware import performance_middleware
 from app.api.questionnaire import router as questionnaire_router
 from app.core.auth import AuthManager
+from app.ui_components.admin_control_panel import admin_control_panel_page
 from app.ui_components.client_details import client_details_page
 from app.ui_components.clients_area import clients_area_page
 from app.ui_components.dashboard import dashboard_page
@@ -18,10 +22,15 @@ from app.ui_components.settings_2fa import settings_2fa_page
 # Create FastAPI app instance that will be wrapped by NiceGUI
 fastapi_app: FastAPI = app
 
+# Add middleware (order matters - performance first, then error handling)
+fastapi_app.middleware("http")(performance_middleware)
+fastapi_app.middleware("http")(agent_error_handler)
+
 # Register API routers
 fastapi_app.include_router(documents_router)
 fastapi_app.include_router(clients_router)
 fastapi_app.include_router(questionnaire_router)
+fastapi_app.include_router(admin_router)
 
 
 @ui.page("/")
@@ -87,6 +96,12 @@ def client_details(client_id: str) -> None:
 def questionnaire_writer() -> None:
     """Questionnaire writer page route."""
     questionnaire_writer_page()
+
+
+@ui.page("/admin")
+def admin() -> None:
+    """Administrative control panel page route."""
+    admin_control_panel_page()
 
 
 @ui.page("/logout")

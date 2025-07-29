@@ -50,7 +50,7 @@ class TestAgentPluginBase:
             "description": "Test agent for unit testing",
             "version": "1.0.0",
             "capabilities": ["test"],
-            "dependencies": ["dep1"]
+            "dependencies": ["dep1"],
         }
 
     @pytest.fixture
@@ -137,11 +137,7 @@ class TestAgentPluginRegistry:
     @pytest.fixture
     def test_config(self):
         """Sample configuration for testing."""
-        return {
-            "name": "Test Agent",
-            "description": "Test agent",
-            "dependencies": []
-        }
+        return {"name": "Test Agent", "description": "Test agent", "dependencies": []}
 
     def test_register_plugin(self, registry):
         """Test plugin registration."""
@@ -184,7 +180,9 @@ class TestAgentPluginRegistry:
         """Test creating plugin instance."""
         registry.register_plugin(MockAgentPlugin)
 
-        instance = await registry.create_instance("MockPlugin", "test_agent", test_config)
+        instance = await registry.create_instance(
+            "MockPlugin", "test_agent", test_config
+        )
 
         assert instance is not None
         assert isinstance(instance, MockAgentPlugin)
@@ -194,7 +192,9 @@ class TestAgentPluginRegistry:
     @pytest.mark.asyncio
     async def test_create_instance_nonexistent_plugin(self, registry, test_config):
         """Test creating instance of non-existent plugin."""
-        instance = await registry.create_instance("NonExistent", "test_agent", test_config)
+        instance = await registry.create_instance(
+            "NonExistent", "test_agent", test_config
+        )
         assert instance is None
 
     def test_get_instance(self, registry):

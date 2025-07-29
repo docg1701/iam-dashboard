@@ -97,7 +97,7 @@ class DocumentUploadDialog:
             file_content = event.content
 
             # Handle SpooledTemporaryFile or bytes content
-            if hasattr(file_content, 'read'):
+            if hasattr(file_content, "read"):
                 # It's a file-like object (SpooledTemporaryFile)
                 file_content.seek(0)  # Ensure we're at the beginning
                 content_bytes = file_content.read()

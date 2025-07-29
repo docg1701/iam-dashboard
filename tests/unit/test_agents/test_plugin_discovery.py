@@ -50,7 +50,7 @@ class TestPluginDiscovery:
 
         # Create a valid plugin file
         plugin_file = temp_dir / "test_plugin.py"
-        plugin_code = '''
+        plugin_code = """
 from app.agents.base_agent import AgentPlugin
 
 class TestPlugin(AgentPlugin):
@@ -68,21 +68,22 @@ class TestPlugin(AgentPlugin):
 
     def get_capabilities(self):
         return ["test"]
-'''
+"""
         plugin_file.write_text(plugin_code)
 
         # Create an invalid plugin file
         invalid_file = temp_dir / "invalid_plugin.py"
-        invalid_code = '''
+        invalid_code = """
 class NotAPlugin:
     pass
-'''
+"""
         invalid_file.write_text(invalid_code)
 
         yield temp_dir
 
         # Cleanup
         import shutil
+
         shutil.rmtree(temp_dir)
 
     def test_discovery_initialization(self):
@@ -96,7 +97,7 @@ class NotAPlugin:
         assert custom_discovery.plugin_dirs == ["custom.plugins", "other.plugins"]
 
     @pytest.mark.asyncio
-    @patch('app.agents.plugin_discovery.importlib.import_module')
+    @patch("app.agents.plugin_discovery.importlib.import_module")
     async def test_discover_plugins_success(self, mock_import, discovery):
         """Test successful plugin discovery."""
         # Mock module with plugin class - note discovery uses "test.plugins"
@@ -108,7 +109,7 @@ class NotAPlugin:
         mock_load_called = False
 
         # Mock Path.glob to return plugin file
-        with patch('pathlib.Path.glob') as mock_glob:
+        with patch("pathlib.Path.glob") as mock_glob:
             mock_file = Mock()
             mock_file.name = "mock_plugin.py"
             mock_glob.return_value = [mock_file]
@@ -119,7 +120,11 @@ class NotAPlugin:
                 mock_load_called = True
                 discovery._discovered_plugins["MockPlugin"] = MockPlugin
 
-            with patch.object(discovery, '_load_plugin_from_file', side_effect=mock_load_plugin_side_effect) as mock_load:
+            with patch.object(
+                discovery,
+                "_load_plugin_from_file",
+                side_effect=mock_load_plugin_side_effect,
+            ) as mock_load:
                 result = await discovery.discover_plugins()
 
                 # Debug information
@@ -138,7 +143,9 @@ class NotAPlugin:
     @pytest.mark.asyncio
     async def test_discover_plugins_import_error(self, discovery):
         """Test plugin discovery with import error."""
-        with patch('app.agents.plugin_discovery.importlib.import_module') as mock_import:
+        with patch(
+            "app.agents.plugin_discovery.importlib.import_module"
+        ) as mock_import:
             mock_import.side_effect = ImportError("Module not found")
 
             result = await discovery.discover_plugins()
@@ -147,13 +154,11 @@ class NotAPlugin:
             assert isinstance(result, dict)
 
     @pytest.mark.asyncio
-    @patch('app.agents.plugin_discovery.plugin_registry')
+    @patch("app.agents.plugin_discovery.plugin_registry")
     async def test_load_plugins_success(self, mock_registry, discovery):
         """Test successful plugin loading."""
         # Setup discovered plugins
-        discovery._discovered_plugins = {
-            "MockPlugin": MockPlugin
-        }
+        discovery._discovered_plugins = {"MockPlugin": MockPlugin}
 
         # Mock registry register method
         mock_registry.register_plugin = Mock()
@@ -164,17 +169,19 @@ class NotAPlugin:
         mock_registry.register_plugin.assert_called_once_with(MockPlugin)
 
     @pytest.mark.asyncio
-    @patch('app.agents.plugin_discovery.plugin_registry')
+    @patch("app.agents.plugin_discovery.plugin_registry")
     async def test_load_plugins_with_error(self, mock_registry, discovery):
         """Test plugin loading with registry error."""
         # Setup discovered plugins
         discovery._discovered_plugins = {
             "MockPlugin": MockPlugin,
-            "ErrorPlugin": MockPlugin  # Will cause error
+            "ErrorPlugin": MockPlugin,  # Will cause error
         }
 
         # Mock registry to raise error on second call
-        mock_registry.register_plugin = Mock(side_effect=[None, Exception("Registration failed")])
+        mock_registry.register_plugin = Mock(
+            side_effect=[None, Exception("Registration failed")]
+        )
 
         result = await discovery.load_plugins()
 
@@ -182,14 +189,14 @@ class NotAPlugin:
         assert mock_registry.register_plugin.call_count == 2
 
     @pytest.mark.asyncio
-    @patch('app.agents.plugin_discovery.importlib')
-    @patch('app.agents.plugin_discovery.plugin_registry')
-    async def test_reload_plugin_success(self, mock_registry, mock_importlib, discovery):
+    @patch("app.agents.plugin_discovery.importlib")
+    @patch("app.agents.plugin_discovery.plugin_registry")
+    async def test_reload_plugin_success(
+        self, mock_registry, mock_importlib, discovery
+    ):
         """Test successful plugin reload."""
         # Setup discovered plugin
-        discovery._discovered_plugins = {
-            "MockPlugin": MockPlugin
-        }
+        discovery._discovered_plugins = {"MockPlugin": MockPlugin}
 
         # Mock importlib functions
         mock_module = Mock()
@@ -222,6 +229,7 @@ class NotAPlugin:
 
     def test_get_plugin_validation_errors_missing_methods(self, discovery):
         """Test validation of plugin with missing methods."""
+
         class IncompletePlugin(AgentPlugin):
             PLUGIN_NAME = "IncompletePlugin"
 
@@ -235,6 +243,7 @@ class NotAPlugin:
 
     def test_get_plugin_validation_errors_missing_plugin_name(self, discovery):
         """Test validation of plugin without PLUGIN_NAME."""
+
         class NoNamePlugin(AgentPlugin):
             # Missing PLUGIN_NAME
 
@@ -256,21 +265,25 @@ class NotAPlugin:
     @pytest.mark.asyncio
     async def test_discover_plugins_in_directory_module_path(self, discovery):
         """Test discovering plugins in module path."""
-        with patch('app.agents.plugin_discovery.importlib.import_module') as mock_import:
+        with patch(
+            "app.agents.plugin_discovery.importlib.import_module"
+        ) as mock_import:
             mock_module = Mock()
             mock_module.__path__ = ["/fake/path"]
             mock_import.return_value = mock_module
 
-            with patch.object(discovery, '_scan_directory_for_plugins') as mock_scan:
+            with patch.object(discovery, "_scan_directory_for_plugins") as mock_scan:
                 await discovery._discover_plugins_in_directory("app.plugins")
 
                 mock_import.assert_called_once_with("app.plugins")
                 mock_scan.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_discover_plugins_in_directory_file_path(self, discovery, temp_plugin_dir):
+    async def test_discover_plugins_in_directory_file_path(
+        self, discovery, temp_plugin_dir
+    ):
         """Test discovering plugins in file path."""
-        with patch.object(discovery, '_scan_directory_for_plugins') as mock_scan:
+        with patch.object(discovery, "_scan_directory_for_plugins") as mock_scan:
             await discovery._discover_plugins_in_directory(str(temp_plugin_dir))
 
             # Should call scan_directory since import fails
@@ -279,7 +292,7 @@ class NotAPlugin:
     @pytest.mark.asyncio
     async def test_scan_directory_for_plugins(self, discovery, temp_plugin_dir):
         """Test scanning directory for plugin files."""
-        with patch.object(discovery, '_load_plugin_from_file') as mock_load:
+        with patch.object(discovery, "_load_plugin_from_file") as mock_load:
             await discovery._scan_directory_for_plugins(temp_plugin_dir)
 
             # Should call load for each .py file (excluding __init__.py, etc.)
@@ -296,7 +309,7 @@ class NotAPlugin:
         # No exception should be raised
 
     @pytest.mark.asyncio
-    @patch('app.agents.plugin_discovery.importlib.import_module')
+    @patch("app.agents.plugin_discovery.importlib.import_module")
     async def test_load_plugin_from_file_success(self, mock_import, discovery):
         """Test loading plugin from file successfully."""
         # Create a mock module with a valid plugin
@@ -305,7 +318,7 @@ class NotAPlugin:
         mock_import.return_value = mock_module
 
         # Mock the dir() function to return our test plugin
-        with patch('builtins.dir', return_value=["TestPlugin", "other_attr"]):
+        with patch("builtins.dir", return_value=["TestPlugin", "other_attr"]):
             # Mock file path
             mock_file = Mock()
             mock_file.relative_to.return_value = Path("test/plugin.py")
@@ -316,7 +329,7 @@ class NotAPlugin:
             assert "MockPlugin" in discovery._discovered_plugins
 
     @pytest.mark.asyncio
-    @patch('app.agents.plugin_discovery.importlib.import_module')
+    @patch("app.agents.plugin_discovery.importlib.import_module")
     async def test_load_plugin_from_file_import_error(self, mock_import, discovery):
         """Test handling import error when loading plugin."""
         mock_import.side_effect = ImportError("Cannot import module")
@@ -331,7 +344,7 @@ class NotAPlugin:
         assert len(discovery._discovered_plugins) == 0
 
     @pytest.mark.asyncio
-    @patch('app.agents.plugin_discovery.importlib.import_module')
+    @patch("app.agents.plugin_discovery.importlib.import_module")
     async def test_load_plugin_from_file_invalid_plugin(self, mock_import, discovery):
         """Test loading file with invalid plugin."""
         # Mock module with invalid plugin
@@ -340,7 +353,7 @@ class NotAPlugin:
         mock_import.return_value = mock_module
 
         # Mock the dir() function to return our invalid plugin
-        with patch('builtins.dir', return_value=["InvalidPlugin"]):
+        with patch("builtins.dir", return_value=["InvalidPlugin"]):
             mock_file = Mock()
             mock_file.relative_to.return_value = Path("test/plugin.py")
 

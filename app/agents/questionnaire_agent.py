@@ -49,11 +49,11 @@ class QuestionnaireAgent(Agent):
 
         # Extract tool-specific config before passing to parent
         tool_config = {
-            'gemini_api_key': kwargs.pop('gemini_api_key', None),
-            'similarity_top_k': kwargs.pop('similarity_top_k', 10),
-            'templates_directory': kwargs.pop('templates_directory', None),
-            'min_context_chunks': kwargs.pop('min_context_chunks', 1),
-            'max_context_chunks': kwargs.pop('max_context_chunks', 15),
+            "gemini_api_key": kwargs.pop("gemini_api_key", None),
+            "similarity_top_k": kwargs.pop("similarity_top_k", 10),
+            "templates_directory": kwargs.pop("templates_directory", None),
+            "min_context_chunks": kwargs.pop("min_context_chunks", 1),
+            "max_context_chunks": kwargs.pop("max_context_chunks", 15),
         }
 
         # Convert model string to Gemini model object
@@ -68,8 +68,7 @@ class QuestionnaireAgent(Agent):
         # Initialize tools
         self.rag_retriever = RAGRetrieverTool()
         self.llm_processor = LLMProcessorTool(
-            model_name=model,
-            api_key=tool_config["gemini_api_key"]
+            model_name=model, api_key=tool_config["gemini_api_key"]
         )
         self.template_manager = TemplateManagerTool(
             templates_directory=tool_config["templates_directory"]
@@ -86,11 +85,7 @@ class QuestionnaireAgent(Agent):
         logger.info(f"Initialized QuestionnaireAgent with model: {model}")
 
     async def retrieve_client_context(
-        self,
-        client_id: str,
-        profession: str,
-        disease: str,
-        incident_date: str
+        self, client_id: str, profession: str, disease: str, incident_date: str
     ) -> dict[str, Any]:
         """Retrieve relevant document context for questionnaire generation.
 
@@ -117,7 +112,7 @@ class QuestionnaireAgent(Agent):
                     profession=profession,
                     disease=disease,
                     incident_date=incident_date,
-                    similarity_top_k=self.similarity_top_k
+                    similarity_top_k=self.similarity_top_k,
                 )
 
                 if context_result["success"]:
@@ -128,8 +123,8 @@ class QuestionnaireAgent(Agent):
                         context_chunks = sorted(
                             context_chunks,
                             key=lambda x: x.get("score", 0.0),
-                            reverse=True
-                        )[:self.max_context_chunks]
+                            reverse=True,
+                        )[: self.max_context_chunks]
                         context_result["context_chunks"] = context_chunks
                         context_result["total_chunks"] = len(context_chunks)
 
@@ -146,7 +141,7 @@ class QuestionnaireAgent(Agent):
                 "error": "No database session available",
                 "context_chunks": [],
                 "total_chunks": 0,
-                "client_id": client_id
+                "client_id": client_id,
             }
 
         except Exception as e:
@@ -157,14 +152,14 @@ class QuestionnaireAgent(Agent):
                 "error": error_msg,
                 "context_chunks": [],
                 "total_chunks": 0,
-                "client_id": client_id
+                "client_id": client_id,
             }
 
     def generate_questionnaire_content(
         self,
         client_data: dict[str, Any],
         case_data: dict[str, Any],
-        context_chunks: list[dict[str, Any]] | None = None
+        context_chunks: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Generate questionnaire content using LLM with retrieved context.
 
@@ -181,7 +176,7 @@ class QuestionnaireAgent(Agent):
             client = Client(
                 id=uuid.UUID(client_data["id"]),
                 name=client_data["name"],
-                cpf=client_data["cpf"]
+                cpf=client_data["cpf"],
             )
 
             # Generate questionnaire using LLM processor
@@ -191,7 +186,7 @@ class QuestionnaireAgent(Agent):
                 disease=case_data["disease"],
                 incident_date=case_data["incident_date"],
                 medical_date=case_data["medical_date"],
-                context_chunks=context_chunks
+                context_chunks=context_chunks,
             )
 
             if generation_result["success"]:
@@ -207,7 +202,7 @@ class QuestionnaireAgent(Agent):
                 "success": False,
                 "error": error_msg,
                 "questionnaire": "",
-                "model_used": "error"
+                "model_used": "error",
             }
 
     def apply_legal_formatting(
@@ -215,7 +210,7 @@ class QuestionnaireAgent(Agent):
         questionnaire_text: str,
         client_data: dict[str, Any],
         case_data: dict[str, Any],
-        template_type: str = "medical_examination"
+        template_type: str = "medical_examination",
     ) -> dict[str, Any]:
         """Apply legal formatting and template structure to questionnaire.
 
@@ -233,18 +228,20 @@ class QuestionnaireAgent(Agent):
             client = Client(
                 id=uuid.UUID(client_data["id"]),
                 name=client_data["name"],
-                cpf=client_data["cpf"]
+                cpf=client_data["cpf"],
             )
 
             # Get template configuration
             template_result = self.template_manager.get_questionnaire_template(
                 template_type=template_type,
                 profession=case_data.get("profession"),
-                disease_category=case_data.get("disease")
+                disease_category=case_data.get("disease"),
             )
 
             if not template_result["success"]:
-                logger.warning(f"Failed to get template: {template_result.get('error')}")
+                logger.warning(
+                    f"Failed to get template: {template_result.get('error')}"
+                )
                 # Continue without template
                 template_config = None
             else:
@@ -255,7 +252,7 @@ class QuestionnaireAgent(Agent):
                 questionnaire_text=questionnaire_text,
                 client=client,
                 case_data=case_data,
-                template_config=template_config
+                template_config=template_config,
             )
 
             if formatting_result["success"]:
@@ -271,13 +268,11 @@ class QuestionnaireAgent(Agent):
                 "success": False,
                 "error": error_msg,
                 "formatted_questionnaire": questionnaire_text,  # Return original
-                "template_applied": "none"
+                "template_applied": "none",
             }
 
     def validate_questionnaire(
-        self,
-        questionnaire_text: str,
-        template_type: str = "medical_examination"
+        self, questionnaire_text: str, template_type: str = "medical_examination"
     ) -> dict[str, Any]:
         """Validate questionnaire format and content quality.
 
@@ -294,16 +289,19 @@ class QuestionnaireAgent(Agent):
                 template_type=template_type
             )
 
-            template_config = None if not template_result["success"] else template_result["template"]
+            template_config = (
+                None if not template_result["success"] else template_result["template"]
+            )
 
             # Validate format
             validation_result = self.template_manager.validate_questionnaire_format(
-                questionnaire_text=questionnaire_text,
-                template_config=template_config
+                questionnaire_text=questionnaire_text, template_config=template_config
             )
 
             if validation_result["success"]:
-                logger.info(f"Questionnaire validation completed: {validation_result['validation_results']['is_valid']}")
+                logger.info(
+                    f"Questionnaire validation completed: {validation_result['validation_results']['is_valid']}"
+                )
                 return validation_result
             else:
                 return validation_result
@@ -314,7 +312,7 @@ class QuestionnaireAgent(Agent):
             return {
                 "success": False,
                 "error": error_msg,
-                "validation_results": {"is_valid": False, "errors": [error_msg]}
+                "validation_results": {"is_valid": False, "errors": [error_msg]},
             }
 
     async def save_questionnaire_draft(
@@ -322,7 +320,7 @@ class QuestionnaireAgent(Agent):
         questionnaire_text: str,
         client_id: str,
         case_data: dict[str, Any],
-        metadata: dict[str, Any] | None = None
+        metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Save questionnaire draft to database.
 
@@ -371,17 +369,13 @@ class QuestionnaireAgent(Agent):
             return {
                 "success": False,
                 "error": "No database session available",
-                "draft_id": None
+                "draft_id": None,
             }
 
         except Exception as e:
             error_msg = f"Failed to save questionnaire draft: {str(e)}"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "draft_id": None
-            }
+            return {"success": False, "error": error_msg, "draft_id": None}
 
     async def generate_questionnaire(
         self,
@@ -390,7 +384,7 @@ class QuestionnaireAgent(Agent):
         disease: str,
         incident_date: str,
         medical_date: str,
-        save_draft: bool = True
+        save_draft: bool = True,
     ) -> dict[str, Any]:
         """Main workflow for generating a legal questionnaire.
 
@@ -405,7 +399,9 @@ class QuestionnaireAgent(Agent):
         Returns:
             Dictionary containing complete generation results
         """
-        logger.info(f"Starting questionnaire generation workflow for client: {client.name}")
+        logger.info(
+            f"Starting questionnaire generation workflow for client: {client.name}"
+        )
 
         try:
             # Step 1: Retrieve relevant context
@@ -413,32 +409,30 @@ class QuestionnaireAgent(Agent):
                 client_id=str(client.id),
                 profession=profession,
                 disease=disease,
-                incident_date=incident_date
+                incident_date=incident_date,
             )
 
             if not context_result["success"]:
-                logger.warning(f"Context retrieval failed: {context_result.get('error')}")
+                logger.warning(
+                    f"Context retrieval failed: {context_result.get('error')}"
+                )
                 context_chunks = []
             else:
                 context_chunks = context_result["context_chunks"]
 
             # Step 2: Generate questionnaire content
-            client_data = {
-                "id": str(client.id),
-                "name": client.name,
-                "cpf": client.cpf
-            }
+            client_data = {"id": str(client.id), "name": client.name, "cpf": client.cpf}
             case_data = {
                 "profession": profession,
                 "disease": disease,
                 "incident_date": incident_date,
-                "medical_date": medical_date
+                "medical_date": medical_date,
             }
 
             generation_result = self.generate_questionnaire_content(
                 client_data=client_data,
                 case_data=case_data,
-                context_chunks=context_chunks
+                context_chunks=context_chunks,
             )
 
             if not generation_result["success"]:
@@ -450,7 +444,7 @@ class QuestionnaireAgent(Agent):
             formatting_result = self.apply_legal_formatting(
                 questionnaire_text=questionnaire_text,
                 client_data=client_data,
-                case_data=case_data
+                case_data=case_data,
             )
 
             if formatting_result["success"]:
@@ -458,7 +452,9 @@ class QuestionnaireAgent(Agent):
 
             # Step 4: Validate questionnaire
             validation_result = self.validate_questionnaire(questionnaire_text)
-            is_valid = validation_result.get("validation_results", {}).get("is_valid", True)
+            is_valid = validation_result.get("validation_results", {}).get(
+                "is_valid", True
+            )
 
             # Step 5: Save draft if requested
             draft_id = None
@@ -470,11 +466,13 @@ class QuestionnaireAgent(Agent):
                     metadata={
                         "context_chunks_used": len(context_chunks),
                         "model_used": generation_result.get("model_used"),
-                        "template_applied": formatting_result.get("template_applied", "none"),
+                        "template_applied": formatting_result.get(
+                            "template_applied", "none"
+                        ),
                         "validation_passed": is_valid,
                         "generation_timestamp": datetime.now(UTC).isoformat(),
-                        "agent_version": "1.0.0"
-                    }
+                        "agent_version": "1.0.0",
+                    },
                 )
 
                 if save_result["success"]:
@@ -494,22 +492,24 @@ class QuestionnaireAgent(Agent):
                     "draft_saved": draft_id is not None,
                     "draft_id": draft_id,
                     "model_used": generation_result.get("model_used"),
-                    "fallback_used": generation_result.get("fallback_used", False)
-                }
+                    "fallback_used": generation_result.get("fallback_used", False),
+                },
             }
 
             logger.info(f"Questionnaire generation completed for client: {client.name}")
             return final_result
 
         except Exception as e:
-            error_msg = f"Questionnaire generation workflow failed for {client.name}: {str(e)}"
+            error_msg = (
+                f"Questionnaire generation workflow failed for {client.name}: {str(e)}"
+            )
             logger.error(error_msg)
             return {
                 "success": False,
                 "error": error_msg,
                 "questionnaire": "",
                 "context_chunks": 0,
-                "client_name": client.name
+                "client_name": client.name,
             }
 
 
@@ -531,15 +531,18 @@ class QuestionnairePlugin(AgentPlugin):
             instructions = self.config.get("instructions")
 
             # Remove conflicting keys from config
-            agent_config = {k: v for k, v in self.config.items()
-                          if k not in ['name', 'description', 'model', 'instructions']}
+            agent_config = {
+                k: v
+                for k, v in self.config.items()
+                if k not in ["name", "description", "model", "instructions"]
+            }
 
             self._agent_instance = QuestionnaireAgent(
                 model=model,
                 instructions=instructions,
                 name=self.name,
                 description=self.description,
-                **agent_config
+                **agent_config,
             )
 
             self._initialized = True
@@ -573,7 +576,9 @@ class QuestionnairePlugin(AgentPlugin):
                 }
 
             # Validate client_data structure
-            if not isinstance(client_data, dict) or not all(key in client_data for key in ["id", "name", "cpf"]):
+            if not isinstance(client_data, dict) or not all(
+                key in client_data for key in ["id", "name", "cpf"]
+            ):
                 return {
                     "success": False,
                     "error": "Invalid client data structure",
@@ -583,7 +588,7 @@ class QuestionnairePlugin(AgentPlugin):
             client = Client(
                 id=uuid.UUID(str(client_data["id"])),
                 name=str(client_data["name"]),
-                cpf=str(client_data["cpf"])
+                cpf=str(client_data["cpf"]),
             )
 
             # Process questionnaire generation
@@ -593,7 +598,7 @@ class QuestionnairePlugin(AgentPlugin):
                 disease=str(disease),
                 incident_date=str(incident_date),
                 medical_date=str(medical_date),
-                save_draft=save_draft
+                save_draft=save_draft,
             )
 
             return result
@@ -623,4 +628,3 @@ class QuestionnairePlugin(AgentPlugin):
             "content_validation",
             "draft_management",
         ]
-

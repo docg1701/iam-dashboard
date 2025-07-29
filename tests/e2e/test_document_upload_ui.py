@@ -18,13 +18,14 @@ def sample_client():
     """Sample client for testing."""
     import uuid
     from datetime import datetime
+
     return Client(
         id=uuid.uuid4(),
         name="João Silva",
         cpf="12345678901",
         birth_date=datetime(1990, 1, 1).date(),
         created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        updated_at=datetime.utcnow(),
     )
 
 
@@ -33,7 +34,7 @@ def sample_pdf_file():
     """Create a temporary PDF file for testing."""
     pdf_content = b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>endobj xref 0 4 0000000000 65535 f 0000000010 00000 n 0000000053 00000 n 0000000100 00000 n trailer<</Size 4/Root 1 0 R>> startxref 150 %%EOF"
 
-    with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
         f.write(pdf_content)
         f.flush()
         yield f.name
@@ -49,6 +50,7 @@ class TestDocumentUploadUI:
     async def test_document_upload_dialog_display(self, sample_client):
         """Test that document upload dialog displays correctly."""
         with Screen("/test") as screen:
+
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
@@ -69,6 +71,7 @@ class TestDocumentUploadUI:
     async def test_document_type_selection(self, sample_client):
         """Test document type selection functionality."""
         with Screen("/test") as screen:
+
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
@@ -89,24 +92,22 @@ class TestDocumentUploadUI:
             # Verify selection changed
             assert type_selector.text == DocumentType.COMPLEX
 
-    @patch('app.services.document_service.DocumentService.create_document')
+    @patch("app.services.document_service.DocumentService.create_document")
     @pytest.mark.asyncio
     async def test_successful_file_upload_flow(
-        self,
-        mock_create_document,
-        sample_client,
-        sample_pdf_file
+        self, mock_create_document, sample_client, sample_pdf_file
     ):
         """Test successful file upload and processing initiation."""
         # Arrange
         mock_create_document.return_value = {
-            'success': True,
-            'document_id': 'doc_123',
-            'task_id': 'task_456',
-            'message': 'Documento criado e processamento iniciado'
+            "success": True,
+            "document_id": "doc_123",
+            "task_id": "task_456",
+            "message": "Documento criado e processamento iniciado",
         }
 
         with Screen("/test") as screen:
+
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
@@ -118,16 +119,16 @@ class TestDocumentUploadUI:
             screen.find("Arrastar PDF aqui ou clicar para selecionar")
 
             # Read the test PDF file
-            with open(sample_pdf_file, 'rb') as f:
+            with open(sample_pdf_file, "rb") as f:
                 file_content = f.read()
 
             # Simulate file selection (this would normally be done by browser)
             # In a real E2E test, you would use Playwright to interact with file input
             upload_dialog.uploaded_file_info = {
-                'filename': 'test.pdf',
-                'content': file_content,
-                'size': len(file_content),
-                'hash': 'abc123'
+                "filename": "test.pdf",
+                "content": file_content,
+                "size": len(file_content),
+                "hash": "abc123",
             }
             upload_dialog._update_file_info()
 
@@ -146,26 +147,24 @@ class TestDocumentUploadUI:
             # Verify document service was called
             mock_create_document.assert_called_once()
             call_args = mock_create_document.call_args
-            assert call_args[1]['client_id'] == sample_client.id
-            assert call_args[1]['filename'] == 'test.pdf'
-            assert call_args[1]['document_type'] == DocumentType.SIMPLE
+            assert call_args[1]["client_id"] == sample_client.id
+            assert call_args[1]["filename"] == "test.pdf"
+            assert call_args[1]["document_type"] == DocumentType.SIMPLE
 
-    @patch('app.services.document_service.DocumentService.create_document')
+    @patch("app.services.document_service.DocumentService.create_document")
     @pytest.mark.asyncio
     async def test_duplicate_file_error_handling(
-        self,
-        mock_create_document,
-        sample_client,
-        sample_pdf_file
+        self, mock_create_document, sample_client, sample_pdf_file
     ):
         """Test error handling when duplicate file is detected."""
         # Arrange
         mock_create_document.return_value = {
-            'success': False,
-            'error': 'Documento duplicado encontrado. Arquivo já existe: existing_file.pdf'
+            "success": False,
+            "error": "Documento duplicado encontrado. Arquivo já existe: existing_file.pdf",
         }
 
         with Screen("/test") as screen:
+
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
@@ -174,14 +173,14 @@ class TestDocumentUploadUI:
             await screen.open("/test")
 
             # Simulate file upload with duplicate
-            with open(sample_pdf_file, 'rb') as f:
+            with open(sample_pdf_file, "rb") as f:
                 file_content = f.read()
 
             upload_dialog.uploaded_file_info = {
-                'filename': 'duplicate.pdf',
-                'content': file_content,
-                'size': len(file_content),
-                'hash': 'duplicate_hash'
+                "filename": "duplicate.pdf",
+                "content": file_content,
+                "size": len(file_content),
+                "hash": "duplicate_hash",
             }
             upload_dialog._update_file_info()
 
@@ -192,22 +191,18 @@ class TestDocumentUploadUI:
             # Verify error notification appears
             screen.should_contain("Documento duplicado encontrado")
 
-    @patch('httpx.AsyncClient')
+    @patch("httpx.AsyncClient")
     @pytest.mark.asyncio
-    async def test_processing_status_tracking(
-        self,
-        mock_httpx_client,
-        sample_client
-    ):
+    async def test_processing_status_tracking(self, mock_httpx_client, sample_client):
         """Test processing status tracking and display."""
         # Arrange
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
-            'task_id': 'task_123',
-            'status': 'SUCCESS',
-            'result': {'message': 'Processing completed'},
-            'error': None
+            "task_id": "task_123",
+            "status": "SUCCESS",
+            "result": {"message": "Processing completed"},
+            "error": None,
         }
 
         mock_client_instance = AsyncMock()
@@ -215,13 +210,14 @@ class TestDocumentUploadUI:
         mock_httpx_client.return_value.__aenter__.return_value = mock_client_instance
 
         with Screen("/test") as screen:
+
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
                 upload_dialog.show()
 
                 # Simulate successful upload that starts tracking
-                upload_dialog.current_task_id = 'task_123'
+                upload_dialog.current_task_id = "task_123"
                 upload_dialog._start_status_tracking()
 
             await screen.open("/test")
@@ -237,6 +233,7 @@ class TestDocumentUploadUI:
     async def test_cancel_upload_dialog(self, sample_client):
         """Test canceling the upload dialog."""
         with Screen("/test") as screen:
+
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
@@ -258,6 +255,7 @@ class TestDocumentUploadUI:
     async def test_file_size_validation(self, sample_client):
         """Test file size validation and error display."""
         with Screen("/test") as screen:
+
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
@@ -266,7 +264,9 @@ class TestDocumentUploadUI:
             await screen.open("/test")
 
             # Verify upload component has size limit
-            upload_component = screen.find("Arrastar PDF aqui ou clicar para selecionar")
+            upload_component = screen.find(
+                "Arrastar PDF aqui ou clicar para selecionar"
+            )
 
             # In a real implementation, this would test the max_file_size property
             # For now, verify the component exists with proper configuration
@@ -276,6 +276,7 @@ class TestDocumentUploadUI:
     async def test_file_type_validation(self, sample_client):
         """Test that only PDF files are accepted."""
         with Screen("/test") as screen:
+
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
@@ -284,10 +285,9 @@ class TestDocumentUploadUI:
             await screen.open("/test")
 
             # Simulate uploading non-PDF file
-            upload_dialog._handle_file_upload(Mock(
-                name="document.txt",
-                content=b"This is not a PDF file"
-            ))
+            upload_dialog._handle_file_upload(
+                Mock(name="document.txt", content=b"This is not a PDF file")
+            )
 
             # Verify error notification
             screen.should_contain("Apenas arquivos PDF são permitidos")
@@ -296,6 +296,7 @@ class TestDocumentUploadUI:
     async def test_file_info_display(self, sample_client, sample_pdf_file):
         """Test that file information is displayed correctly after upload."""
         with Screen("/test") as screen:
+
             @ui.page("/test")
             def test_page():
                 upload_dialog = DocumentUploadDialog(sample_client)
@@ -304,14 +305,14 @@ class TestDocumentUploadUI:
             await screen.open("/test")
 
             # Simulate file upload
-            with open(sample_pdf_file, 'rb') as f:
+            with open(sample_pdf_file, "rb") as f:
                 file_content = f.read()
 
             upload_dialog.uploaded_file_info = {
-                'filename': 'test_document.pdf',
-                'content': file_content,
-                'size': len(file_content),
-                'hash': 'abcdef123456'
+                "filename": "test_document.pdf",
+                "content": file_content,
+                "size": len(file_content),
+                "hash": "abcdef123456",
             }
             upload_dialog._update_file_info()
 

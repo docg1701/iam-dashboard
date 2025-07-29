@@ -18,10 +18,7 @@ class TestUserService:
         role = UserRole.COMMON_USER
 
         user = await user_service.create_user(
-            username=username,
-            password=password,
-            role=role,
-            enable_2fa=True
+            username=username, password=password, role=role, enable_2fa=True
         )
 
         assert user.username == username
@@ -42,7 +39,7 @@ class TestUserService:
             username=username,
             password=password,
             role=UserRole.COMMON_USER,
-            enable_2fa=False
+            enable_2fa=False,
         )
 
         assert user.username == username
@@ -50,7 +47,9 @@ class TestUserService:
         assert user.totp_secret is None
 
     @pytest.mark.asyncio
-    async def test_create_user_duplicate_username(self, user_service: UserService) -> None:
+    async def test_create_user_duplicate_username(
+        self, user_service: UserService
+    ) -> None:
         """Test user creation with duplicate username."""
         username = "duplicate"
         password = "password123"
@@ -63,30 +62,44 @@ class TestUserService:
             await user_service.create_user(username, password)
 
     @pytest.mark.asyncio
-    async def test_authenticate_user_success(self, user_service: UserService, test_user: User) -> None:
+    async def test_authenticate_user_success(
+        self, user_service: UserService, test_user: User
+    ) -> None:
         """Test successful user authentication."""
-        authenticated_user = await user_service.authenticate_user("testuser", "testpassword123")
+        authenticated_user = await user_service.authenticate_user(
+            "testuser", "testpassword123"
+        )
 
         assert authenticated_user is not None
         assert authenticated_user.id == test_user.id
         assert authenticated_user.username == test_user.username
 
     @pytest.mark.asyncio
-    async def test_authenticate_user_wrong_password(self, user_service: UserService, test_user: User) -> None:
+    async def test_authenticate_user_wrong_password(
+        self, user_service: UserService, test_user: User
+    ) -> None:
         """Test authentication with wrong password."""
-        authenticated_user = await user_service.authenticate_user("testuser", "wrongpassword")
+        authenticated_user = await user_service.authenticate_user(
+            "testuser", "wrongpassword"
+        )
 
         assert authenticated_user is None
 
     @pytest.mark.asyncio
-    async def test_authenticate_user_nonexistent(self, user_service: UserService) -> None:
+    async def test_authenticate_user_nonexistent(
+        self, user_service: UserService
+    ) -> None:
         """Test authentication with nonexistent user."""
-        authenticated_user = await user_service.authenticate_user("nonexistent", "password")
+        authenticated_user = await user_service.authenticate_user(
+            "nonexistent", "password"
+        )
 
         assert authenticated_user is None
 
     @pytest.mark.asyncio
-    async def test_verify_totp_code_success(self, user_service: UserService, test_user: User) -> None:
+    async def test_verify_totp_code_success(
+        self, user_service: UserService, test_user: User
+    ) -> None:
         """Test successful TOTP code verification."""
         # Generate valid TOTP code
         totp = pyotp.TOTP(test_user.totp_secret)
@@ -97,14 +110,18 @@ class TestUserService:
         assert is_valid is True
 
     @pytest.mark.asyncio
-    async def test_verify_totp_code_invalid(self, user_service: UserService, test_user: User) -> None:
+    async def test_verify_totp_code_invalid(
+        self, user_service: UserService, test_user: User
+    ) -> None:
         """Test TOTP code verification with invalid code."""
         is_valid = await user_service.verify_totp_code(test_user, "000000")
 
         assert is_valid is False
 
     @pytest.mark.asyncio
-    async def test_verify_totp_code_no_2fa(self, user_service: UserService, test_user_no_2fa: User) -> None:
+    async def test_verify_totp_code_no_2fa(
+        self, user_service: UserService, test_user_no_2fa: User
+    ) -> None:
         """Test TOTP code verification for user without 2FA."""
         is_valid = await user_service.verify_totp_code(test_user_no_2fa, "123456")
 
@@ -112,7 +129,9 @@ class TestUserService:
         assert is_valid is True
 
     @pytest.mark.asyncio
-    async def test_get_totp_provisioning_uri(self, user_service: UserService, test_user: User) -> None:
+    async def test_get_totp_provisioning_uri(
+        self, user_service: UserService, test_user: User
+    ) -> None:
         """Test getting TOTP provisioning URI."""
         uri = user_service.get_totp_provisioning_uri(test_user)
 
@@ -122,14 +141,18 @@ class TestUserService:
         assert "IAM%20Dashboard" in uri or "IAM Dashboard" in uri
 
     @pytest.mark.asyncio
-    async def test_get_totp_provisioning_uri_no_secret(self, user_service: UserService, test_user_no_2fa: User) -> None:
+    async def test_get_totp_provisioning_uri_no_secret(
+        self, user_service: UserService, test_user_no_2fa: User
+    ) -> None:
         """Test getting TOTP provisioning URI for user without secret."""
         uri = user_service.get_totp_provisioning_uri(test_user_no_2fa)
 
         assert uri is None
 
     @pytest.mark.asyncio
-    async def test_enable_2fa(self, user_service: UserService, test_user_no_2fa: User) -> None:
+    async def test_enable_2fa(
+        self, user_service: UserService, test_user_no_2fa: User
+    ) -> None:
         """Test enabling 2FA for a user."""
         secret = await user_service.enable_2fa(test_user_no_2fa)
 
@@ -139,7 +162,9 @@ class TestUserService:
         assert test_user_no_2fa.totp_secret == secret
 
     @pytest.mark.asyncio
-    async def test_disable_2fa(self, user_service: UserService, test_user: User) -> None:
+    async def test_disable_2fa(
+        self, user_service: UserService, test_user: User
+    ) -> None:
         """Test disabling 2FA for a user."""
         await user_service.disable_2fa(test_user)
 
@@ -147,7 +172,9 @@ class TestUserService:
         assert test_user.totp_secret is None
 
     @pytest.mark.asyncio
-    async def test_get_user_by_id(self, user_service: UserService, test_user: User) -> None:
+    async def test_get_user_by_id(
+        self, user_service: UserService, test_user: User
+    ) -> None:
         """Test getting user by ID."""
         found_user = await user_service.get_user_by_id(test_user.id)
 
@@ -156,7 +183,9 @@ class TestUserService:
         assert found_user.username == test_user.username
 
     @pytest.mark.asyncio
-    async def test_get_user_by_username(self, user_service: UserService, test_user: User) -> None:
+    async def test_get_user_by_username(
+        self, user_service: UserService, test_user: User
+    ) -> None:
         """Test getting user by username."""
         found_user = await user_service.get_user_by_username(test_user.username)
 

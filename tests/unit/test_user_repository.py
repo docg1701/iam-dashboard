@@ -19,9 +19,7 @@ class TestUserRepository:
         role = UserRole.COMMON_USER
 
         user = await user_repository.create(
-            username=username,
-            hashed_password=hashed_password,
-            role=role
+            username=username, hashed_password=hashed_password, role=role
         )
 
         assert user.id is not None
@@ -44,14 +42,16 @@ class TestUserRepository:
             username=username,
             hashed_password=hashed_password,
             role=role,
-            totp_secret=totp_secret
+            totp_secret=totp_secret,
         )
 
         assert user.totp_secret == totp_secret
         assert user.is_2fa_enabled is True
 
     @pytest.mark.asyncio
-    async def test_create_user_duplicate_username(self, user_repository: UserRepository) -> None:
+    async def test_create_user_duplicate_username(
+        self, user_repository: UserRepository
+    ) -> None:
         """Test user creation with duplicate username."""
         username = "duplicate"
         hashed_password = "hashed_password_123"
@@ -88,7 +88,9 @@ class TestUserRepository:
         assert found_user is None
 
     @pytest.mark.asyncio
-    async def test_get_by_username_success(self, user_repository: UserRepository) -> None:
+    async def test_get_by_username_success(
+        self, user_repository: UserRepository
+    ) -> None:
         """Test getting user by username."""
         username = "testuser"
 
@@ -105,7 +107,9 @@ class TestUserRepository:
         assert found_user.username == username
 
     @pytest.mark.asyncio
-    async def test_get_by_username_not_found(self, user_repository: UserRepository) -> None:
+    async def test_get_by_username_not_found(
+        self, user_repository: UserRepository
+    ) -> None:
         """Test getting user by nonexistent username."""
         found_user = await user_repository.get_by_username("nonexistent")
 
@@ -130,7 +134,9 @@ class TestUserRepository:
         assert updated_user.is_2fa_enabled is True
 
     @pytest.mark.asyncio
-    async def test_is_username_taken_true(self, user_repository: UserRepository) -> None:
+    async def test_is_username_taken_true(
+        self, user_repository: UserRepository
+    ) -> None:
         """Test checking if username is taken (true case)."""
         username = "testuser"
 
@@ -143,7 +149,9 @@ class TestUserRepository:
         assert is_taken is True
 
     @pytest.mark.asyncio
-    async def test_is_username_taken_false(self, user_repository: UserRepository) -> None:
+    async def test_is_username_taken_false(
+        self, user_repository: UserRepository
+    ) -> None:
         """Test checking if username is taken (false case)."""
         is_taken = await user_repository.is_username_taken("nonexistent")
 

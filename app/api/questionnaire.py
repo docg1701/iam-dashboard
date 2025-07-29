@@ -2,14 +2,18 @@
 
 import uuid
 
+from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.base_agent import plugin_registry
+from app.api.middleware.agent_error_handler import (
+    AgentNotActiveError,
+    AgentNotFoundError,
+)
+from app.containers import Container
+from app.core.agent_manager import AgentManager
 from app.core.database import get_async_db
-
-# Import plugin to ensure registration
 from app.repositories.client_repository import ClientRepository
 from app.repositories.document_chunk_repository import DocumentChunkRepository
 from app.services.client_service import ClientService
@@ -57,41 +61,12 @@ class ClientDocumentsResponse(BaseModel):
     chunk_count: int = Field(..., description="Number of document chunks available")
 
 
-async def get_questionnaire_agent() -> object | None:
-    """Get or create QuestionnaireAgent instance."""
-    agent_id = "questionnaire_agent_default"
-
-    # Try to get existing instance
-    agent_instance = plugin_registry.get_instance(agent_id)
-
-    if not agent_instance:
-        # Create new instance
-        config = {
-            "name": "Questionnaire Agent",
-            "description": "Autonomous agent for legal questionnaire generation",
-            "model": "gemini-1.5-pro",
-            "capabilities": [
-                "questionnaire_generation",
-                "rag_document_retrieval",
-                "legal_template_formatting",
-                "content_validation",
-                "draft_management"
-            ]
-        }
-
-        agent_instance = await plugin_registry.create_instance(
-            "QuestionnairePlugin", agent_id, config
-        )
-
-        if agent_instance:
-            await agent_instance.initialize()
-
-    return agent_instance
-
-
 @router.post("/generate", response_model=QuestionnaireGenerateResponse)
+@inject
 async def generate_questionnaire(
-    request: QuestionnaireGenerateRequest, db: AsyncSession = Depends(get_async_db)
+    request: QuestionnaireGenerateRequest,
+    db: AsyncSession = Depends(get_async_db),
+    agent_manager: AgentManager = Depends(Provide[Container.agent_manager]),
 ) -> QuestionnaireGenerateResponse:
     """
     Generate judicial questionnaire draft from form data and client documents.
@@ -110,29 +85,34 @@ async def generate_questionnaire(
         if not client:
             raise HTTPException(status_code=404, detail="Client not found")
 
-        # Get questionnaire agent
-        agent = await get_questionnaire_agent()
+        # Get questionnaire agent from AgentManager
+        agent = agent_manager.get_agent("questionnaire")
+
         if not agent:
-            raise HTTPException(status_code=503, detail="Questionnaire agent not available")
+            raise AgentNotFoundError(
+                "Questionnaire agent not found", agent_id="questionnaire"
+            )
+
+        if not agent_manager.is_agent_active("questionnaire"):
+            raise AgentNotActiveError(
+                "Questionnaire agent is not active", agent_id="questionnaire"
+            )
 
         # Prepare data for agent processing
-        client_data = {
-            "id": str(client.id),
-            "name": client.name,
-            "cpf": client.cpf
-        }
+        client_data = {"id": str(client.id), "name": client.name, "cpf": client.cpf}
 
-        agent_input = {
-            "client": client_data,
-            "profession": request.profession,
-            "disease": request.disease,
-            "incident_date": request.incident_date,
-            "medical_date": request.medical_date,
-            "save_draft": True
-        }
+        # Note: Direct agent call parameters prepared inline below
+        # Future enhancement: Could extract to separate preparation function
 
         # Process through agent
-        result = await agent.process(agent_input)
+        result = await agent.generate_questionnaire(
+            client_data=client_data,
+            profession=request.profession,
+            disease=request.disease,
+            incident_date=request.incident_date,
+            medical_date=request.medical_date,
+            save_draft=True,
+        )
 
         if result["success"]:
             return QuestionnaireGenerateResponse(
@@ -154,7 +134,9 @@ async def generate_questionnaire(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @router.get(
@@ -200,4 +182,6 @@ async def check_client_documents(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e

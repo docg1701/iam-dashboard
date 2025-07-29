@@ -12,7 +12,9 @@ class TestClientDetailsUI:
     """E2E tests for client details page functionality."""
 
     @pytest.mark.asyncio
-    async def test_client_details_page_navigation(self, nicegui_page, authenticated_user, test_client_with_documents):
+    async def test_client_details_page_navigation(
+        self, nicegui_page, authenticated_user, test_client_with_documents
+    ):
         """Test navigation from clients list to client details page."""
         client, documents = test_client_with_documents
 
@@ -35,7 +37,9 @@ class TestClientDetailsUI:
         await expect(client_name).to_be_visible()
 
     @pytest.mark.asyncio
-    async def test_client_details_display(self, nicegui_page, authenticated_user, test_client_with_documents):
+    async def test_client_details_display(
+        self, nicegui_page, authenticated_user, test_client_with_documents
+    ):
         """Test client details information display."""
         client, documents = test_client_with_documents
 
@@ -47,13 +51,19 @@ class TestClientDetailsUI:
 
         # Verify client information
         await expect(nicegui_page.locator(f"text=Nome: {client.name}")).to_be_visible()
-        await expect(nicegui_page.locator(f"text=CPF: {client.formatted_cpf}")).to_be_visible()
+        await expect(
+            nicegui_page.locator(f"text=CPF: {client.formatted_cpf}")
+        ).to_be_visible()
 
         birth_date_str = client.birth_date.strftime("%d/%m/%Y")
-        await expect(nicegui_page.locator(f"text=Data de Nascimento: {birth_date_str}")).to_be_visible()
+        await expect(
+            nicegui_page.locator(f"text=Data de Nascimento: {birth_date_str}")
+        ).to_be_visible()
 
     @pytest.mark.asyncio
-    async def test_documents_list_display(self, nicegui_page, authenticated_user, test_client_with_documents):
+    async def test_documents_list_display(
+        self, nicegui_page, authenticated_user, test_client_with_documents
+    ):
         """Test documents list display with different statuses."""
         client, documents = test_client_with_documents
 
@@ -73,7 +83,9 @@ class TestClientDetailsUI:
             await expect(filename_cell).to_be_visible()
 
     @pytest.mark.asyncio
-    async def test_document_status_indicators(self, nicegui_page, authenticated_user, test_client_with_documents):
+    async def test_document_status_indicators(
+        self, nicegui_page, authenticated_user, test_client_with_documents
+    ):
         """Test document status visual indicators."""
         client, documents = test_client_with_documents
 
@@ -89,10 +101,14 @@ class TestClientDetailsUI:
         failed_chip = nicegui_page.locator(".q-chip:has-text('Falha')")
 
         # At least one status should be visible
-        await expect(processed_chip.or_(processing_chip).or_(failed_chip)).to_be_visible()
+        await expect(
+            processed_chip.or_(processing_chip).or_(failed_chip)
+        ).to_be_visible()
 
     @pytest.mark.asyncio
-    async def test_view_document_summary(self, nicegui_page, authenticated_user, test_client_with_processed_document):
+    async def test_view_document_summary(
+        self, nicegui_page, authenticated_user, test_client_with_processed_document
+    ):
         """Test viewing document summary for processed documents."""
         client, processed_document = test_client_with_processed_document
 
@@ -103,19 +119,27 @@ class TestClientDetailsUI:
         await nicegui_page.wait_for_selector("table")
 
         # Find and click view summary button for processed document
-        view_summary_button = nicegui_page.locator('[title="Ver Resumo do Documento"]').first
+        view_summary_button = nicegui_page.locator(
+            '[title="Ver Resumo do Documento"]'
+        ).first
         await view_summary_button.click()
 
         # Verify summary modal opens
         await nicegui_page.wait_for_selector("text=Resumo do Documento")
-        await expect(nicegui_page.locator(f"text={processed_document.filename}")).to_be_visible()
+        await expect(
+            nicegui_page.locator(f"text={processed_document.filename}")
+        ).to_be_visible()
 
         # Verify document information is displayed
-        await expect(nicegui_page.locator("text=Informações do Documento")).to_be_visible()
+        await expect(
+            nicegui_page.locator("text=Informações do Documento")
+        ).to_be_visible()
         await expect(nicegui_page.locator("text=Conteúdo Extraído")).to_be_visible()
 
     @pytest.mark.asyncio
-    async def test_document_summary_statistics(self, nicegui_page, authenticated_user, test_client_with_processed_document):
+    async def test_document_summary_statistics(
+        self, nicegui_page, authenticated_user, test_client_with_processed_document
+    ):
         """Test document summary statistics display."""
         client, processed_document = test_client_with_processed_document
 
@@ -123,23 +147,31 @@ class TestClientDetailsUI:
         await nicegui_page.goto(f"/client/{client.id}")
         await nicegui_page.wait_for_selector("table")
 
-        view_summary_button = nicegui_page.locator('[title="Ver Resumo do Documento"]').first
+        view_summary_button = nicegui_page.locator(
+            '[title="Ver Resumo do Documento"]'
+        ).first
         await view_summary_button.click()
 
         # Wait for summary modal
         await nicegui_page.wait_for_selector("text=Resumo do Documento")
 
         # Verify statistics section
-        await expect(nicegui_page.locator("text=Estatísticas do Processamento")).to_be_visible()
+        await expect(
+            nicegui_page.locator("text=Estatísticas do Processamento")
+        ).to_be_visible()
 
         # Check for statistic values (should be numbers)
-        stats_section = nicegui_page.locator("text=Estatísticas do Processamento").locator("..")
+        stats_section = nicegui_page.locator(
+            "text=Estatísticas do Processamento"
+        ).locator("..")
         await expect(stats_section.locator("text=Blocos de Texto")).to_be_visible()
         await expect(stats_section.locator("text=Caracteres")).to_be_visible()
         await expect(stats_section.locator("text=Palavras")).to_be_visible()
 
     @pytest.mark.asyncio
-    async def test_real_time_status_updates(self, nicegui_page, authenticated_user, test_client_with_processing_document):
+    async def test_real_time_status_updates(
+        self, nicegui_page, authenticated_user, test_client_with_processing_document
+    ):
         """Test real-time document status updates."""
         client, processing_document = test_client_with_processing_document
 
@@ -166,7 +198,9 @@ class TestClientDetailsUI:
         await expect(status_chips.first).to_be_visible()
 
     @pytest.mark.asyncio
-    async def test_document_retry_processing(self, nicegui_page, authenticated_user, test_client_with_failed_document):
+    async def test_document_retry_processing(
+        self, nicegui_page, authenticated_user, test_client_with_failed_document
+    ):
         """Test retry processing functionality for failed documents."""
         client, failed_document = test_client_with_failed_document
 
@@ -177,14 +211,18 @@ class TestClientDetailsUI:
         await nicegui_page.wait_for_selector("table")
 
         # Find retry button for failed document
-        retry_button = nicegui_page.locator('[title="Tentar Processar Novamente"]').first
+        retry_button = nicegui_page.locator(
+            '[title="Tentar Processar Novamente"]'
+        ).first
         await retry_button.click()
 
         # Wait for success notification
         await nicegui_page.wait_for_selector("text=Reprocessamento iniciado")
 
     @pytest.mark.asyncio
-    async def test_empty_documents_state(self, nicegui_page, authenticated_user, test_client_without_documents):
+    async def test_empty_documents_state(
+        self, nicegui_page, authenticated_user, test_client_without_documents
+    ):
         """Test display when client has no documents."""
         client = test_client_without_documents
 
@@ -195,11 +233,17 @@ class TestClientDetailsUI:
         await nicegui_page.wait_for_selector("text=Documentos")
 
         # Verify empty state message
-        await expect(nicegui_page.locator("text=Nenhum documento encontrado")).to_be_visible()
-        await expect(nicegui_page.locator("text=Faça upload de documentos para este cliente")).to_be_visible()
+        await expect(
+            nicegui_page.locator("text=Nenhum documento encontrado")
+        ).to_be_visible()
+        await expect(
+            nicegui_page.locator("text=Faça upload de documentos para este cliente")
+        ).to_be_visible()
 
     @pytest.mark.asyncio
-    async def test_back_navigation(self, nicegui_page, authenticated_user, test_client_with_documents):
+    async def test_back_navigation(
+        self, nicegui_page, authenticated_user, test_client_with_documents
+    ):
         """Test navigation back to clients list."""
         client, documents = test_client_with_documents
 
@@ -215,10 +259,14 @@ class TestClientDetailsUI:
 
         # Verify navigation back to clients list
         await nicegui_page.wait_for_url("/clients")
-        await expect(nicegui_page.locator("text=Gerenciamento de Clientes")).to_be_visible()
+        await expect(
+            nicegui_page.locator("text=Gerenciamento de Clientes")
+        ).to_be_visible()
 
     @pytest.mark.asyncio
-    async def test_document_download_placeholder(self, nicegui_page, authenticated_user, test_client_with_documents):
+    async def test_document_download_placeholder(
+        self, nicegui_page, authenticated_user, test_client_with_documents
+    ):
         """Test document download functionality (placeholder)."""
         client, documents = test_client_with_documents
 
@@ -229,14 +277,20 @@ class TestClientDetailsUI:
         await nicegui_page.wait_for_selector("table")
 
         # Click download button
-        download_button = nicegui_page.locator('[title="Baixar Documento Original"]').first
+        download_button = nicegui_page.locator(
+            '[title="Baixar Documento Original"]'
+        ).first
         await download_button.click()
 
         # Verify placeholder notification
-        await nicegui_page.wait_for_selector("text=Funcionalidade de download será implementada")
+        await nicegui_page.wait_for_selector(
+            "text=Funcionalidade de download será implementada"
+        )
 
     @pytest.mark.asyncio
-    async def test_responsive_layout(self, nicegui_page, authenticated_user, test_client_with_documents):
+    async def test_responsive_layout(
+        self, nicegui_page, authenticated_user, test_client_with_documents
+    ):
         """Test responsive layout on different screen sizes."""
         client, documents = test_client_with_documents
 
@@ -245,7 +299,9 @@ class TestClientDetailsUI:
         await nicegui_page.goto(f"/client/{client.id}")
 
         # Verify all components are visible
-        await expect(nicegui_page.locator("text=Informações do Cliente")).to_be_visible()
+        await expect(
+            nicegui_page.locator("text=Informações do Cliente")
+        ).to_be_visible()
         await expect(nicegui_page.locator("text=Documentos")).to_be_visible()
 
         # Test tablet size
@@ -253,7 +309,9 @@ class TestClientDetailsUI:
         await nicegui_page.reload()
 
         # Components should still be visible
-        await expect(nicegui_page.locator("text=Informações do Cliente")).to_be_visible()
+        await expect(
+            nicegui_page.locator("text=Informações do Cliente")
+        ).to_be_visible()
         await expect(nicegui_page.locator("text=Documentos")).to_be_visible()
 
     @pytest.mark.asyncio
@@ -266,10 +324,14 @@ class TestClientDetailsUI:
 
         # Should redirect to clients page with error notification
         await nicegui_page.wait_for_url("/clients")
-        await expect(nicegui_page.locator("text=Cliente não encontrado")).to_be_visible()
+        await expect(
+            nicegui_page.locator("text=Cliente não encontrado")
+        ).to_be_visible()
 
     @pytest.mark.asyncio
-    async def test_logout_from_client_details(self, nicegui_page, authenticated_user, test_client_with_documents):
+    async def test_logout_from_client_details(
+        self, nicegui_page, authenticated_user, test_client_with_documents
+    ):
         """Test logout functionality from client details page."""
         client, documents = test_client_with_documents
 
@@ -285,7 +347,9 @@ class TestClientDetailsUI:
 
         # Verify logout and redirect to login
         await nicegui_page.wait_for_url("/login")
-        await expect(nicegui_page.locator("text=Saída realizada com sucesso")).to_be_visible()
+        await expect(
+            nicegui_page.locator("text=Saída realizada com sucesso")
+        ).to_be_visible()
 
 
 # Test fixtures for E2E tests
@@ -304,9 +368,7 @@ async def test_client_with_documents(async_db_session):
 
     # Create client
     client = await client_service.create_client(
-        name="João Silva",
-        cpf="12345678901",
-        birth_date=datetime(1990, 1, 15).date()
+        name="João Silva", cpf="12345678901", birth_date=datetime(1990, 1, 15).date()
     )
 
     # Create documents with different statuses
@@ -358,9 +420,7 @@ async def test_client_with_processed_document(async_db_session):
 
     # Create client and processed document
     client = await client_service.create_client(
-        name="Maria Santos",
-        cpf="98765432100",
-        birth_date=datetime(1985, 5, 20).date()
+        name="Maria Santos", cpf="98765432100", birth_date=datetime(1985, 5, 20).date()
     )
 
     doc = await doc_service.create_document(
@@ -375,14 +435,14 @@ async def test_client_with_processed_document(async_db_session):
             node_id="chunk1",
             text="Primeiro bloco de texto extraído",
             metadata={"page": 1},
-            document_id=doc_obj.id
+            document_id=doc_obj.id,
         ),
         DocumentChunk(
             node_id="chunk2",
             text="Segundo bloco de texto extraído",
             metadata={"page": 1},
-            document_id=doc_obj.id
-        )
+            document_id=doc_obj.id,
+        ),
     ]
     await chunk_repo.create_multiple(chunks)
 
@@ -403,9 +463,7 @@ async def test_client_with_processing_document(async_db_session):
     doc_service = DocumentService(doc_repo)
 
     client = await client_service.create_client(
-        name="Pedro Costa",
-        cpf="11111111111",
-        birth_date=datetime(1992, 8, 10).date()
+        name="Pedro Costa", cpf="11111111111", birth_date=datetime(1992, 8, 10).date()
     )
 
     doc = await doc_service.create_document(
@@ -431,9 +489,7 @@ async def test_client_with_failed_document(async_db_session):
     doc_service = DocumentService(doc_repo)
 
     client = await client_service.create_client(
-        name="Ana Lima",
-        cpf="22222222222",
-        birth_date=datetime(1988, 3, 25).date()
+        name="Ana Lima", cpf="22222222222", birth_date=datetime(1988, 3, 25).date()
     )
 
     doc = await doc_service.create_document(
@@ -459,7 +515,7 @@ async def test_client_without_documents(async_db_session):
     client = await client_service.create_client(
         name="Carlos Ferreira",
         cpf="33333333333",
-        birth_date=datetime(1975, 12, 5).date()
+        birth_date=datetime(1975, 12, 5).date(),
     )
 
     return client

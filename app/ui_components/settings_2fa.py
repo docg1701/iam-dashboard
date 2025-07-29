@@ -154,7 +154,9 @@ class Settings2FAPage:
         except Exception as e:
             ui.notify(f"Erro ao desabilitar 2FA: {str(e)}", type="negative")
 
-    def _show_2fa_setup(self, user_service: UserService, user: User, secret: str) -> None:
+    def _show_2fa_setup(
+        self, user_service: UserService, user: User, secret: str
+    ) -> None:
         """Show QR code for 2FA setup."""
         try:
             # Get provisioning URI

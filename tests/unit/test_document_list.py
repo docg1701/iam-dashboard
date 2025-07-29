@@ -65,7 +65,7 @@ class TestDocumentListComponent:
         component = DocumentListComponent(
             client_id=client_id,
             on_view_summary=on_view_summary,
-            on_download=on_download
+            on_download=on_download,
         )
 
         assert component.client_id == client_id
@@ -127,9 +127,13 @@ class TestDocumentListComponent:
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = sample_documents
 
-        with patch("app.ui_components.document_list.get_async_db") as mock_get_db, \
-             patch("app.ui_components.document_list.DocumentService", return_value=mock_document_service):
-
+        with (
+            patch("app.ui_components.document_list.get_async_db") as mock_get_db,
+            patch(
+                "app.ui_components.document_list.DocumentService",
+                return_value=mock_document_service,
+            ),
+        ):
             mock_get_db.return_value.__aiter__.return_value = [mock_db_session]
 
             await component._load_documents()
@@ -159,9 +163,13 @@ class TestDocumentListComponent:
         mock_document_service = AsyncMock()
         mock_document_service.get_documents_by_client.return_value = []
 
-        with patch("app.ui_components.document_list.get_async_db") as mock_get_db, \
-             patch("app.ui_components.document_list.DocumentService", return_value=mock_document_service):
-
+        with (
+            patch("app.ui_components.document_list.get_async_db") as mock_get_db,
+            patch(
+                "app.ui_components.document_list.DocumentService",
+                return_value=mock_document_service,
+            ),
+        ):
             mock_get_db.return_value.__aiter__.return_value = [mock_db_session]
 
             await component._load_documents()
@@ -198,11 +206,15 @@ class TestDocumentListComponent:
         mock_document_service = AsyncMock()
         mock_document_service.get_document_by_id.return_value = updated_doc
 
-        with patch("app.ui_components.document_list.get_async_db") as mock_get_db, \
-             patch("app.ui_components.document_list.DocumentService", return_value=mock_document_service), \
-             patch.object(component, "_load_documents") as mock_load, \
-             patch("app.ui_components.document_list.ui.notify") as mock_notify:
-
+        with (
+            patch("app.ui_components.document_list.get_async_db") as mock_get_db,
+            patch(
+                "app.ui_components.document_list.DocumentService",
+                return_value=mock_document_service,
+            ),
+            patch.object(component, "_load_documents") as mock_load,
+            patch("app.ui_components.document_list.ui.notify") as mock_notify,
+        ):
             mock_get_db.return_value.__aiter__.return_value = [mock_db_session]
 
             await component._auto_refresh()
@@ -225,7 +237,7 @@ class TestDocumentListComponent:
             content_hash="hash",
             file_size=1024,
             document_type="simple",
-            file_path="test.pdf"
+            file_path="test.pdf",
         )
         component.documents = [completed_doc]
 
@@ -241,9 +253,10 @@ class TestDocumentListComponent:
         client_id = uuid.uuid4()
         component = DocumentListComponent(client_id)
 
-        with patch.object(component, "_load_documents") as mock_load, \
-             patch("app.ui_components.document_list.ui.notify") as mock_notify:
-
+        with (
+            patch.object(component, "_load_documents") as mock_load,
+            patch("app.ui_components.document_list.ui.notify") as mock_notify,
+        ):
             await component._manual_refresh()
 
             mock_load.assert_called_once()
@@ -308,13 +321,20 @@ class TestDocumentListComponent:
         mock_document_service = AsyncMock()
         mock_document_repository = AsyncMock()
 
-        with patch("app.ui_components.document_list.get_async_db") as mock_get_db, \
-             patch("app.ui_components.document_list.DocumentService", return_value=mock_document_service), \
-             patch("app.ui_components.document_list.DocumentRepository", return_value=mock_document_repository), \
-             patch("app.workers.document_processor.process_document") as mock_process, \
-             patch.object(component, "_load_documents"), \
-             patch("app.ui_components.document_list.ui.notify") as mock_notify:
-
+        with (
+            patch("app.ui_components.document_list.get_async_db") as mock_get_db,
+            patch(
+                "app.ui_components.document_list.DocumentService",
+                return_value=mock_document_service,
+            ),
+            patch(
+                "app.ui_components.document_list.DocumentRepository",
+                return_value=mock_document_repository,
+            ),
+            patch("app.workers.document_processor.process_document") as mock_process,
+            patch.object(component, "_load_documents"),
+            patch("app.ui_components.document_list.ui.notify") as mock_notify,
+        ):
             mock_get_db.return_value.__aiter__.return_value = [mock_db_session]
             mock_process.delay.return_value.id = "task123"
 

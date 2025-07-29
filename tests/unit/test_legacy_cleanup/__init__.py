@@ -1,0 +1,1 @@
+"""Legacy cleanup validation tests."""

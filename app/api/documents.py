@@ -4,47 +4,28 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.middleware.agent_error_handler import (
+    AgentNotActiveError,
+    AgentNotFoundError,
+)
+from app.containers import Container
 from app.core.agent_manager import AgentManager
 from app.core.database import get_async_db
 from app.repositories.document_chunk_repository import DocumentChunkRepository
 from app.repositories.document_repository import DocumentRepository
 from app.services.document_service import DocumentService
-from app.workers.document_processor import get_task_status
 
 router = APIRouter(prefix="/v1/documents", tags=["documents"])
 
-# Global agent manager instance
-agent_manager = AgentManager()
 
-
-@router.get("/tasks/{task_id}", response_model=dict)
-async def get_document_task_status(task_id: str) -> dict:
-    """Get the status of a document processing task."""
-    try:
-        # Get task status from Celery
-        task_status = get_task_status(task_id)
-
-        return {
-            "task_id": task_id,
-            "status": task_status.get("status", "UNKNOWN"),
-            "result": task_status.get("result"),
-            "error": task_status.get("traceback") or task_status.get("error"),
-        }
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error retrieving task status: {str(e)}",
-        ) from e
-
-
-@router.get("/client/{client_id}", response_model=list[dict])
+@router.get("/client/{client_id}", response_model=list[dict[str, Any]])
 async def get_client_documents(
     client_id: str, db: AsyncSession = Depends(get_async_db)
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Get all documents for a specific client."""
     try:
         client_uuid = uuid.UUID(client_id)
@@ -82,10 +63,10 @@ async def get_client_documents(
         ) from e
 
 
-@router.get("/{document_id}", response_model=dict)
+@router.get("/{document_id}", response_model=dict[str, Any])
 async def get_document(
     document_id: str, db: AsyncSession = Depends(get_async_db)
-) -> dict:
+) -> dict[str, Any]:
     """Get a specific document by ID."""
     try:
         doc_uuid = uuid.UUID(document_id)
@@ -126,10 +107,10 @@ async def get_document(
         ) from e
 
 
-@router.get("/{document_id}/summary", response_model=dict)
+@router.get("/{document_id}/summary", response_model=dict[str, Any])
 async def get_document_summary(
     document_id: str, db: AsyncSession = Depends(get_async_db)
-) -> dict:
+) -> dict[str, Any]:
     """Get document summary with extracted content and chunks."""
     try:
         doc_uuid = uuid.UUID(document_id)
@@ -149,7 +130,7 @@ async def get_document_summary(
         if document.status != "processed":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Document summary only available for processed documents"
+                detail="Document summary only available for processed documents",
             )
 
         # Get document chunks
@@ -163,13 +144,15 @@ async def get_document_summary(
         # Prepare chunk data
         chunk_data = []
         for i, chunk in enumerate(chunks):
-            chunk_data.append({
-                "index": i + 1,
-                "node_id": chunk.node_id,
-                "text": chunk.text,
-                "text_length": len(chunk.text) if chunk.text else 0,
-                "metadata": chunk.metadata or {}
-            })
+            chunk_data.append(
+                {
+                    "index": i + 1,
+                    "node_id": chunk.node_id,
+                    "text": chunk.text,
+                    "text_length": len(chunk.text) if chunk.text else 0,
+                    "metadata": chunk.metadata or {},
+                }
+            )
 
         return {
             "document": {
@@ -180,15 +163,17 @@ async def get_document_summary(
                 "file_size": document.formatted_file_size,
                 "client_id": str(document.client_id),
                 "created_at": document.created_at.isoformat(),
-                "processed_at": document.processed_at.isoformat() if document.processed_at else None,
+                "processed_at": (
+                    document.processed_at.isoformat() if document.processed_at else None
+                ),
             },
             "statistics": {
                 "total_chunks": len(chunks),
                 "total_characters": total_chars,
                 "total_words": total_words,
-                "average_chunk_size": avg_chunk_size
+                "average_chunk_size": avg_chunk_size,
             },
-            "chunks": chunk_data
+            "chunks": chunk_data,
         }
 
     except ValueError as e:
@@ -202,13 +187,15 @@ async def get_document_summary(
         ) from e
 
 
-@router.post("/upload", response_model=dict)
+@router.post("/upload", response_model=dict[str, Any])
+@inject
 async def upload_document(
     file: UploadFile = File(...),
     user_id: int = Form(...),
     perform_ocr: bool = Form(True),
-    db: AsyncSession = Depends(get_async_db)
-) -> dict:
+    db: AsyncSession = Depends(get_async_db),
+    agent_manager: AgentManager = Depends(Provide[Container.agent_manager]),
+) -> dict[str, Any]:
     """Upload and process a PDF document using the PDF Processor Agent."""
     import logging
 
@@ -216,10 +203,10 @@ async def upload_document(
 
     try:
         # Validate file type
-        if not file.filename or not file.filename.lower().endswith('.pdf'):
+        if not file.filename or not file.filename.lower().endswith(".pdf"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only PDF files are supported"
+                detail="Only PDF files are supported",
             )
 
         # Save uploaded file temporarily
@@ -232,20 +219,22 @@ async def upload_document(
             content = await file.read()
             buffer.write(content)
 
-        # Get or create PDF processor agent instance
-        pdf_agent_instance = await _get_pdf_processor_agent()
+        # Get PDF processor agent instance from AgentManager
+        pdf_agent_instance = agent_manager.get_agent("pdf_processor")
 
         if not pdf_agent_instance:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="PDF Processor Agent not available"
+            raise AgentNotFoundError(
+                "PDF Processor Agent not found", agent_id="pdf_processor"
+            )
+
+        if not agent_manager.is_agent_active("pdf_processor"):
+            raise AgentNotActiveError(
+                "PDF Processor Agent is not active", agent_id="pdf_processor"
             )
 
         # Process document using the agent
         processing_result = await pdf_agent_instance.process_document(
-            file_path=str(file_path),
-            user_id=user_id,
-            perform_ocr=perform_ocr
+            file_path=str(file_path), user_id=user_id, perform_ocr=perform_ocr
         )
 
         # Clean up temporary file
@@ -260,19 +249,22 @@ async def upload_document(
                 "document_id": processing_result["document_id"],
                 "filename": processing_result["filename"],
                 "processing_summary": processing_result["processing_summary"],
-                "message": "Document processed successfully using PDF Processor Agent"
+                "message": "Document processed successfully using PDF Processor Agent",
             }
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Document processing failed: {processing_result.get('error', 'Unknown error')}"
+                detail=(
+                    f"Document processing failed: "
+                    f"{processing_result.get('error', 'Unknown error')}"
+                ),
             )
 
     except HTTPException:
         raise
     except Exception as e:
         # Clean up temporary file if it exists
-        if 'file_path' in locals():
+        if "file_path" in locals():
             try:
                 file_path.unlink()
             except Exception:
@@ -280,12 +272,15 @@ async def upload_document(
 
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Document upload failed: {str(e)}"
+            detail=f"Document upload failed: {str(e)}",
         ) from e
 
 
-@router.get("/agents/status", response_model=dict)
-async def get_agent_status() -> dict:
+@router.get("/agents/status", response_model=dict[str, Any])
+@inject
+async def get_agent_status(
+    agent_manager: AgentManager = Depends(Provide[Container.agent_manager]),
+) -> dict[str, Any]:
     """Get status of all document processing agents."""
     try:
         agents_metadata = agent_manager.get_all_agents_metadata()
@@ -298,23 +293,31 @@ async def get_agent_status() -> dict:
                     "status": metadata.status.value,
                     "capabilities": metadata.capabilities,
                     "health_status": metadata.health_status,
-                    "last_health_check": metadata.last_health_check.isoformat() if metadata.last_health_check else None,
-                    "error_message": metadata.error_message
+                    "last_health_check": (
+                        metadata.last_health_check.isoformat()
+                        if metadata.last_health_check
+                        else None
+                    ),
+                    "error_message": metadata.error_message,
                 }
                 for agent_id, metadata in agents_metadata.items()
             },
-            "total_agents": len(agents_metadata)
+            "total_agents": len(agents_metadata),
         }
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error retrieving agent status: {str(e)}"
+            detail=f"Error retrieving agent status: {str(e)}",
         ) from e
 
 
-@router.post("/agents/{agent_id}/enable", response_model=dict)
-async def enable_agent(agent_id: str) -> dict:
+@router.post("/agents/{agent_id}/enable", response_model=dict[str, Any])
+@inject
+async def enable_agent(
+    agent_id: str,
+    agent_manager: AgentManager = Depends(Provide[Container.agent_manager]),
+) -> dict[str, Any]:
     """Enable a specific agent."""
     try:
         success = await agent_manager.enable_agent(agent_id)
@@ -322,12 +325,12 @@ async def enable_agent(agent_id: str) -> dict:
         if success:
             return {
                 "success": True,
-                "message": f"Agent {agent_id} enabled successfully"
+                "message": f"Agent {agent_id} enabled successfully",
             }
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to enable agent {agent_id}"
+                detail=f"Failed to enable agent {agent_id}",
             )
 
     except HTTPException:
@@ -335,12 +338,16 @@ async def enable_agent(agent_id: str) -> dict:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error enabling agent: {str(e)}"
+            detail=f"Error enabling agent: {str(e)}",
         ) from e
 
 
-@router.post("/agents/{agent_id}/disable", response_model=dict)
-async def disable_agent(agent_id: str) -> dict:
+@router.post("/agents/{agent_id}/disable", response_model=dict[str, Any])
+@inject
+async def disable_agent(
+    agent_id: str,
+    agent_manager: AgentManager = Depends(Provide[Container.agent_manager]),
+) -> dict[str, Any]:
     """Disable a specific agent."""
     try:
         success = await agent_manager.disable_agent(agent_id)
@@ -348,12 +355,12 @@ async def disable_agent(agent_id: str) -> dict:
         if success:
             return {
                 "success": True,
-                "message": f"Agent {agent_id} disabled successfully"
+                "message": f"Agent {agent_id} disabled successfully",
             }
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to disable agent {agent_id}"
+                detail=f"Failed to disable agent {agent_id}",
             )
 
     except HTTPException:
@@ -361,12 +368,16 @@ async def disable_agent(agent_id: str) -> dict:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error disabling agent: {str(e)}"
+            detail=f"Error disabling agent: {str(e)}",
         ) from e
 
 
-@router.get("/agents/{agent_id}/health", response_model=dict)
-async def check_agent_health(agent_id: str) -> dict:
+@router.get("/agents/{agent_id}/health", response_model=dict[str, Any])
+@inject
+async def check_agent_health(
+    agent_id: str,
+    agent_manager: AgentManager = Depends(Provide[Container.agent_manager]),
+) -> dict[str, Any]:
     """Perform health check on a specific agent."""
     try:
         is_healthy = await agent_manager.health_check(agent_id)
@@ -375,16 +386,20 @@ async def check_agent_health(agent_id: str) -> dict:
         if not metadata:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Agent {agent_id} not found"
+                detail=f"Agent {agent_id} not found",
             )
 
         return {
             "agent_id": agent_id,
             "is_healthy": is_healthy,
             "health_status": metadata.health_status,
-            "last_health_check": metadata.last_health_check.isoformat() if metadata.last_health_check else None,
+            "last_health_check": (
+                metadata.last_health_check.isoformat()
+                if metadata.last_health_check
+                else None
+            ),
             "status": metadata.status.value,
-            "error_message": metadata.error_message
+            "error_message": metadata.error_message,
         }
 
     except HTTPException:
@@ -392,64 +407,5 @@ async def check_agent_health(agent_id: str) -> dict:
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error checking agent health: {str(e)}"
+            detail=f"Error checking agent health: {str(e)}",
         ) from e
-
-
-async def _get_pdf_processor_agent() -> Any:
-    """Get or create PDF processor agent instance."""
-    import logging
-
-    from app.agents.pdf_processor_agent import PDFProcessorAgent
-    from app.config.agents import load_agent_config
-
-    logger = logging.getLogger(__name__)
-
-    try:
-        # Check if agent is already loaded
-        agent = agent_manager.get_agent("pdf_processor")
-
-        if agent and agent_manager.is_agent_active("pdf_processor"):
-            return agent
-
-        # Load agent configuration
-        config = load_agent_config()
-        pdf_config = config.get("agents", {}).get("pdf_processor", {})
-
-        if not pdf_config.get("enabled", False):
-            logger.error("PDF processor agent is not enabled in configuration")
-            return None
-
-        # Create agent instance
-        agent_config = pdf_config.get("config", {})
-        PDFProcessorAgent(
-            model=agent_config.get("model", "gemini-2.5-pro"),
-            max_file_size_mb=agent_config.get("max_file_size_mb", 50),
-            embedding_model=agent_config.get("embedding_model", "gemini-embedding-001"),
-            chunk_size=agent_config.get("chunk_size", 1000),
-            ocr_confidence=50.0,
-            ocr_preprocessing=True
-        )
-
-        # Load agent into manager
-        success = await agent_manager.load_agent(
-            "pdf_processor",
-            PDFProcessorAgent,
-            {
-                "name": pdf_config.get("name", "PDF Processor Agent"),
-                "description": pdf_config.get("description", ""),
-                "capabilities": pdf_config.get("capabilities", []),
-                "dependencies": pdf_config.get("dependencies", []),
-                **agent_config
-            }
-        )
-
-        if success:
-            return agent_manager.get_agent("pdf_processor")
-        else:
-            logger.error("Failed to load PDF processor agent")
-            return None
-
-    except Exception as e:
-        logger.error(f"Error getting PDF processor agent: {str(e)}")
-        return None

@@ -17,10 +17,7 @@ class OCRProcessorTool:
     """Tool for performing OCR on image-based PDF documents."""
 
     def __init__(
-        self,
-        min_confidence: float = 50.0,
-        dpi: int = 300,
-        preprocessing: bool = True
+        self, min_confidence: float = 50.0, dpi: int = 300, preprocessing: bool = True
     ) -> None:
         """Initialize the OCR processor tool.
 
@@ -34,7 +31,7 @@ class OCRProcessorTool:
         self.preprocessing = preprocessing
 
         # OCR configuration
-        self.tesseract_config = r'--oem 3 --psm 6'
+        self.tesseract_config = r"--oem 3 --psm 6"
 
     def validate_dependencies(self) -> dict[str, Any]:
         """Validate that required OCR dependencies are available.
@@ -57,14 +54,14 @@ class OCRProcessorTool:
                 "dependencies": {
                     "tesseract": str(tesseract_version),
                     "opencv": opencv_version,
-                    "pillow": pil_version
-                }
+                    "pillow": pil_version,
+                },
             }
 
         except Exception as e:
             return {
                 "valid": False,
-                "error": f"OCR dependencies validation failed: {str(e)}"
+                "error": f"OCR dependencies validation failed: {str(e)}",
             }
 
     def preprocess_image(self, image: np.ndarray) -> np.ndarray:
@@ -99,7 +96,9 @@ class OCRProcessorTool:
             return processed
 
         except Exception as e:
-            logger.warning(f"Image preprocessing failed: {str(e)}, using original image")
+            logger.warning(
+                f"Image preprocessing failed: {str(e)}, using original image"
+            )
             return image
 
     def extract_page_image(self, doc: fitz.Document, page_num: int) -> dict[str, Any]:
@@ -135,7 +134,7 @@ class OCRProcessorTool:
                 "width": pix.width,
                 "height": pix.height,
                 "page_number": page_num + 1,
-                "dpi": self.dpi
+                "dpi": self.dpi,
             }
 
             pix = None  # Free memory
@@ -144,13 +143,11 @@ class OCRProcessorTool:
         except Exception as e:
             error_msg = f"Failed to extract image from page {page_num + 1}: {str(e)}"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "page_number": page_num + 1
-            }
+            return {"success": False, "error": error_msg, "page_number": page_num + 1}
 
-    def perform_ocr_on_image(self, image: np.ndarray, page_number: int) -> dict[str, Any]:
+    def perform_ocr_on_image(
+        self, image: np.ndarray, page_number: int
+    ) -> dict[str, Any]:
         """Perform OCR on a single image.
 
         Args:
@@ -177,25 +174,29 @@ class OCRProcessorTool:
             ocr_data = pytesseract.image_to_data(
                 pil_image,
                 config=self.tesseract_config,
-                output_type=pytesseract.Output.DICT
+                output_type=pytesseract.Output.DICT,
             )
 
             # Extract text with confidence filtering
             filtered_text = []
             word_confidences = []
 
-            for i, confidence in enumerate(ocr_data['conf']):
+            for i, confidence in enumerate(ocr_data["conf"]):
                 if int(confidence) >= self.min_confidence:
-                    text = ocr_data['text'][i].strip()
+                    text = ocr_data["text"][i].strip()
                     if text:
                         filtered_text.append(text)
                         word_confidences.append(int(confidence))
 
             # Get full text without confidence filtering for backup
-            full_text = pytesseract.image_to_string(pil_image, config=self.tesseract_config)
+            full_text = pytesseract.image_to_string(
+                pil_image, config=self.tesseract_config
+            )
 
             # Calculate statistics
-            avg_confidence = sum(word_confidences) / len(word_confidences) if word_confidences else 0
+            avg_confidence = (
+                sum(word_confidences) / len(word_confidences) if word_confidences else 0
+            )
 
             result = {
                 "success": True,
@@ -204,25 +205,25 @@ class OCRProcessorTool:
                 "full_text": full_text,
                 "average_confidence": avg_confidence,
                 "word_count": len(filtered_text),
-                "total_words": len([w for w in ocr_data['text'] if w.strip()]),
+                "total_words": len([w for w in ocr_data["text"] if w.strip()]),
                 "confidence_threshold": self.min_confidence,
                 "char_count": len(" ".join(filtered_text)),
-                "preprocessing_applied": self.preprocessing
+                "preprocessing_applied": self.preprocessing,
             }
 
-            logger.info(f"OCR completed for page {page_number}: {len(filtered_text)} words, {avg_confidence:.1f}% avg confidence")
+            logger.info(
+                f"OCR completed for page {page_number}: {len(filtered_text)} words, {avg_confidence:.1f}% avg confidence"
+            )
             return result
 
         except Exception as e:
             error_msg = f"OCR processing failed for page {page_number}: {str(e)}"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "page_number": page_number
-            }
+            return {"success": False, "error": error_msg, "page_number": page_number}
 
-    def detect_low_text_pages(self, text_content: list[dict[str, Any]], threshold: int = 100) -> list[int]:
+    def detect_low_text_pages(
+        self, text_content: list[dict[str, Any]], threshold: int = 100
+    ) -> list[int]:
         """Detect pages that likely need OCR based on low text content.
 
         Args:
@@ -241,13 +242,13 @@ class OCRProcessorTool:
             if char_count < threshold:
                 low_text_pages.append(page_number)
 
-        logger.info(f"Detected {len(low_text_pages)} pages needing OCR (< {threshold} chars)")
+        logger.info(
+            f"Detected {len(low_text_pages)} pages needing OCR (< {threshold} chars)"
+        )
         return low_text_pages
 
     def process_pdf_pages(
-        self,
-        file_path: str,
-        pages_to_process: list[int] | None = None
+        self, file_path: str, pages_to_process: list[int] | None = None
     ) -> dict[str, Any]:
         """Process specified PDF pages with OCR.
 
@@ -270,21 +271,27 @@ class OCRProcessorTool:
             valid_pages = [p for p in pages_to_process if 1 <= p <= total_pages]
 
             if len(valid_pages) != len(pages_to_process):
-                logger.warning(f"Some page numbers were invalid and skipped: {file_path}")
+                logger.warning(
+                    f"Some page numbers were invalid and skipped: {file_path}"
+                )
 
             ocr_results = []
             successful_pages = 0
 
             for page_num in valid_pages:
                 # Extract page as image
-                image_result = self.extract_page_image(doc, page_num - 1)  # Convert to 0-indexed
+                image_result = self.extract_page_image(
+                    doc, page_num - 1
+                )  # Convert to 0-indexed
 
                 if not image_result["success"]:
-                    ocr_results.append({
-                        "success": False,
-                        "page_number": page_num,
-                        "error": image_result["error"]
-                    })
+                    ocr_results.append(
+                        {
+                            "success": False,
+                            "page_number": page_num,
+                            "error": image_result["error"],
+                        }
+                    )
                     continue
 
                 # Perform OCR on the image
@@ -292,11 +299,13 @@ class OCRProcessorTool:
 
                 # Add image metadata to OCR result
                 if ocr_result["success"]:
-                    ocr_result.update({
-                        "image_width": image_result["width"],
-                        "image_height": image_result["height"],
-                        "image_dpi": image_result["dpi"]
-                    })
+                    ocr_result.update(
+                        {
+                            "image_width": image_result["width"],
+                            "image_height": image_result["height"],
+                            "image_dpi": image_result["dpi"],
+                        }
+                    )
                     successful_pages += 1
 
                 ocr_results.append(ocr_result)
@@ -313,7 +322,11 @@ class OCRProcessorTool:
                     if result.get("average_confidence", 0) > 0:
                         total_confidence_scores.append(result["average_confidence"])
 
-            overall_confidence = sum(total_confidence_scores) / len(total_confidence_scores) if total_confidence_scores else 0
+            overall_confidence = (
+                sum(total_confidence_scores) / len(total_confidence_scores)
+                if total_confidence_scores
+                else 0
+            )
 
             final_result = {
                 "success": True,
@@ -326,27 +339,25 @@ class OCRProcessorTool:
                     "total_ocr_chars": len(total_ocr_text.strip()),
                     "overall_confidence": overall_confidence,
                     "confidence_threshold_used": self.min_confidence,
-                    "preprocessing_enabled": self.preprocessing
-                }
+                    "preprocessing_enabled": self.preprocessing,
+                },
             }
 
-            logger.info(f"OCR processing completed for {file_path}: {successful_pages}/{len(valid_pages)} pages successful")
+            logger.info(
+                f"OCR processing completed for {file_path}: {successful_pages}/{len(valid_pages)} pages successful"
+            )
             return final_result
 
         except Exception as e:
             error_msg = f"OCR processing failed for {file_path}: {str(e)}"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "file_path": file_path
-            }
+            return {"success": False, "error": error_msg, "file_path": file_path}
 
     def process_document_with_text_analysis(
         self,
         file_path: str,
         existing_text_content: list[dict[str, Any]],
-        char_threshold: int = 100
+        char_threshold: int = 100,
     ) -> dict[str, Any]:
         """Process document with OCR based on existing text analysis.
 
@@ -361,7 +372,9 @@ class OCRProcessorTool:
         logger.info(f"Starting OCR analysis for document: {file_path}")
 
         # Detect pages that need OCR
-        pages_needing_ocr = self.detect_low_text_pages(existing_text_content, char_threshold)
+        pages_needing_ocr = self.detect_low_text_pages(
+            existing_text_content, char_threshold
+        )
 
         if not pages_needing_ocr:
             logger.info(f"No pages need OCR in document: {file_path}")
@@ -370,17 +383,19 @@ class OCRProcessorTool:
                 "file_path": file_path,
                 "pages_needing_ocr": [],
                 "ocr_performed": False,
-                "message": "All pages have sufficient text content, OCR not needed"
+                "message": "All pages have sufficient text content, OCR not needed",
             }
 
         # Process pages with OCR
         ocr_result = self.process_pdf_pages(file_path, pages_needing_ocr)
 
         if ocr_result["success"]:
-            ocr_result.update({
-                "pages_needing_ocr": pages_needing_ocr,
-                "ocr_performed": True,
-                "char_threshold_used": char_threshold
-            })
+            ocr_result.update(
+                {
+                    "pages_needing_ocr": pages_needing_ocr,
+                    "ocr_performed": True,
+                    "char_threshold_used": char_threshold,
+                }
+            )
 
         return ocr_result

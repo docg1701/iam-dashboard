@@ -6,7 +6,7 @@ SaaS platform for autonomous legal agents with document processing, questionnair
 
 - **Backend**: Python 3.12, FastAPI, SQLAlchemy 2.0, PostgreSQL with pgvector
 - **Frontend**: NiceGUI (web-based Python UI framework)
-- **Async Processing**: Celery + Redis (migrating to Agno autonomous agents)
+- **Async Processing**: Agno autonomous agents with plugin system
 - **AI/ML**: Google Gemini API, LlamaIndex for document processing
 - **Container**: Docker with docker-compose
 - **Authentication**: JWT + 2FA (TOTP)
@@ -24,9 +24,11 @@ app/
 ├── models/                   # SQLAlchemy models
 ├── repositories/            # Data access layer
 ├── services/               # Business logic layer
+├── agents/                 # Agno autonomous agents
+├── tools/                  # Agent tools and utilities
+├── plugins/                # Agent plugins
 ├── api/                    # FastAPI endpoints
 ├── ui_components/          # NiceGUI components
-├── workers/                # Celery workers (being phased out)
 └── utils/                  # Utility functions
 
 docs/                       # Comprehensive project documentation
@@ -122,9 +124,10 @@ docker-compose down
 ## Testing Strategy
 
 ### Test Organization
-- **Unit tests**: `tests/unit/` - Individual components
-- **Integration tests**: `tests/integration/` - Service interactions
+- **Unit tests**: `tests/unit/` - Individual components, agents, and tools
+- **Integration tests**: `tests/integration/` - Agent workflows and API endpoints
 - **E2E tests**: `tests/e2e/` - Full user workflows
+- **Performance tests**: `tests/performance/` - Agent benchmarking and load testing
 
 ### Testing Requirements
 - **Minimum 80% code coverage**
@@ -170,10 +173,10 @@ uv run pytest --cov=app --cov-report=html
 
 ## Migration Status: Agno Integration
 
-**Current State**: Traditional Celery workers
-**Target State**: Autonomous agents using Agno framework
+**Current State**: ✅ **COMPLETED** - Autonomous agents using Agno framework
+**Previous State**: Traditional Celery workers (removed)
 
-The system is in active migration from Celery-based async processing to autonomous agent architecture. See `docs/architecture/` for detailed migration plans.
+The system has successfully completed migration from Celery-based async processing to autonomous agent architecture. All legacy components have been removed and comprehensive testing has been implemented. See `docs/architecture/` for technical details.
 
 ## Common Workflows
 

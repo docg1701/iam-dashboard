@@ -25,6 +25,9 @@ class Container(containers.DeclarativeContainer):
             "app.ui_components.register",
             "app.ui_components.settings_2fa",
             "app.core.agent_manager",
+            "app.api.documents",
+            "app.api.questionnaire",
+            "app.api.admin",
         ]
     )
 

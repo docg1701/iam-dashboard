@@ -29,11 +29,7 @@ class TestQuestionnaireWriterPage:
     @pytest.fixture
     def mock_auth_user(self):
         """Mock authenticated user."""
-        return {
-            "username": "test_user",
-            "role": "common_user",
-            "is_active": True
-        }
+        return {"username": "test_user", "role": "common_user", "is_active": True}
 
     def test_page_initialization(self, page_instance):
         """Test page initialization with default values."""
@@ -46,9 +42,11 @@ class TestQuestionnaireWriterPage:
         assert page_instance.medical_date_input is None
         assert page_instance.result_area is None
 
-    @patch('app.ui_components.questionnaire_writer.AuthManager.require_auth')
-    @patch('app.ui_components.questionnaire_writer.AuthManager.get_current_user')
-    def test_create_requires_authentication(self, mock_get_user, mock_require_auth, page_instance, mock_auth_user):
+    @patch("app.ui_components.questionnaire_writer.AuthManager.require_auth")
+    @patch("app.ui_components.questionnaire_writer.AuthManager.get_current_user")
+    def test_create_requires_authentication(
+        self, mock_get_user, mock_require_auth, page_instance, mock_auth_user
+    ):
         """Test that page creation requires authentication."""
         # Arrange
         mock_require_auth.return_value = False
@@ -60,10 +58,12 @@ class TestQuestionnaireWriterPage:
         mock_require_auth.assert_called_once()
         mock_get_user.assert_not_called()
 
-    @patch('app.ui_components.questionnaire_writer.AuthManager.require_auth')
-    @patch('app.ui_components.questionnaire_writer.AuthManager.get_current_user')
-    @patch('app.ui_components.questionnaire_writer.ui')
-    def test_create_with_authentication(self, mock_ui, mock_get_user, mock_require_auth, page_instance, mock_auth_user):
+    @patch("app.ui_components.questionnaire_writer.AuthManager.require_auth")
+    @patch("app.ui_components.questionnaire_writer.AuthManager.get_current_user")
+    @patch("app.ui_components.questionnaire_writer.ui")
+    def test_create_with_authentication(
+        self, mock_ui, mock_get_user, mock_require_auth, page_instance, mock_auth_user
+    ):
         """Test page creation with proper authentication."""
         # Arrange
         mock_require_auth.return_value = True
@@ -83,13 +83,15 @@ class TestQuestionnaireWriterPage:
         mock_event = MagicMock()
         mock_event.value = str(mock_client.id)
 
-        with patch('app.ui_components.questionnaire_writer.ui.notify') as mock_notify:
+        with patch("app.ui_components.questionnaire_writer.ui.notify") as mock_notify:
             # Act
             page_instance._on_client_selected(mock_event)
 
             # Assert
             assert page_instance.selected_client == mock_client
-            mock_notify.assert_called_once_with(f"Cliente selecionado: {mock_client.name}", type="positive")
+            mock_notify.assert_called_once_with(
+                f"Cliente selecionado: {mock_client.name}", type="positive"
+            )
 
     def test_on_client_selected_with_empty_value(self, page_instance):
         """Test client selection with empty value."""
@@ -116,8 +118,10 @@ class TestQuestionnaireWriterPage:
         # Assert
         assert page_instance.selected_client is None
 
-    @patch('app.ui_components.questionnaire_writer.get_async_db')
-    async def test_load_clients_with_documents_success(self, mock_get_db, page_instance, mock_client):
+    @patch("app.ui_components.questionnaire_writer.get_async_db")
+    async def test_load_clients_with_documents_success(
+        self, mock_get_db, page_instance, mock_client
+    ):
         """Test successful loading of clients with documents."""
         # Arrange
         mock_db_session = AsyncMock()
@@ -129,9 +133,13 @@ class TestQuestionnaireWriterPage:
         page_instance.client_select = MagicMock()
         page_instance.client_select.options = {}
 
-        with patch('app.ui_components.questionnaire_writer.ClientRepository'):
-            with patch('app.ui_components.questionnaire_writer.ClientService') as mock_service:
-                with patch('app.ui_components.questionnaire_writer.ui.notify') as mock_notify:
+        with patch("app.ui_components.questionnaire_writer.ClientRepository"):
+            with patch(
+                "app.ui_components.questionnaire_writer.ClientService"
+            ) as mock_service:
+                with patch(
+                    "app.ui_components.questionnaire_writer.ui.notify"
+                ) as mock_notify:
                     mock_service.return_value = mock_client_service
 
                     # Act
@@ -140,12 +148,21 @@ class TestQuestionnaireWriterPage:
                     # Assert
                     mock_client_service.get_all_clients.assert_called_once()
                     assert page_instance.clients == [mock_client]
-                    expected_option = f"{mock_client.name} - {mock_client.formatted_cpf}"
-                    assert page_instance.client_select.options[str(mock_client.id)] == expected_option
-                    mock_notify.assert_called_once_with("1 cliente(s) carregado(s)", type="positive")
+                    expected_option = (
+                        f"{mock_client.name} - {mock_client.formatted_cpf}"
+                    )
+                    assert (
+                        page_instance.client_select.options[str(mock_client.id)]
+                        == expected_option
+                    )
+                    mock_notify.assert_called_once_with(
+                        "1 cliente(s) carregado(s)", type="positive"
+                    )
 
-    @patch('app.ui_components.questionnaire_writer.get_async_db')
-    async def test_load_clients_with_documents_no_clients(self, mock_get_db, page_instance):
+    @patch("app.ui_components.questionnaire_writer.get_async_db")
+    async def test_load_clients_with_documents_no_clients(
+        self, mock_get_db, page_instance
+    ):
         """Test loading clients when no clients exist."""
         # Arrange
         mock_db_session = AsyncMock()
@@ -157,9 +174,13 @@ class TestQuestionnaireWriterPage:
         page_instance.client_select = MagicMock()
         page_instance.client_select.options = {}
 
-        with patch('app.ui_components.questionnaire_writer.ClientRepository'):
-            with patch('app.ui_components.questionnaire_writer.ClientService') as mock_service:
-                with patch('app.ui_components.questionnaire_writer.ui.notify') as mock_notify:
+        with patch("app.ui_components.questionnaire_writer.ClientRepository"):
+            with patch(
+                "app.ui_components.questionnaire_writer.ClientService"
+            ) as mock_service:
+                with patch(
+                    "app.ui_components.questionnaire_writer.ui.notify"
+                ) as mock_notify:
                     mock_service.return_value = mock_client_service
 
                     # Act
@@ -168,20 +189,26 @@ class TestQuestionnaireWriterPage:
                     # Assert
                     assert page_instance.clients == []
                     assert page_instance.client_select.options == {}
-                    mock_notify.assert_called_once_with("Nenhum cliente encontrado", type="warning")
+                    mock_notify.assert_called_once_with(
+                        "Nenhum cliente encontrado", type="warning"
+                    )
 
-    @patch('app.ui_components.questionnaire_writer.get_async_db')
-    async def test_load_clients_with_documents_exception(self, mock_get_db, page_instance):
+    @patch("app.ui_components.questionnaire_writer.get_async_db")
+    async def test_load_clients_with_documents_exception(
+        self, mock_get_db, page_instance
+    ):
         """Test exception handling in client loading."""
         # Arrange
         mock_get_db.side_effect = Exception("Database error")
 
-        with patch('app.ui_components.questionnaire_writer.ui.notify') as mock_notify:
+        with patch("app.ui_components.questionnaire_writer.ui.notify") as mock_notify:
             # Act
             await page_instance._load_clients_with_documents()
 
             # Assert
-            mock_notify.assert_called_once_with("Erro ao carregar clientes: Database error", type="negative")
+            mock_notify.assert_called_once_with(
+                "Erro ao carregar clientes: Database error", type="negative"
+            )
 
     def test_copy_result_with_content(self, page_instance):
         """Test copying result when content is available."""
@@ -189,14 +216,20 @@ class TestQuestionnaireWriterPage:
         page_instance.result_area = MagicMock()
         page_instance.result_area.value = "Test questionnaire content"
 
-        with patch('app.ui_components.questionnaire_writer.ui.run_javascript') as mock_js:
-            with patch('app.ui_components.questionnaire_writer.ui.notify') as mock_notify:
+        with patch(
+            "app.ui_components.questionnaire_writer.ui.run_javascript"
+        ) as mock_js:
+            with patch(
+                "app.ui_components.questionnaire_writer.ui.notify"
+            ) as mock_notify:
                 # Act
                 page_instance._copy_result()
 
                 # Assert
                 mock_js.assert_called_once()
-                mock_notify.assert_called_once_with("Texto copiado para a área de transferência!", type="positive")
+                mock_notify.assert_called_once_with(
+                    "Texto copiado para a área de transferência!", type="positive"
+                )
 
     def test_copy_result_without_content(self, page_instance):
         """Test copying result when no content is available."""
@@ -204,26 +237,32 @@ class TestQuestionnaireWriterPage:
         page_instance.result_area = MagicMock()
         page_instance.result_area.value = ""
 
-        with patch('app.ui_components.questionnaire_writer.ui.notify') as mock_notify:
+        with patch("app.ui_components.questionnaire_writer.ui.notify") as mock_notify:
             # Act
             page_instance._copy_result()
 
             # Assert
-            mock_notify.assert_called_once_with("Nenhum conteúdo para copiar", type="warning")
+            mock_notify.assert_called_once_with(
+                "Nenhum conteúdo para copiar", type="warning"
+            )
 
     async def test_generate_questionnaire_no_client_selected(self, page_instance):
         """Test questionnaire generation when no client is selected."""
         # Arrange
         page_instance.selected_client = None
 
-        with patch('app.ui_components.questionnaire_writer.ui.notify') as mock_notify:
+        with patch("app.ui_components.questionnaire_writer.ui.notify") as mock_notify:
             # Act
             await page_instance._generate_questionnaire()
 
             # Assert
-            mock_notify.assert_called_once_with("Por favor, selecione um cliente", type="warning")
+            mock_notify.assert_called_once_with(
+                "Por favor, selecione um cliente", type="warning"
+            )
 
-    async def test_generate_questionnaire_missing_fields(self, page_instance, mock_client):
+    async def test_generate_questionnaire_missing_fields(
+        self, page_instance, mock_client
+    ):
         """Test questionnaire generation with missing required fields."""
         # Arrange
         page_instance.selected_client = mock_client
@@ -236,15 +275,19 @@ class TestQuestionnaireWriterPage:
         page_instance.medical_date_input = MagicMock()
         page_instance.medical_date_input.value = "02/01/2024"
 
-        with patch('app.ui_components.questionnaire_writer.ui.notify') as mock_notify:
+        with patch("app.ui_components.questionnaire_writer.ui.notify") as mock_notify:
             # Act
             await page_instance._generate_questionnaire()
 
             # Assert
-            mock_notify.assert_called_once_with("Por favor, preencha todos os campos obrigatórios", type="warning")
+            mock_notify.assert_called_once_with(
+                "Por favor, preencha todos os campos obrigatórios", type="warning"
+            )
 
-    @patch('app.ui_components.questionnaire_writer.get_async_db')
-    async def test_generate_questionnaire_success(self, mock_get_db, page_instance, mock_client):
+    @patch("app.ui_components.questionnaire_writer.get_async_db")
+    async def test_generate_questionnaire_success(
+        self, mock_get_db, page_instance, mock_client
+    ):
         """Test successful questionnaire generation."""
         # Arrange
         page_instance.selected_client = mock_client
@@ -266,12 +309,16 @@ class TestQuestionnaireWriterPage:
             "success": True,
             "questionnaire": "Generated questionnaire",
             "context_chunks": 5,
-            "client_name": "Test Client"
+            "client_name": "Test Client",
         }
 
-        with patch('app.ui_components.questionnaire_writer.DocumentChunkRepository'):
-            with patch('app.ui_components.questionnaire_writer.get_questionnaire_draft_service') as mock_get_service:
-                with patch('app.ui_components.questionnaire_writer.ui.notify') as mock_notify:
+        with patch("app.ui_components.questionnaire_writer.DocumentChunkRepository"):
+            with patch(
+                "app.ui_components.questionnaire_writer.get_questionnaire_draft_service"
+            ) as mock_get_service:
+                with patch(
+                    "app.ui_components.questionnaire_writer.ui.notify"
+                ) as mock_notify:
                     mock_get_service.return_value = mock_service
 
                     # Act
@@ -279,11 +326,18 @@ class TestQuestionnaireWriterPage:
 
                     # Assert
                     assert page_instance.result_area.value == "Generated questionnaire"
-                    mock_notify.assert_any_call("Gerando quesitos... Aguarde.", type="info")
-                    mock_notify.assert_any_call("Quesitos gerados com sucesso (baseado em 5 documento(s))!", type="positive")
+                    mock_notify.assert_any_call(
+                        "Gerando quesitos... Aguarde.", type="info"
+                    )
+                    mock_notify.assert_any_call(
+                        "Quesitos gerados com sucesso (baseado em 5 documento(s))!",
+                        type="positive",
+                    )
 
-    @patch('app.ui_components.questionnaire_writer.get_async_db')
-    async def test_generate_questionnaire_service_failure(self, mock_get_db, page_instance, mock_client):
+    @patch("app.ui_components.questionnaire_writer.get_async_db")
+    async def test_generate_questionnaire_service_failure(
+        self, mock_get_db, page_instance, mock_client
+    ):
         """Test questionnaire generation when service fails."""
         # Arrange
         page_instance.selected_client = mock_client
@@ -304,16 +358,22 @@ class TestQuestionnaireWriterPage:
             "success": False,
             "error": "Service error",
             "questionnaire": "",
-            "context_chunks": 0
+            "context_chunks": 0,
         }
 
-        with patch('app.ui_components.questionnaire_writer.DocumentChunkRepository'):
-            with patch('app.ui_components.questionnaire_writer.get_questionnaire_draft_service') as mock_get_service:
-                with patch('app.ui_components.questionnaire_writer.ui.notify') as mock_notify:
+        with patch("app.ui_components.questionnaire_writer.DocumentChunkRepository"):
+            with patch(
+                "app.ui_components.questionnaire_writer.get_questionnaire_draft_service"
+            ) as mock_get_service:
+                with patch(
+                    "app.ui_components.questionnaire_writer.ui.notify"
+                ) as mock_notify:
                     mock_get_service.return_value = mock_service
 
                     # Act
                     await page_instance._generate_questionnaire()
 
                     # Assert
-                    mock_notify.assert_any_call("Erro ao gerar quesitos: Service error", type="negative")
+                    mock_notify.assert_any_call(
+                        "Erro ao gerar quesitos: Service error", type="negative"
+                    )

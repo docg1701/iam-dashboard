@@ -30,7 +30,7 @@ class TestAgentManager:
             "name": "Test Agent",
             "description": "Test agent for unit testing",
             "capabilities": ["test_capability"],
-            "dependencies": []
+            "dependencies": [],
         }
 
     @pytest.mark.asyncio
@@ -40,7 +40,9 @@ class TestAgentManager:
         mock_agent_class = Mock(return_value=mock_agent)
 
         # Load agent
-        result = await agent_manager.load_agent("test_agent", mock_agent_class, sample_config)
+        result = await agent_manager.load_agent(
+            "test_agent", mock_agent_class, sample_config
+        )
 
         # Assertions
         assert result is True
@@ -175,7 +177,7 @@ class TestAgentManager:
             name="Test Agent",
             description="Test description",
             capabilities=["test"],
-            dependencies=[]
+            dependencies=[],
         )
         agent_manager._metadata["test_agent"] = metadata
 

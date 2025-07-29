@@ -34,28 +34,19 @@ class PDFReaderTool:
             path = Path(file_path)
 
             if not path.exists():
-                return {
-                    "valid": False,
-                    "error": f"File does not exist: {file_path}"
-                }
+                return {"valid": False, "error": f"File does not exist: {file_path}"}
 
             if not path.is_file():
-                return {
-                    "valid": False,
-                    "error": f"Path is not a file: {file_path}"
-                }
+                return {"valid": False, "error": f"Path is not a file: {file_path}"}
 
-            if path.suffix.lower() != '.pdf':
-                return {
-                    "valid": False,
-                    "error": f"File is not a PDF: {file_path}"
-                }
+            if path.suffix.lower() != ".pdf":
+                return {"valid": False, "error": f"File is not a PDF: {file_path}"}
 
             file_size = path.stat().st_size
             if file_size > self.max_file_size_bytes:
                 return {
                     "valid": False,
-                    "error": f"File too large: {file_size / 1024 / 1024:.1f}MB > {self.max_file_size_mb}MB"
+                    "error": f"File too large: {file_size / 1024 / 1024:.1f}MB > {self.max_file_size_mb}MB",
                 }
 
             # Try to open with PyMuPDF to check if it's a valid PDF
@@ -64,22 +55,12 @@ class PDFReaderTool:
                 page_count = len(doc)
                 doc.close()
 
-                return {
-                    "valid": True,
-                    "file_size": file_size,
-                    "page_count": page_count
-                }
+                return {"valid": True, "file_size": file_size, "page_count": page_count}
             except Exception as pdf_error:
-                return {
-                    "valid": False,
-                    "error": f"Invalid PDF file: {str(pdf_error)}"
-                }
+                return {"valid": False, "error": f"Invalid PDF file: {str(pdf_error)}"}
 
         except Exception as e:
-            return {
-                "valid": False,
-                "error": f"File validation failed: {str(e)}"
-            }
+            return {"valid": False, "error": f"File validation failed: {str(e)}"}
 
     def extract_metadata(self, file_path: str) -> dict[str, Any]:
         """Extract metadata from PDF document.
@@ -101,7 +82,7 @@ class PDFReaderTool:
                 "page_count": page_count,
                 "is_encrypted": doc.needs_pass,
                 "has_toc": len(doc.get_toc()) > 0,
-                "file_size": Path(file_path).stat().st_size
+                "file_size": Path(file_path).stat().st_size,
             }
 
             # Analyze page sizes and orientations
@@ -109,12 +90,14 @@ class PDFReaderTool:
             for page_num in range(min(page_count, 10)):  # Analyze first 10 pages
                 page = doc.load_page(page_num)
                 rect = page.rect
-                page_info.append({
-                    "page_number": page_num + 1,
-                    "width": rect.width,
-                    "height": rect.height,
-                    "rotation": page.rotation
-                })
+                page_info.append(
+                    {
+                        "page_number": page_num + 1,
+                        "width": rect.width,
+                        "height": rect.height,
+                        "rotation": page.rotation,
+                    }
+                )
 
             doc.close()
 
@@ -123,7 +106,7 @@ class PDFReaderTool:
                 "metadata": metadata,
                 "document_info": doc_info,
                 "page_info": page_info,
-                "file_path": file_path
+                "file_path": file_path,
             }
 
             logger.info(f"Successfully extracted metadata from PDF: {file_path}")
@@ -132,13 +115,11 @@ class PDFReaderTool:
         except Exception as e:
             error_msg = f"Failed to extract metadata from {file_path}: {str(e)}"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "file_path": file_path
-            }
+            return {"success": False, "error": error_msg, "file_path": file_path}
 
-    def extract_text_content(self, file_path: str, include_annotations: bool = True) -> dict[str, Any]:
+    def extract_text_content(
+        self, file_path: str, include_annotations: bool = True
+    ) -> dict[str, Any]:
         """Extract text content from PDF document.
 
         Args:
@@ -179,11 +160,13 @@ class PDFReaderTool:
                                 "type": annot.type[1],  # Get type name
                                 "content": annot.content,
                                 "author": annot.info.get("title", ""),
-                                "rect": list(annot.rect)
+                                "rect": list(annot.rect),
                             }
                             annotations.append(annotation_data)
                         except Exception as annot_error:
-                            logger.warning(f"Failed to extract annotation: {str(annot_error)}")
+                            logger.warning(
+                                f"Failed to extract annotation: {str(annot_error)}"
+                            )
                             continue
 
                     page_data["annotations"] = annotations
@@ -197,21 +180,21 @@ class PDFReaderTool:
                 "text_content": text_content,
                 "total_pages": len(text_content),
                 "total_chars": total_chars,
-                "average_chars_per_page": total_chars / len(text_content) if text_content else 0,
-                "file_path": file_path
+                "average_chars_per_page": total_chars / len(text_content)
+                if text_content
+                else 0,
+                "file_path": file_path,
             }
 
-            logger.info(f"Successfully extracted text from PDF: {file_path} ({len(text_content)} pages, {total_chars} chars)")
+            logger.info(
+                f"Successfully extracted text from PDF: {file_path} ({len(text_content)} pages, {total_chars} chars)"
+            )
             return result
 
         except Exception as e:
             error_msg = f"Failed to extract text from {file_path}: {str(e)}"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "file_path": file_path
-            }
+            return {"success": False, "error": error_msg, "file_path": file_path}
 
     def _detect_tables(self, page: fitz.Page) -> bool:
         """Simple table detection based on text arrangement.
@@ -238,7 +221,9 @@ class PDFReaderTool:
                 # Count how many elements share similar y-positions (within 5 points)
                 alignment_count = 0
                 for i, y1 in enumerate(y_positions):
-                    similar_count = sum(1 for y2 in y_positions[i+1:] if abs(y1 - y2) < 5)
+                    similar_count = sum(
+                        1 for y2 in y_positions[i + 1 :] if abs(y1 - y2) < 5
+                    )
                     if similar_count > 2:
                         alignment_count += 1
 
@@ -279,24 +264,30 @@ class PDFReaderTool:
                             "xref": xref,
                             "width": pix.width,
                             "height": pix.height,
-                            "colorspace": pix.colorspace.name if pix.colorspace else "unknown",
+                            "colorspace": pix.colorspace.name
+                            if pix.colorspace
+                            else "unknown",
                             "bpp": pix.n,  # bits per pixel
-                            "size_estimate": pix.width * pix.height * pix.n
+                            "size_estimate": pix.width * pix.height * pix.n,
                         }
 
                         page_images.append(image_info)
                         pix = None  # Free memory
 
                     except Exception as img_error:
-                        logger.warning(f"Failed to analyze image {img_index} on page {page_num + 1}: {str(img_error)}")
+                        logger.warning(
+                            f"Failed to analyze image {img_index} on page {page_num + 1}: {str(img_error)}"
+                        )
                         continue
 
                 if page_images:
-                    images_info.append({
-                        "page_number": page_num + 1,
-                        "image_count": len(page_images),
-                        "images": page_images
-                    })
+                    images_info.append(
+                        {
+                            "page_number": page_num + 1,
+                            "image_count": len(page_images),
+                            "images": page_images,
+                        }
+                    )
                     total_images += len(page_images)
 
             doc.close()
@@ -305,22 +296,22 @@ class PDFReaderTool:
                 "success": True,
                 "total_images": total_images,
                 "images_by_page": images_info,
-                "file_path": file_path
+                "file_path": file_path,
             }
 
-            logger.info(f"Successfully analyzed images in PDF: {file_path} ({total_images} images)")
+            logger.info(
+                f"Successfully analyzed images in PDF: {file_path} ({total_images} images)"
+            )
             return result
 
         except Exception as e:
             error_msg = f"Failed to extract image info from {file_path}: {str(e)}"
             logger.error(error_msg)
-            return {
-                "success": False,
-                "error": error_msg,
-                "file_path": file_path
-            }
+            return {"success": False, "error": error_msg, "file_path": file_path}
 
-    def process_document(self, file_path: str, include_annotations: bool = True) -> dict[str, Any]:
+    def process_document(
+        self, file_path: str, include_annotations: bool = True
+    ) -> dict[str, Any]:
         """Complete PDF processing workflow.
 
         Args:
@@ -338,7 +329,7 @@ class PDFReaderTool:
             return {
                 "success": False,
                 "error": validation["error"],
-                "file_path": file_path
+                "file_path": file_path,
             }
 
         # Step 2: Extract metadata
@@ -355,7 +346,9 @@ class PDFReaderTool:
         images_result = self.extract_images_info(file_path)
         # Don't fail if image extraction fails, just log and continue
         if not images_result["success"]:
-            logger.warning(f"Failed to extract image info: {images_result.get('error', 'Unknown error')}")
+            logger.warning(
+                f"Failed to extract image info: {images_result.get('error', 'Unknown error')}"
+            )
             images_result = {"success": True, "total_images": 0, "images_by_page": []}
 
         # Combine all results
@@ -370,12 +363,12 @@ class PDFReaderTool:
             "text_summary": {
                 "total_pages": text_result["total_pages"],
                 "total_chars": text_result["total_chars"],
-                "average_chars_per_page": text_result["average_chars_per_page"]
+                "average_chars_per_page": text_result["average_chars_per_page"],
             },
             "images_info": {
                 "total_images": images_result["total_images"],
-                "images_by_page": images_result["images_by_page"]
-            }
+                "images_by_page": images_result["images_by_page"],
+            },
         }
 
         logger.info(f"PDF processing completed successfully for: {file_path}")
