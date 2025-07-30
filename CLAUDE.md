@@ -105,6 +105,7 @@ docker compose down
 - **Formatting**: Use `ruff format` (replaces Black)
 - **Linting**: Ruff with strict configuration
 - **Docstrings**: Google-style for public functions and classes
+- **No Emojis in Code**: NEVER use emojis in code, comments, docstrings, variable names, function names, or any part of the codebase - emojis are only acceptable in documentation files (.md)
 
 ### Architecture Patterns
 - **Dependency Injection**: Uses `dependency-injector` for IoC
@@ -305,3 +306,10 @@ uv run pytest tests/e2e/ -m e2e --slow
 # Single E2E test with browser debugging
 uv run pytest tests/e2e/test_playwright_mcp_real.py::TestRealMCPIntegration::test_mcp_browser_navigate -v
 ```
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+**CRITICAL: NEVER use emojis in any code files** (.py, .js, .ts, .sql, .yaml, .json, etc.) - this includes code, comments, docstrings, variable names, function names, or any code content. Emojis are ONLY acceptable in documentation files (.md).

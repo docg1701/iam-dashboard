@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship
 from .base import TimestampedModel
 
 if TYPE_CHECKING:
-    pass
+    from .agent import AgentExecution
 
 
 class Client(TimestampedModel):
@@ -27,6 +27,7 @@ class Client(TimestampedModel):
     questionnaire_drafts = relationship(
         "QuestionnaireDraft", back_populates="client", cascade="all, delete-orphan"
     )
+    agent_executions = relationship("AgentExecution", back_populates="client")
 
     def __repr__(self) -> str:
         """String representation of Client."""

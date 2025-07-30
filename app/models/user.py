@@ -1,10 +1,15 @@
 """User model for authentication and authorization."""
 
 import enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Column, Enum, String
+from sqlalchemy.orm import relationship
 
 from .base import TimestampedModel
+
+if TYPE_CHECKING:
+    from .agent import AgentExecution
 
 
 class UserRole(enum.Enum):
@@ -30,6 +35,9 @@ class User(TimestampedModel):
     # 2FA fields
     totp_secret = Column(String(32), nullable=True)
     is_2fa_enabled = Column(Boolean, default=False, nullable=False)
+
+    # Relationships
+    agent_executions: relationship = relationship("AgentExecution", back_populates="user")
 
     def __repr__(self) -> str:
         """String representation of User."""

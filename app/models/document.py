@@ -1,12 +1,16 @@
 """Document model for storing uploaded PDF documents and their metadata."""
 
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from .base import TimestampedModel
+
+if TYPE_CHECKING:
+    from .agent import AgentExecution
 
 
 class DocumentType(str, Enum):
