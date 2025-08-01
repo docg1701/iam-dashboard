@@ -53,9 +53,7 @@ class DashboardPage:
                         )
                         ui.button(
                             "Acessar",
-                            on_click=lambda: ui.notify(
-                                "Funcionalidade em desenvolvimento", type="info"
-                            ),
+                            on_click=lambda: ui.navigate.to("/pdf-processor"),
                         ).classes(
                             "w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
                         )

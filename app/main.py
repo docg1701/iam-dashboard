@@ -23,6 +23,7 @@ from app.ui_components.client_details import client_details_page
 from app.ui_components.clients_area import clients_area_page
 from app.ui_components.dashboard import dashboard_page
 from app.ui_components.login import login_page
+from app.ui_components.pdf_processor_page import pdf_processor_page
 from app.ui_components.questionnaire_writer import questionnaire_writer_page
 from app.ui_components.register import register_page
 from app.ui_components.settings_2fa import settings_2fa_page
@@ -136,6 +137,12 @@ def client_details(client_id: str) -> None:
 def questionnaire_writer() -> None:
     """Questionnaire writer page route."""
     questionnaire_writer_page()
+
+
+@ui.page("/pdf-processor")
+def pdf_processor() -> None:
+    """PDF processor page route."""
+    pdf_processor_page()
 
 
 @ui.page("/admin")
