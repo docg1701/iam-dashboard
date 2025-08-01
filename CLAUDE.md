@@ -1,6 +1,6 @@
 # CLAUDE.md - Multi-Agent IAM Dashboard Development Guide
 
-This file provides comprehensive guidance to Claude Code when working on this fullstack multi-agent IAM Dashboard project. The system is built on a **Single-Tenant SaaS architecture** with **independent agents** communicating through a shared database.
+This file provides comprehensive guidance to Claude Code when working on this fullstack multi-agent IAM Dashboard project. The system is built as a **Custom Implementation Service** delivering **dedicated VPS instances** with **independent agents** communicating through a shared database.
 
 ## 🚫 CRITICAL RESTRICTIONS
 
@@ -68,7 +68,7 @@ mcp__context7__get-library-docs --context7CompatibleLibraryID="/shadcn/ui" --top
 - **Responsive testing**: Validate UI behavior on different screen sizes
 - **Authentication flows**: Test login, 2FA, and role-based access
 - **Agent interactions**: Test data flow between different agents
-- **White-label theming**: Validate theme applications and customizations
+- **Custom branding**: Validate brand customizations and visual identity integration
 
 #### Playwright Testing Strategy
 ```javascript
@@ -136,12 +136,12 @@ describe('Agent 1 - Client Management', () => {
    });
    ```
 
-4. **Theme Customization**
+4. **Custom Branding**
    ```javascript
-   // Test white-label theming
-   await mcp__playwright__browser_navigate({ url: 'http://localhost:3000/admin/themes' });
-   // Change primary color
-   // Apply theme
+   // Test custom branding system
+   await mcp__playwright__browser_navigate({ url: 'http://localhost:3000/admin/branding' });
+   // Change primary color and logo
+   // Apply custom branding
    // Verify changes across all pages
    ```
 
@@ -195,11 +195,11 @@ mcp__playwright__browser_wait_for --text="Upload Complete"
   - [ ] Associate recordings with clients
   - [ ] LLM analysis of transcriptions
 - [ ] **Cross-Agent Data Flow**: Data consistency between agents
-- [ ] **Theme Customization**: 
-  - [ ] Logo and favicon upload
-  - [ ] Color scheme customization
-  - [ ] Typography selection
-  - [ ] Real-time theme preview
+- [ ] **Custom Branding**: 
+  - [ ] Logo and favicon upload and integration
+  - [ ] Complete color scheme customization
+  - [ ] Typography selection and application
+  - [ ] Real-time branding preview and deployment
 - [ ] **Responsive Design**: Mobile, tablet, desktop layouts
 - [ ] **Error Handling**: Network errors, validation errors, system errors
 - [ ] **Configuration Management**: 
@@ -225,13 +225,13 @@ Avoid building functionality on speculation. Implement features only when they a
 ## 🏗️ Project Architecture Overview
 
 ### Multi-Agent System Structure
-This is a **Single-Tenant SaaS Dashboard** where each client gets their own VPS instance. The system follows a **Core + Independent Agents** architecture:
+This is a **Custom Implementation Service** where each client receives a dedicated VPS instance with complete customization and managed deployment. The system follows a **Core + Independent Agents** architecture:
 
 #### Core System
 - **Frontend**: Next.js 15 + React 19 + TypeScript + shadcn/ui
 - **Backend**: FastAPI + SQLModel + PostgreSQL
 - **Authentication**: OAuth2 + JWT + 2FA
-- **Deployment**: Docker Compose on Ubuntu Server VPS
+- **Deployment**: Automated via Terraform + Ansible + Docker Compose on Ubuntu Server VPS
 
 #### Agent Communication Model
 - **Shared Database**: All agents communicate through PostgreSQL tables
@@ -342,15 +342,17 @@ This is a **Single-Tenant SaaS Dashboard** where each client gets their own VPS 
 - **React Hook Form**: Form handling with validation
 - **@hookform/resolvers**: Form validation resolvers
 
-### Infrastructure
+### Infrastructure & Deployment
 - **Docker + Docker Compose**: Containerization
+- **Terraform**: Infrastructure as code for VPS provisioning
+- **Ansible**: Configuration management and deployment automation
 - **Caddy**: Reverse proxy with automatic HTTPS
 - **Ubuntu Server 24.x**: Host operating system
 
-## 🎨 White-Label Theming System
+## 🎨 Custom Branding & Theming System
 
-### Theme Architecture
-The system implements a complete **white-label solution** using shadcn/ui's CSS variable system:
+### Custom Branding Architecture
+The system implements a complete **custom branding solution** for each client implementation using shadcn/ui's CSS variable system:
 
 #### CSS Variables Structure
 ```css
@@ -593,6 +595,22 @@ docker-compose logs -f backend
 docker-compose exec postgres psql -U postgres -d dashboard
 ```
 
+### Deployment Automation
+```bash
+# Infrastructure provisioning with Terraform
+cd infrastructure
+terraform init
+terraform plan -var="client_name=example-client"
+terraform apply
+
+# Configuration management with Ansible
+cd deployment
+ansible-playbook -i inventory deploy-client.yml --extra-vars "client_name=example-client"
+
+# Custom branding deployment
+ansible-playbook -i inventory customize-branding.yml --extra-vars "client_name=example-client"
+```
+
 ## 🚀 Performance Guidelines
 
 ### Backend Optimization
@@ -723,8 +741,8 @@ Before any merge to main:
 ---
 
 **Last Updated**: Agosto 2025  
-**Project**: Multi-Agent IAM Dashboard  
+**Project**: Multi-Agent IAM Dashboard Custom Implementation Service  
 **Language**: 100% English (native)  
-**Architecture**: Single-Tenant SaaS with Independent Agents
+**Architecture**: Custom Implementation Service with Dedicated VPS and Independent Agents
 
 *This document is the single source of truth for development guidelines. Keep it updated as the project evolves and new patterns emerge.*

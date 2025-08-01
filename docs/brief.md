@@ -6,49 +6,52 @@
 
 ## Executive Summary
 
-**IAM Dashboard** is a single-tenant SaaS platform that leverages independent AI agents to provide comprehensive business automation capabilities. The system addresses the critical need for modular, scalable business solutions that can be customized and white-labeled for different organizations while maintaining complete data isolation and security.
+**IAM Dashboard** is a custom implementation service that delivers dedicated multi-agent AI automation infrastructure tailored to each client's specific needs. The system provides complete visual customization, dedicated VPS deployment, and specialized agent configuration, enabling organizations to have their own branded, secure, and workflow-specific automation platform.
 
-**Primary Problem:** Current business automation solutions lack the modularity and customization flexibility needed by SMBs requiring specialized workflows, white-label branding, and complete data isolation.
+**Primary Problem:** Organizations need advanced AI automation that reflects their brand identity and specific workflows, but lack the technical expertise and resources to develop and maintain custom solutions internally.
 
-**Target Market:** Small and medium businesses seeking advanced AI-powered automation solutions with professional branding capabilities.
+**Target Market:** Growing businesses (50-500 employees) seeking enterprise-grade AI automation with complete customization and dedicated infrastructure, delivered as a managed service.
 
-**Key Value Proposition:** The only multi-agent AI platform combining autonomous intelligent agents, complete white-label customization, and single-tenant security isolation, enabling SMBs to deploy a fully branded, modular business automation system tailored to their specific workflows.
+**Key Value Proposition:** Custom-implemented AI agent infrastructure delivered in 30 days with complete visual customization, dedicated VPS isolation, and ongoing managed services - providing enterprise-grade solutions at a fraction of internal development costs.
 
 ---
 
 ## Problem Statement
 
 **Current State and Pain Points:**
-Organizations struggle with business automation solutions that are either too rigid (enterprise solutions with limited customization) or too generic (SaaS platforms without branding flexibility). Existing solutions force organizations into predefined workflows and visual identities, creating friction in adoption and user experience.
+Organizations seeking AI automation face a critical dilemma: generic SaaS solutions don't reflect their brand or specific workflows, while custom development is prohibitively expensive and time-consuming. Most companies want the sophistication of enterprise automation but need it delivered quickly with their visual identity and tailored to their processes.
 
 **Impact of the Problem:**
-- **Security Risks:** Multi-tenant solutions create potential data leakage concerns for sensitive organizations
-- **Brand Dilution:** Generic interfaces reduce user trust and organizational ownership perception
-- **Workflow Friction:** Rigid systems require organizations to adapt their processes rather than the system adapting to them
-- **Maintenance Overhead:** Complex integrations and customizations require ongoing technical resources
+- **Brand Identity Loss:** Generic automation tools dilute company branding and reduce user engagement
+- **Workflow Misalignment:** Off-the-shelf solutions require adapting business processes rather than technology adapting to business needs
+- **Data Security Concerns:** Shared SaaS platforms create compliance and security risks for sensitive business data
+- **Implementation Delays:** Custom development projects take 6-18 months and often fail or exceed budgets
+- **Technical Debt:** Organizations lack expertise to maintain and evolve custom automation solutions
 
 **Why Existing Solutions Fall Short:**
-1. **Traditional Enterprise Automation:** Extremely expensive, requires months of implementation, limited white-label capabilities
-2. **SaaS Automation Platforms:** Shared infrastructure creates security concerns, minimal customization options
-3. **Custom Built Solutions:** Prohibitively expensive to develop and maintain, lack of AI/automation capabilities
+1. **Generic SaaS Platforms:** Limited customization, shared infrastructure, generic branding, rigid workflows
+2. **Enterprise Custom Development:** 6-18 month timelines, $100K-500K budgets, ongoing maintenance burden
+3. **Consulting Implementations:** Expensive, lengthy, often deliver over-engineered solutions requiring internal technical teams
 
 **Urgency and Importance:**
-With digital transformation acceleration and increasing competition, SMBs need business automation solutions that can be deployed quickly while maintaining professional branding and user experience standards. The market window exists now as AI capabilities make sophisticated automation accessible to smaller organizations.
+Organizations need AI automation solutions that can be implemented quickly while maintaining their brand identity and adapting to their specific workflows. The market opportunity exists for delivery of enterprise-grade customization with SaaS-like speed and predictable costs.
 
 ---
 
 ## Proposed Solution
 
 **Core Concept and Approach:**
-A **multi-agent SaaS dashboard platform** built on single-tenant architecture where each client receives their own VPS instance. The system utilizes independent AI agents (powered by the Agno framework) that communicate through a shared PostgreSQL database, enabling modular functionality while maintaining complete data isolation.
+A **custom implementation service** that delivers fully-customized multi-agent AI automation infrastructure on dedicated VPS instances. Each implementation is tailored to the client's visual identity, workflow requirements, and business processes, deployed via semi-automated scripts, and maintained as a managed service.
 
 **Key Differentiators from Existing Solutions:**
 
-1. **Agent-Based Modularity:** Extensible architecture supporting autonomous AI agents with specialized functions (specific agents to be defined based on MVP requirements)
+1. **Custom Implementation Approach:** Complete solution delivered in 30 days with client-specific customization, not generic software configuration
 
-2. **Complete White-Label System:** Built on shadcn/ui with CSS variable-based theming, allowing real-time customization of colors, typography, logos, and branding without code changes
+2. **Dedicated Infrastructure:** Each client receives their own VPS instance with complete data isolation and unlimited customization possibilities
 
-3. **Single-Tenant Security:** Each client gets dedicated infrastructure eliminating data leakage risks while enabling unlimited customization
+3. **Managed Service Model:** We handle provisioning, deployment, customization, and ongoing maintenance - clients receive a turn-key solution
+
+4. **Visual Identity Integration:** Complete branding customization including colors, logos, typography, and UI elements tailored to client's brand guidelines
 
 **Why This Solution Will Succeed:**
 
@@ -58,127 +61,132 @@ A **multi-agent SaaS dashboard platform** built on single-tenant architecture wh
 - **Responsive Design:** 100% mobile-first design ensures consistent experience across all devices
 
 **High-Level Product Vision:**
-A business automation platform that feels like a custom-built solution but deploys in under an hour with enterprise-grade security, complete visual customization, and AI-powered autonomous agents that adapt to organizational workflows rather than forcing workflow changes.
+A custom-implemented AI automation platform that provides enterprise-grade capabilities with complete visual customization and workflow adaptation, delivered in 30 days through managed implementation service rather than requiring internal development resources.
 
 ---
 
 ## Target Users
 
-### Primary User Segment: Small and Medium Businesses (SMBs)
+### Primary User Segment: Growing Businesses Seeking Custom Solutions
 
 **Demographic/Firmographic Profile:**
-- Small and medium businesses (10-200 employees) across various industries
-- Annual revenue $500K-$25M seeking advanced technological solutions
-- Growing companies that need to scale operations efficiently
-- Visionary leadership willing to adopt emerging AI technologies
+- Mid-market businesses (50-500 employees) across various industries
+- Annual revenue $5M-$100M with budget for custom technology solutions
+- Companies prioritizing brand identity and professional image
+- Organizations with specific workflow requirements not met by generic tools
+- Leadership seeking competitive advantage through tailored automation
 
 **Current Behaviors and Workflows:**
-- Rely on fragmented solutions: spreadsheets, basic CRM systems, isolated tools
-- Manual-intensive processes for client management, document processing, and reporting
-- Lack of integration between different tools and systems
-- Budget constraints prevent traditional enterprise solutions
-- Seeking solutions that offer advanced capabilities at accessible costs
+- Use multiple disconnected SaaS tools that don't integrate well
+- Frustrated with generic interfaces that don't reflect their brand
+- Require custom workflows that off-the-shelf solutions can't accommodate
+- Have budget allocated for technology improvements but avoid long development projects
+- Seek professional, branded solutions that enhance their market positioning
 
 **Specific Needs and Pain Points:**
-- **Intelligent Automation:** Need to automate repetitive processes with AI
-- **Integrated Solution:** Want a unified platform instead of multiple isolated tools
-- **Cost-Effectiveness:** Need enterprise capabilities at SMB prices
-- **Ease of Use:** Don't have large IT teams to manage complex systems
-- **Scalable Growth:** Solutions that grow with the company
+- **Brand Consistency:** Need technology that reflects their professional brand identity
+- **Custom Workflows:** Require automation that adapts to their specific business processes
+- **Data Security:** Want dedicated infrastructure without shared multi-tenant risks
+- **Quick Implementation:** Need custom solutions delivered in weeks, not months
+- **Managed Service:** Prefer to focus on business while technology is professionally maintained
 
 **Goals They're Trying to Achieve:**
-- Gain competitive advantage through intelligent automation
-- Consolidate multiple tools into a unified platform
-- Scale operations without proportionally increasing staff
-- Present professional, modern image to clients
-- Access advanced AI technologies without development investment
+- Present a professional, custom-branded technology experience to clients
+- Implement AI automation that adapts to their specific workflows
+- Achieve enterprise-grade capabilities without enterprise development costs
+- Maintain complete control over data and customization
+- Focus on core business while having technology professionally managed
 
-### Secondary User Segment: Growing Tech Startups
+### Secondary User Segment: Service-Based Businesses
 
 **Demographic/Firmographic Profile:**
-- Startups and scale-ups (5-100 employees) with technology focus
-- Companies that value innovation and early adoption of new technologies
-- Founders and CTOs seeking competitive differentiation through AI
-- Organizations with data-driven and automation-first culture
+- Professional services firms (consulting, legal, accounting, agencies)
+- Companies where client presentation and professional image are critical
+- Organizations handling sensitive client data requiring security
+- Businesses with established processes needing AI enhancement rather than replacement
 
 **Current Behaviors and Workflows:**
-- Already use modern tools but in separate silos
-- Experiment with point AI solutions without integration
-- Constantly seek ways to optimize operations
-- Value solutions that demonstrate technological sophistication
+- Use industry-specific tools that don't integrate or reflect their brand
+- Manual processes for client management, reporting, and analysis
+- Multiple point solutions creating data silos and workflow friction
+- Concerned about data security and client confidentiality
 
 **Specific Needs and Pain Points:**
-- **Differentiation:** Want to show clients they use cutting-edge technology
-- **Operational Efficiency:** Maximize productivity of small teams
-- **AI Integration:** Desire truly integrated AI, not just isolated AI features
-- **Professional Branding:** Need to appear larger and more established
+- **Client Confidence:** Need professional, branded interfaces that build trust
+- **Process Enhancement:** Want to enhance existing workflows with AI rather than replace them
+- **Data Security:** Require complete control over sensitive client information
+- **Implementation Speed:** Need solutions that can be implemented without disrupting operations
 
 **Goals They're Trying to Achieve:**
-- Demonstrate technological leadership in the market
-- Automate operations to focus on core business
-- Create differentiated client experiences using AI
-- Prepare infrastructure to scale rapidly
+- Enhance service delivery through intelligent automation
+- Present cutting-edge, professional technology to clients
+- Improve operational efficiency while maintaining service quality
+- Gain competitive advantage through custom-tailored AI capabilities
 
 ---
 
 ## Goals & Success Metrics
 
 ### Business Objectives
-- **Revenue Goal:** Achieve $500K ARR within 12 months by acquiring 50 SMB clients at $833/month average
-- **Market Penetration:** Capture 0.1% of the SMB automation software market within 18 months
-- **Client Retention:** Maintain 90%+ annual retention rate through high-value autonomous agent capabilities
-- **Time to Value:** Enable clients to deploy and see ROI within 30 days of onboarding
-- **Platform Scalability:** Support 100+ concurrent clients on single infrastructure deployment
+- **Revenue Goal:** Achieve $600K ARR within 12 months through 25 custom implementations at $2K monthly service fee + $3.5K average setup fees
+- **Market Penetration:** Establish presence in custom AI implementation services market with 5-10 implementations per quarter
+- **Client Retention:** Maintain 95%+ annual retention rate through dedicated infrastructure and ongoing managed services
+- **Implementation Speed:** Deliver complete custom implementations in 3-4 weeks from contract signing
+- **Service Scaling:** Build capability to handle 5-8 concurrent implementations with standardized deployment processes
 
-### User Success Metrics
-- **User Adoption:** 80%+ of licensed users actively using the platform monthly
-- **Feature Utilization:** Average client uses 3+ autonomous agents within 90 days
-- **Efficiency Gains:** Clients report 40%+ reduction in manual administrative tasks
-- **User Satisfaction:** Net Promoter Score (NPS) of 50+ within first year
-- **Onboarding Success:** 95% of new clients complete setup within first week
+### Client Success Metrics
+- **Implementation Success:** 100% of implementations go live within agreed timeline
+- **Client Satisfaction:** Net Promoter Score (NPS) of 60+ based on custom implementation experience
+- **Operational Impact:** Clients report 50%+ improvement in workflow efficiency within 60 days
+- **Brand Enhancement:** 90%+ of clients report improved professional image with branded interface
+- **Service Reliability:** 99.9% uptime across all client VPS instances
 
 ### Key Performance Indicators (KPIs)
-- **Monthly Recurring Revenue (MRR):** $41.7K by month 12, growing 15% monthly
-- **Customer Acquisition Cost (CAC):** Under $2,500 per client with 12-month payback period
-- **Platform Uptime:** 99.9% availability with sub-2 minute recovery times
-- **Agent Performance:** Average response time under 200ms for simple operations
-- **Customization Adoption:** 75% of clients implement white-label branding within 60 days
+- **Monthly Recurring Revenue (MRR):** $50K by month 12 from managed services + setup fees
+- **Implementation Cycle Time:** Average 21 days from contract to go-live
+- **Customer Acquisition Cost (CAC):** Under $5K per client with 18-month payback period
+- **Service Delivery:** 99.9% availability with automated monitoring and alerting
+- **Custom Deployment Success:** 100% of implementations include complete visual customization
 
 ---
 
 ## MVP Scope
 
-### Core Features (Must Have)
+### Core Implementation Service Features (Must Have)
 
-- **Client Management Agent:** Complete CRUD operations for client data with the following capabilities:
+- **Custom Implementation Process:**
+  - **Client Discovery:** Requirements gathering and workflow analysis
+  - **Visual Customization:** Complete branding integration (logo, colors, typography, UI elements)
+  - **VPS Provisioning:** Dedicated server setup via automated scripts
+  - **Custom Configuration:** Agent and workflow configuration specific to client needs
+  - **Quality Assurance:** Testing and validation before client handover
+
+- **Client Management Agent:** Core automation functionality including:
   - **Client Registration:** Name, SSN, birthdate validation and storage
   - **SSN Validation:** Format validation and duplicate prevention system
   - **Client Search & Retrieval:** Efficient search by name, SSN, or other criteria
   - **Data Management:** Edit, update, and maintain client information with audit trails
   - **Bulk Operations:** CSV export and multiple client selection capabilities
 
-- **Core Platform Infrastructure:**
-  - **Authentication System:** JWT + 2FA with role-based access (sysadmin, admin, user)
-  - **Database Foundation:** PostgreSQL with proper indexing and client data tables
-  - **Agent Framework:** Agno integration for the Client Management Agent
-  - **API Layer:** FastAPI endpoints for all client management operations
+- **Deployment Automation:**
+  - **VPS Provisioning:** Terraform scripts for infrastructure setup
+  - **Configuration Management:** Ansible playbooks for system configuration
+  - **Application Deployment:** Docker Compose stack deployment
+  - **SSL/DNS Setup:** Automated certificate and domain configuration
+  - **Monitoring Setup:** Health checks, alerting, and backup configuration
 
-- **White-Label System:**
-  - **Theme Customization:** Complete CSS variable-based customization with shadcn/ui
-  - **Logo & Branding:** Logo and favicon upload capabilities
-  - **Real-time Preview:** Live theme application and preview system
-  - **Color & Typography:** Primary/secondary colors and font selection
+- **Custom Branding System:**
+  - **Visual Identity Integration:** Complete client brand guidelines implementation
+  - **Dynamic Theming:** CSS variable-based customization system
+  - **Asset Management:** Logo, favicon, and custom asset integration
+  - **Typography & Colors:** Brand-specific font and color scheme application
 
-- **Responsive Interface:**
-  - **Dashboard:** Clean, professional client management interface
-  - **Mobile-First Design:** 100% responsive across all device sizes
-  - **Client Forms:** Intuitive client creation and editing forms
-  - **Data Tables:** Efficient client listing with search and filtering
-
-- **Single-Tenant Deployment:**
-  - **Docker Infrastructure:** Complete Docker Compose setup for client isolation
-  - **VPS Deployment:** Ubuntu Server deployment model
-  - **Security:** Single-tenant data isolation and access controls
+- **Managed Service Infrastructure:**
+  - **Dedicated VPS:** Client-specific server with complete data isolation
+  - **Security Hardening:** Authentication, authorization, and access controls
+  - **Backup & Recovery:** Automated daily backups with recovery procedures
+  - **Performance Monitoring:** 24/7 uptime monitoring and alerting
+  - **Update Management:** Automated security updates and feature deployments
 
 ### Out of Scope for MVP
 
@@ -191,20 +199,21 @@ A business automation platform that feels like a custom-built solution but deplo
 
 ### MVP Success Criteria
 
-**A successful MVP enables an SMB to:**
-- Deploy IAM Dashboard on their VPS in under 1 hour
-- Complete white-label customization (logo, colors, branding) within 30 minutes
-- Register, manage, and search client data efficiently through the Client Management Agent
-- Replace their current client management solution (spreadsheets, basic CRM)
-- See immediate productivity gains in client data management workflows
-- Experience the autonomous AI agent approach with the Client Management Agent
+**A successful MVP implementation enables a client to:**
+- Receive a completely branded, custom-deployed AI automation platform in 30 days
+- Begin using the Client Management Agent immediately upon delivery
+- Experience enterprise-grade security with dedicated VPS infrastructure
+- Have their complete visual identity reflected throughout the interface
+- Replace fragmented client management tools with unified, AI-powered solution
+- Gain competitive advantage through professional, custom-branded technology
 
-**Technical Success Criteria:**
-- 100% responsive design across mobile, tablet, desktop
-- Sub-200ms response times for client management operations
-- 99.9% uptime with proper error handling and validation
-- Complete SSN validation and duplicate prevention
-- Seamless white-label theme application without code changes
+**Service Delivery Success Criteria:**
+- 100% of implementations completed within 3-4 week timeline
+- Complete visual customization matching client brand guidelines
+- Dedicated VPS deployment with 99.9% uptime guarantee
+- Comprehensive training and documentation delivered with each implementation
+- Ongoing managed service maintaining system performance and security
+- Client satisfaction score of 8+ out of 10 for implementation experience
 
 ---
 
@@ -234,22 +243,23 @@ A business automation platform that feels like a custom-built solution but deplo
 
 ## Technical Considerations
 
-### Platform Requirements
-- **Target Platforms:** Web-based SaaS accessible via modern browsers (Chrome, Firefox, Safari, Edge)
+### Implementation Service Requirements
+- **Target Deployment:** Custom VPS instances with dedicated resources per client
 - **Browser/OS Support:** Modern browsers with ES2020+ support, responsive design for mobile/tablet/desktop
-- **Performance Requirements:** Sub-200ms response times, 99.9% uptime, support for 100+ concurrent clients per instance
+- **Performance Requirements:** Sub-200ms response times, 99.9% uptime per client instance, dedicated resource allocation
 
-### Technology Preferences
-- **Frontend:** Next.js 15 + React 19 + TypeScript + shadcn/ui + Tailwind CSS
+### Technology Stack for Implementation
+- **Frontend:** Next.js 15 + React 19 + TypeScript + shadcn/ui + Tailwind CSS (customized per client)
 - **Backend:** FastAPI + SQLModel + PostgreSQL + Agno framework for AI agents
-- **Database:** PostgreSQL with proper indexing, potential pgvector extension for future agents
-- **Hosting/Infrastructure:** Single-tenant VPS deployment via Docker Compose on Ubuntu Server
+- **Database:** PostgreSQL with client-specific schemas and proper indexing
+- **Infrastructure:** Dedicated VPS per client via automated Docker Compose deployment on Ubuntu Server
+- **Deployment Automation:** Terraform for provisioning, Ansible for configuration, custom scripts for branding
 
-### Architecture Considerations
-- **Repository Structure:** Vertical slice architecture organized by features, co-located tests
-- **Service Architecture:** Single-tenant microservices with agent independence via shared database communication
-- **Integration Requirements:** Agno framework integration, OAuth2 + JWT authentication, Celery + Redis for future async processing
-- **Security/Compliance:** Single-tenant data isolation, 2FA authentication, input validation with Zod/Pydantic, audit logging
+### Implementation Architecture
+- **Deployment Structure:** Template-based architecture with client-specific customization layers
+- **Service Architecture:** Single-tenant instances with dedicated resources and custom branding per deployment
+- **Automation Requirements:** Terraform/Ansible infrastructure automation, custom branding injection, automated SSL/DNS setup
+- **Security/Compliance:** Complete data isolation per client, custom authentication configuration, dedicated backup systems, audit logging per client
 
 **Development Philosophy Integration:**
 - **KISS Principle:** Simple solutions over complex ones, direct database communication between agents
@@ -259,61 +269,63 @@ A business automation platform that feels like a custom-built solution but deplo
 
 **Key Technical Decisions:**
 - **Agno over LangGraph:** 10,000x faster agent instantiation, 50x less memory usage
-- **Single-tenant over Multi-tenant:** Higher infrastructure costs but superior security and customization
-- **PostgreSQL over NoSQL:** ACID compliance for client data, structured relationships
-- **Docker Compose over Kubernetes:** Simpler deployment model appropriate for single-tenant architecture
+- **Custom Implementation over SaaS:** Higher service value but complete client customization and dedicated resources
+- **PostgreSQL over NoSQL:** ACID compliance for client data, structured relationships, reliable backup/recovery
+- **Docker Compose over Kubernetes:** Simpler per-client deployment model with easier customization and management
+- **Automated Deployment over Manual:** Semi-automated scripts for consistent, repeatable client implementations
 
 ---
 
 ## Constraints & Assumptions
 
 ### Constraints
-- **Budget:** SMB-focused pricing model requires cost-effective development and deployment approach
-- **Timeline:** MVP development timeline constrained by single-tenant architecture complexity and Agno framework integration learning curve
-- **Resources:** Development team must have or acquire expertise in modern Python/TypeScript stack and AI agent frameworks
-- **Technical:** Single-tenant model increases infrastructure costs per client but provides necessary security and customization capabilities
+- **Service Delivery:** Custom implementation model requires 3-4 week delivery timeline per client
+- **Resource Scaling:** Team capacity limits concurrent implementations to 5-8 projects simultaneously
+- **Technical Expertise:** Implementation team must master automation scripts, VPS management, and custom branding systems
+- **Infrastructure Costs:** Dedicated VPS per client increases operational costs but enables premium pricing model
+- **Quality Control:** Each implementation requires thorough testing and validation before client handover
 
 ### Key Assumptions
-- **Market Demand:** SMBs are willing to pay premium ($833/month) for autonomous AI agent capabilities over traditional automation tools
-- **Technical Adoption:** SMB target market has sufficient technical sophistication to deploy and manage VPS-based solutions
-- **Agent Value Proposition:** Single Client Management Agent provides sufficient value to justify platform investment and demonstrate multi-agent potential
-- **Framework Maturity:** Agno framework provides stable, production-ready foundation despite being newer than alternatives
-- **Competitive Landscape:** Current market lacks integrated multi-agent solutions accessible to SMB segment
-- **Development Capability:** Team can successfully integrate Agno framework and build production-ready AI agents within timeline
-- **Scalability Model:** Single-tenant architecture can scale economically as customer base grows
-- **User Experience:** White-label customization and professional branding significantly impact SMB buying decisions
-- **Data Security:** Single-tenant isolation is essential requirement for SMB trust and adoption
-- **Technology Stack:** Chosen technologies (Next.js 15, React 19, FastAPI, Agno) provide stable foundation for rapid development
+- **Market Demand:** Growing businesses are willing to pay premium ($2K/month + setup fees) for custom-implemented AI automation over generic SaaS tools
+- **Service Model Acceptance:** Target market prefers managed implementation service over self-deployment options
+- **Value Proposition:** Custom branding and dedicated infrastructure provide sufficient differentiation to justify premium pricing
+- **Implementation Capability:** Team can deliver consistent, high-quality custom implementations within 3-4 week timeline
+- **Framework Maturity:** Agno framework provides stable, production-ready foundation for client implementations
+- **Automation Effectiveness:** Semi-automated deployment scripts can reduce implementation time while maintaining customization quality
+- **Client Relationship:** Ongoing managed service model creates sustainable recurring revenue and client relationships
+- **Competitive Advantage:** Custom implementation approach provides significant differentiation from generic SaaS competitors
+- **Operational Scaling:** Implementation process can be standardized and scaled to handle 25+ clients annually
+- **Technology Reliability:** Chosen technology stack provides stable foundation for production client deployments
 
 ---
 
 ## Risks & Open Questions
 
 ### Key Risks
-- **Technology Risk - Agno Framework:** While mature with 31.1k stars and 81 releases, integration complexity and team learning curve could impact development timeline
-- **Market Risk - SMB Price Sensitivity:** SMBs may not be willing to pay $833/month for automation, especially for a single-agent MVP
-- **Technical Risk - Single-Tenant Scaling:** Infrastructure costs may become prohibitive as customer base grows, affecting profitability
-- **Adoption Risk - Technical Complexity:** SMB target market may lack technical capability to deploy and manage VPS-based solutions
-- **Competitive Risk - Market Response:** Established players (Zapier, Microsoft Power Platform) could quickly add AI agent capabilities
-- **Development Risk - Team Capability:** Learning curve for Agno framework and AI agent development may extend timeline significantly
-- **User Experience Risk - Agent Value:** Single Client Management Agent may not provide sufficient differentiation to justify platform switch
+- **Implementation Capacity Risk:** Limited team capacity may create bottlenecks with multiple concurrent client implementations
+- **Service Delivery Risk:** Complex custom implementations may exceed 3-4 week timeline, affecting client satisfaction and profitability
+- **Technology Integration Risk:** Agno framework integration complexity could impact implementation quality or timeline
+- **Market Acceptance Risk:** Target market may resist premium pricing for custom implementation vs. standard SaaS solutions
+- **Operational Scaling Risk:** Standardizing custom implementation process while maintaining quality and customization
+- **Client Support Risk:** Managing ongoing support for multiple custom VPS deployments may overwhelm team resources
+- **Competitive Response Risk:** Established players may offer similar custom implementation services with larger teams and resources
 
 ### Open Questions
-- What is the actual willingness to pay for AI agent automation in the SMB segment?
-- How technically sophisticated is our target SMB market for VPS deployment and management?
-- What are the real infrastructure costs per client at different scale levels?
-- How stable and production-ready is the Agno framework for commercial applications?
-- What specific client management pain points does the AI agent solve that traditional CRM doesn't?
-- How will we handle customer support for both the platform and the underlying VPS infrastructure?
-- What are the compliance requirements (GDPR, CCPA, etc.) for client data management in different markets?
+- What is the actual willingness to pay for custom implementation services in the target market segment?
+- How much customization vs. standardization can be achieved while maintaining 3-4 week implementation timeline?
+- What are the real operational costs of managing multiple client VPS instances at scale?
+- How can we effectively standardize the custom implementation process without losing differentiation value?
+- What level of ongoing support and maintenance will clients expect for their dedicated instances?
+- How will we handle compliance requirements (GDPR, CCPA, etc.) across different client industries and geographies?
+- What is the optimal team structure and capacity for scaling to 25+ concurrent client implementations?
 
 ### Areas Needing Further Research
-- **Competitive Analysis:** Detailed analysis of existing SMB automation solutions and their AI capabilities
-- **Market Validation:** Direct SMB interviews about AI agent automation needs and price sensitivity
-- **Technical Validation:** Agno framework proof-of-concept for Client Management Agent
-- **Infrastructure Costing:** Detailed analysis of single-tenant deployment costs at scale
-- **User Experience Research:** SMB user journey mapping for platform deployment and adoption
-- **Compliance Research:** Legal and regulatory requirements for client data management platform
+- **Custom Implementation Market Analysis:** Research existing custom implementation service providers and their pricing models
+- **Target Market Validation:** Direct interviews with 50-500 employee businesses about custom technology implementation preferences
+- **Service Delivery Optimization:** Proof-of-concept implementations to validate 3-4 week timeline and identify bottlenecks
+- **Operational Cost Analysis:** Detailed analysis of VPS, support, and implementation costs at different client scales
+- **Implementation Process Standardization:** Research optimal balance between customization and standardized delivery processes
+- **Client Success Metrics:** Define and validate key success indicators for custom implementation projects
 
 ---
 
@@ -359,6 +371,7 @@ This project brief is based on comprehensive technical and architectural analysi
 - **React:** https://github.com/facebook/react - JavaScript library for building user interfaces
 - **TypeScript:** https://github.com/microsoft/TypeScript - JavaScript with syntax for static types
 - **shadcn/ui:** https://github.com/shadcn-ui/ui - Reusable and customizable React components
+- **Tailwind CSS:** https://github.com/tailwindlabs/tailwindcss - Utility-first CSS framework for rapid UI development
 
 **Server and Proxy:**
 - **Caddy:** https://github.com/caddyserver/caddy - Fast and extensible web server with automatic HTTPS
@@ -371,9 +384,11 @@ This project brief is based on comprehensive technical and architectural analysi
 **Testing:**
 - **pytest:** https://github.com/pytest-dev/pytest - Testing framework for Python
 
-**Containerization and Deploy:**
+**Containerization and Infrastructure:**
 - **Docker:** https://github.com/docker/docker-ce - Platform for developing, shipping, and running applications in containers
 - **Docker Compose:** https://github.com/docker/compose - Tool for defining and running multi-container Docker applications
+- **Terraform:** https://github.com/hashicorp/terraform - Infrastructure as code tool for building, changing, and versioning infrastructure
+- **Ansible:** https://github.com/ansible/ansible - IT automation platform for configuration management, deployment, and orchestration
 
 **Authentication and Security:**
 - **PyJWT:** https://github.com/jpadilla/pyjwt - Python JWT implementation
@@ -386,23 +401,23 @@ This project brief is based on comprehensive technical and architectural analysi
 
 ### Immediate Actions
 
-1. **Market Validation Research:** Conduct interviews with 10-15 SMBs to validate pricing assumptions and Client Management Agent value proposition
-2. **Agno Framework Proof-of-Concept:** Build basic Client Management Agent prototype to validate integration complexity and development approach
-3. **Infrastructure Cost Analysis:** Calculate actual single-tenant deployment costs across different VPS providers and scale scenarios
-4. **Team Capability Assessment:** Evaluate current team skills against required technology stack and identify training needs
-5. **Competitive Analysis Deep-dive:** Research existing SMB automation solutions and their AI agent capabilities
-6. **Technical Architecture Refinement:** Create detailed system architecture based on MVP scope and Agno framework capabilities
+1. **Custom Implementation Market Research:** Conduct interviews with 15-20 target businesses about custom implementation preferences and pricing acceptance
+2. **Service Delivery Proof-of-Concept:** Complete end-to-end implementation simulation to validate timeline and identify process bottlenecks
+3. **Automation Scripts Development:** Build and test Terraform/Ansible scripts for consistent VPS provisioning and deployment
+4. **Team Structure Planning:** Define roles and capacity needed for 5-8 concurrent implementations (Solution Architects, DevOps Engineers, Support)
+5. **Implementation Process Documentation:** Create standardized workflows, checklists, and quality gates for consistent service delivery
+6. **Pricing Model Validation:** Test pricing assumptions ($3.5K setup + $2K monthly) with target market through pilot implementations
 
 ### PM Handoff
 
-This Project Brief provides the full context for **IAM Dashboard**. Please start in 'PRD Generation Mode', review the brief thoroughly to work with the user to create the PRD section by section as the template indicates, asking for any necessary clarification or suggesting improvements.
+This Project Brief provides the full context for **IAM Dashboard Custom Implementation Service**. Please start in 'PRD Generation Mode', review the brief thoroughly to work with the user to create the PRD section by section as the template indicates, asking for any necessary clarification or suggesting improvements.
 
 **Key Handoff Points:**
-- **MVP Focus:** Single Client Management Agent with complete CRUD, SSN validation, and white-label capabilities
-- **Target Market:** SMBs (10-200 employees, $500K-$25M revenue) seeking AI agent automation
-- **Critical Assumptions:** $833/month pricing acceptance, SMB technical sophistication, single-agent value demonstration
-- **Technology Foundation:** Agno framework validated as mature and production-ready
-- **Success Criteria:** 30-day ROI, 1-hour deployment, complete white-label customization
+- **Service Model:** Custom implementation with complete branding, dedicated VPS, and managed service approach
+- **Target Market:** Growing businesses (50-500 employees, $5M-$100M revenue) seeking custom AI automation solutions
+- **Critical Assumptions:** $3.5K setup + $2K monthly pricing acceptance, 3-4 week implementation timeline, managed service preference
+- **Technology Foundation:** Agno framework + automated deployment scripts for consistent, customizable implementations
+- **Success Criteria:** 3-4 week delivery, complete visual customization, 99.9% uptime, ongoing managed service
 
 ---
 
