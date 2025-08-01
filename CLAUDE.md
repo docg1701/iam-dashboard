@@ -583,16 +583,16 @@ npm run build
 ### Docker Development
 ```bash
 # Build and run all services
-docker-compose up --build
+docker compose up --build
 
 # Run specific service
-docker-compose up backend
+docker compose up backend
 
 # View logs
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Database shell
-docker-compose exec postgres psql -U postgres -d dashboard
+docker compose exec postgres psql -U postgres -d dashboard
 ```
 
 ### Deployment Automation
