@@ -712,30 +712,9 @@ Before any merge to main:
 - [ ] Performance benchmarks meet requirements
 - [ ] Documentation is updated
 
-## 📚 Resources & References
-
-### Framework Documentation
-- [FastAPI](https://fastapi.tiangolo.com/): Backend framework
-- [Next.js 15](https://nextjs.org/docs): Frontend framework
-- [Agno](https://github.com/agno-agi/agno): Multi-agent framework
-- [shadcn/ui](https://ui.shadcn.com/): Component library
-- [SQLModel](https://sqlmodel.tiangolo.com/): Database ORM
-- [UV](https://github.com/astral-sh/uv): Python package manager
-- [Ruff](https://github.com/astral-sh/ruff): Python linter and formatter
-- [TanStack Query](https://tanstack.com/query): Server state management
-- [React Hook Form](https://react-hook-form.com/): Form handling
-- [Zod](https://zod.dev/): TypeScript-first schema validation
-
-### Best Practices
-- [12-Factor App](https://12factor.net/): SaaS application principles
-- [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html): Software design
-- [API Design Guidelines](https://github.com/microsoft/api-guidelines): RESTful API best practices
-- [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/): Testing best practices
-- [Vertical Slice Architecture](https://jimmybogard.com/vertical-slice-architecture/): Feature-based organization
-
 ---
 
-**Last Updated**: January 2025  
+**Last Updated**: Agosto 2025  
 **Project**: Multi-Agent IAM Dashboard  
 **Language**: 100% English (native)  
 **Architecture**: Single-Tenant SaaS with Independent Agents
