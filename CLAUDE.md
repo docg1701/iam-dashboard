@@ -9,6 +9,14 @@ This file provides comprehensive guidance to Claude Code when working on this fu
 - **NEVER read, list, or modify** files in `.secret-vault/`
 - This restriction is permanent and non-negotiable
 
+### Language Requirements
+- **ALL code, comments, documentation, and technical content MUST be in native English**
+- **ALL variable names, function names, class names MUST be in English**
+- **ALL commit messages, pull request descriptions, and technical discussions MUST be in English**
+- **ALL API endpoints, database schemas, and system logs MUST be in English**
+- **User Interface (UI) content MUST be in Portuguese (Brazil)** for ease of use
+- **Only user-facing labels, messages, and interface text should be in Portuguese**
+
 ## 🛠️ MCP (Model Context Protocol) Tools
 
 ### MCP Context7 - Documentation & Code Search
