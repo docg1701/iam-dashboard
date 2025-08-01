@@ -1,19 +1,29 @@
 """Unit tests for admin API endpoints."""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
 from app.api.admin import router as admin_router
+from app.api.middleware.auth_middleware import (
+    get_current_user,
+    require_admin,
+    require_sysadmin,
+)
 from app.containers import Container
 
 
 @pytest.fixture
 def mock_agent_manager():
     """Mock AgentManager for testing."""
-    return MagicMock()
+    manager = MagicMock()
+    # Make async methods return coroutines
+    manager.enable_agent = AsyncMock(return_value=True)
+    manager.disable_agent = AsyncMock(return_value=True)
+    manager.health_check = AsyncMock(return_value=True)
+    return manager
 
 
 @pytest.fixture
@@ -37,13 +47,89 @@ def container():
 
 
 @pytest.fixture
-def client(mock_agent_manager, container):
-    """Create test client with mocked dependencies."""
-    # Create a clean FastAPI app for testing
+def sysadmin_user():
+    """Mock SYSADMIN user."""
+    return {"user_id": "123", "username": "sysadmin", "role": "sysadmin"}
+
+
+@pytest.fixture
+def admin_user():
+    """Mock ADMIN_USER user."""
+    return {"user_id": "124", "username": "admin", "role": "admin_user"}
+
+
+@pytest.fixture
+def common_user():
+    """Mock COMMON_USER user."""
+    return {"user_id": "125", "username": "user", "role": "common_user"}
+
+
+def create_authenticated_client(mock_agent_manager, container, user_role="sysadmin"):
+    """Create test client with proper authentication mocking."""
     app = FastAPI()
+
+    # Mock users for different roles
+    def mock_sysadmin_user():
+        return {"user_id": "123", "username": "sysadmin", "role": "sysadmin"}
+
+    def mock_admin_user():
+        return {"user_id": "124", "username": "admin", "role": "admin_user"}
+
+    def mock_common_user():
+        return {"user_id": "125", "username": "user", "role": "common_user"}
+
+    # Choose the appropriate user mock
+    user_mocks = {
+        "sysadmin": mock_sysadmin_user,
+        "admin_user": mock_admin_user,
+        "common_user": mock_common_user
+    }
+
+    current_user_mock = user_mocks.get(user_role, mock_sysadmin_user)
+
+    # Override authentication dependencies
+    app.dependency_overrides[get_current_user] = current_user_mock
+
+    # Override role-based dependencies based on user role
+    if user_role in ["sysadmin", "admin_user"]:
+        app.dependency_overrides[require_admin()] = current_user_mock
+    if user_role == "sysadmin":
+        app.dependency_overrides[require_sysadmin()] = current_user_mock
+
     app.include_router(admin_router)
 
     # Override the container provider
+    container.agent_manager.override(mock_agent_manager)
+    container.wire(modules=["app.api.admin"])
+
+    return TestClient(app), container
+
+
+@pytest.fixture
+def client(mock_agent_manager, container):
+    """Create test client with SYSADMIN authentication by default."""
+    test_client, test_container = create_authenticated_client(mock_agent_manager, container, "sysadmin")
+
+    with test_client as client:
+        yield client
+
+    # Clean up
+    test_container.unwire()
+    test_container.reset_override()
+
+
+@pytest.fixture
+def authorized_client(mock_agent_manager, container, sysadmin_user):
+    """Create test client with SYSADMIN authorization."""
+    app = FastAPI()
+
+    # Override auth dependencies to return mocked user
+    app.dependency_overrides[get_current_user] = lambda: sysadmin_user
+    app.dependency_overrides[require_admin()] = lambda: sysadmin_user
+    app.dependency_overrides[require_sysadmin()] = lambda: sysadmin_user
+
+    app.include_router(admin_router)
+
     container.agent_manager.override(mock_agent_manager)
     container.wire(modules=["app.api.admin"])
 
@@ -59,7 +145,7 @@ class TestAgentListing:
     """Test agent listing endpoints."""
 
     def test_list_all_agents_success(
-        self, client, mock_agent_manager, mock_agent_metadata
+        self, authorized_client, mock_agent_manager, mock_agent_metadata
     ):
         """Test successfully listing all agents."""
         # Setup mocks
@@ -68,7 +154,7 @@ class TestAgentListing:
         }
 
         # Make request
-        response = client.get("/v1/admin/agents")
+        response = authorized_client.get("/v1/admin/agents")
 
         # Assertions
         assert response.status_code == status.HTTP_200_OK
@@ -79,13 +165,13 @@ class TestAgentListing:
         assert data[0]["status"] == "active"
         assert data[0]["capabilities"] == ["test_capability"]
 
-    def test_list_all_agents_empty(self, client, mock_agent_manager):
+    def test_list_all_agents_empty(self, authorized_client, mock_agent_manager):
         """Test listing agents when no agents exist."""
         # Setup mocks
         mock_agent_manager.get_all_agents_metadata.return_value = {}
 
         # Make request
-        response = client.get("/v1/admin/agents")
+        response = authorized_client.get("/v1/admin/agents")
 
         # Assertions
         assert response.status_code == status.HTTP_200_OK
@@ -129,7 +215,7 @@ class TestAgentOperations:
     def test_start_agent_success(self, client, mock_agent_manager):
         """Test successfully starting an agent."""
         # Setup mocks
-        mock_agent_manager.enable_agent.return_value = True
+        mock_agent_manager.enable_agent = AsyncMock(return_value=True)
 
         # Make request
         response = client.post("/v1/admin/agents/test_agent/start")
@@ -144,7 +230,7 @@ class TestAgentOperations:
     def test_start_agent_failure(self, client, mock_agent_manager):
         """Test starting an agent that fails to start."""
         # Setup mocks
-        mock_agent_manager.enable_agent.return_value = False
+        mock_agent_manager.enable_agent = AsyncMock(return_value=False)
 
         # Make request
         response = client.post("/v1/admin/agents/test_agent/start")
@@ -159,7 +245,7 @@ class TestAgentOperations:
     def test_stop_agent_success(self, client, mock_agent_manager):
         """Test successfully stopping an agent."""
         # Setup mocks
-        mock_agent_manager.disable_agent.return_value = True
+        mock_agent_manager.disable_agent = AsyncMock(return_value=True)
 
         # Make request
         response = client.post("/v1/admin/agents/test_agent/stop")
@@ -174,7 +260,7 @@ class TestAgentOperations:
     def test_stop_agent_failure(self, client, mock_agent_manager):
         """Test stopping an agent that fails to stop."""
         # Setup mocks
-        mock_agent_manager.disable_agent.return_value = False
+        mock_agent_manager.disable_agent = AsyncMock(return_value=False)
 
         # Make request
         response = client.post("/v1/admin/agents/test_agent/stop")
@@ -189,8 +275,8 @@ class TestAgentOperations:
     def test_restart_agent_success(self, client, mock_agent_manager):
         """Test successfully restarting an agent."""
         # Setup mocks
-        mock_agent_manager.disable_agent.return_value = True
-        mock_agent_manager.enable_agent.return_value = True
+        mock_agent_manager.disable_agent = AsyncMock(return_value=True)
+        mock_agent_manager.enable_agent = AsyncMock(return_value=True)
 
         # Make request
         response = client.post("/v1/admin/agents/test_agent/restart")
@@ -205,7 +291,7 @@ class TestAgentOperations:
     def test_restart_agent_stop_failure(self, client, mock_agent_manager):
         """Test restarting an agent when stop fails."""
         # Setup mocks
-        mock_agent_manager.disable_agent.return_value = False
+        mock_agent_manager.disable_agent = AsyncMock(return_value=False)
 
         # Make request
         response = client.post("/v1/admin/agents/test_agent/restart")
@@ -220,8 +306,8 @@ class TestAgentOperations:
     def test_restart_agent_start_failure(self, client, mock_agent_manager):
         """Test restarting an agent when start fails."""
         # Setup mocks
-        mock_agent_manager.disable_agent.return_value = True
-        mock_agent_manager.enable_agent.return_value = False
+        mock_agent_manager.disable_agent = AsyncMock(return_value=True)
+        mock_agent_manager.enable_agent = AsyncMock(return_value=False)
 
         # Make request
         response = client.post("/v1/admin/agents/test_agent/restart")
@@ -242,7 +328,7 @@ class TestHealthChecks:
     ):
         """Test successful agent health check."""
         # Setup mocks
-        mock_agent_manager.health_check.return_value = True
+        mock_agent_manager.health_check = AsyncMock(return_value=True)
         mock_agent_manager.get_agent_metadata.return_value = mock_agent_metadata
 
         # Make request
@@ -259,7 +345,7 @@ class TestHealthChecks:
     def test_check_agent_health_not_found(self, client, mock_agent_manager):
         """Test health check for non-existent agent."""
         # Setup mocks
-        mock_agent_manager.health_check.return_value = False
+        mock_agent_manager.health_check = AsyncMock(return_value=False)
         mock_agent_manager.get_agent_metadata.return_value = None
 
         # Make request
@@ -277,7 +363,7 @@ class TestHealthChecks:
             "agent1": mock_agent_metadata,
             "agent2": mock_agent_metadata,
         }
-        mock_agent_manager.health_check.return_value = True
+        mock_agent_manager.health_check = AsyncMock(return_value=True)
 
         # Make request
         response = client.get("/v1/admin/system/health")
@@ -320,7 +406,7 @@ class TestHealthChecks:
         mock_agent_manager.get_all_agents_metadata.return_value = {
             "agent1": mock_agent_metadata
         }
-        mock_agent_manager.health_check.return_value = False
+        mock_agent_manager.health_check = AsyncMock(return_value=False)
 
         # Make request
         response = client.get("/v1/admin/system/health")
@@ -345,8 +431,8 @@ class TestSystemOperations:
             "agent1": mock_agent_metadata,
             "agent2": mock_agent_metadata,
         }
-        mock_agent_manager.disable_agent.return_value = True
-        mock_agent_manager.enable_agent.return_value = True
+        mock_agent_manager.disable_agent = AsyncMock(return_value=True)
+        mock_agent_manager.enable_agent = AsyncMock(return_value=True)
 
         # Make request
         response = client.post("/v1/admin/system/restart-all")
@@ -369,8 +455,8 @@ class TestSystemOperations:
             "agent2": mock_agent_metadata,
         }
         # First agent succeeds, second fails to stop
-        mock_agent_manager.disable_agent.side_effect = [True, False]
-        mock_agent_manager.enable_agent.return_value = True
+        mock_agent_manager.disable_agent = AsyncMock(side_effect=[True, False])
+        mock_agent_manager.enable_agent = AsyncMock(return_value=True)
 
         # Make request
         response = client.post("/v1/admin/system/restart-all")
@@ -429,3 +515,155 @@ class TestErrorHandling:
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         data = response.json()
         assert "Error starting agent" in data["detail"]
+
+
+class TestAdminAPIAuthorization:
+    """Test authorization for admin API endpoints."""
+
+    def test_list_agents_requires_admin_access(self, mock_agent_manager, container):
+        """Test that listing agents requires admin access."""
+        app = FastAPI()
+
+        def mock_common_user():
+            return {"user_id": "125", "username": "user", "role": "common_user"}
+
+        # Override to return common user
+        app.dependency_overrides[get_current_user] = mock_common_user
+        app.include_router(admin_router)
+
+        container.agent_manager.override(mock_agent_manager)
+        container.wire(modules=["app.api.admin"])
+
+        with TestClient(app) as client:
+            response = client.get("/v1/admin/agents")
+            # Should be forbidden for common user
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_admin_user_can_list_agents(self, mock_agent_manager, container, mock_agent_metadata):
+        """Test that ADMIN_USER can list agents."""
+        app = FastAPI()
+
+        def mock_admin_user():
+            return {"user_id": "124", "username": "admin", "role": "admin_user"}
+
+        app.dependency_overrides[get_current_user] = mock_admin_user
+        app.dependency_overrides[require_admin()] = mock_admin_user
+        app.include_router(admin_router)
+
+        container.agent_manager.override(mock_agent_manager)
+        container.wire(modules=["app.api.admin"])
+
+        mock_agent_manager.get_all_agents_metadata.return_value = {"test": mock_agent_metadata}
+
+        with TestClient(app) as client:
+            response = client.get("/v1/admin/agents")
+            assert response.status_code == status.HTTP_200_OK
+
+    def test_sysadmin_operations_require_sysadmin_access(self, mock_agent_manager, container):
+        """Test that SYSADMIN operations require SYSADMIN access."""
+        app = FastAPI()
+
+        def mock_admin_user():
+            return {"user_id": "124", "username": "admin", "role": "admin_user"}
+
+        app.dependency_overrides[get_current_user] = mock_admin_user
+        app.dependency_overrides[require_admin()] = mock_admin_user
+        app.include_router(admin_router)
+
+        container.agent_manager.override(mock_agent_manager)
+        container.wire(modules=["app.api.admin"])
+
+        with TestClient(app) as client:
+            # ADMIN_USER should not be able to start agents (SYSADMIN only)
+            response = client.post("/v1/admin/agents/test_agent/start")
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+            # ADMIN_USER should not be able to stop agents (SYSADMIN only)
+            response = client.post("/v1/admin/agents/test_agent/stop")
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+            # ADMIN_USER should not be able to restart all agents (SYSADMIN only)
+            response = client.post("/v1/admin/system/restart-all")
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_sysadmin_can_perform_all_operations(self, mock_agent_manager, container, mock_agent_metadata):
+        """Test that SYSADMIN can perform all operations."""
+        app = FastAPI()
+
+        def mock_sysadmin_user():
+            return {"user_id": "123", "username": "sysadmin", "role": "sysadmin"}
+
+        app.dependency_overrides[get_current_user] = mock_sysadmin_user
+        app.dependency_overrides[require_admin()] = mock_sysadmin_user
+        app.dependency_overrides[require_sysadmin()] = mock_sysadmin_user
+        app.include_router(admin_router)
+
+        container.agent_manager.override(mock_agent_manager)
+        container.wire(modules=["app.api.admin"])
+
+        # Setup mocks
+        mock_agent_manager.enable_agent = AsyncMock(return_value=True)
+        mock_agent_manager.disable_agent = AsyncMock(return_value=True)
+        mock_agent_manager.get_all_agents_metadata.return_value = {"test": mock_agent_metadata}
+
+        with TestClient(app) as client:
+            # SYSADMIN should be able to start agents
+            response = client.post("/v1/admin/agents/test_agent/start")
+            assert response.status_code == status.HTTP_200_OK
+
+            # SYSADMIN should be able to stop agents
+            response = client.post("/v1/admin/agents/test_agent/stop")
+            assert response.status_code == status.HTTP_200_OK
+
+            # SYSADMIN should be able to restart all agents
+            response = client.post("/v1/admin/system/restart-all")
+            assert response.status_code == status.HTTP_200_OK
+
+    def test_configuration_operations_require_sysadmin(self, mock_agent_manager, container):
+        """Test that configuration operations require SYSADMIN access."""
+        app = FastAPI()
+
+        def mock_admin_user():
+            return {"user_id": "124", "username": "admin", "role": "admin_user"}
+
+        app.dependency_overrides[get_current_user] = mock_admin_user
+        app.dependency_overrides[require_admin()] = mock_admin_user
+        app.include_router(admin_router)
+
+        container.agent_manager.override(mock_agent_manager)
+        container.wire(modules=["app.api.admin"])
+
+        with TestClient(app) as client:
+            # Configuration endpoints should require SYSADMIN
+            response = client.get("/v1/admin/agents/test_agent/config")
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+            response = client.put("/v1/admin/agents/test_agent/config",
+                                json={"config": {"test": "value"}})
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+            response = client.post("/v1/admin/agents/test_agent/config/validate",
+                                 json={"config": {"test": "value"}})
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+            response = client.post("/v1/admin/agents/test_agent/config/rollback")
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_unauthenticated_access_denied(self, mock_agent_manager, container):
+        """Test that unauthenticated requests are denied."""
+        app = FastAPI()
+        app.include_router(admin_router)
+
+        container.agent_manager.override(mock_agent_manager)
+        container.wire(modules=["app.api.admin"])
+
+        with TestClient(app) as client:
+            # All endpoints should require authentication (403 because dependencies fail)
+            response = client.get("/v1/admin/agents")
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+            response = client.post("/v1/admin/agents/test/start")
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+
+            response = client.get("/v1/admin/system/health")
+            assert response.status_code == status.HTTP_403_FORBIDDEN

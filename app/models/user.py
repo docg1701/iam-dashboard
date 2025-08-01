@@ -4,7 +4,7 @@ import enum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Column, Enum, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, relationship
 
 from .base import TimestampedModel
 
@@ -37,7 +37,8 @@ class User(TimestampedModel):
     is_2fa_enabled = Column(Boolean, default=False, nullable=False)
 
     # Relationships
-    agent_executions: relationship = relationship("AgentExecution", back_populates="user")
+    agent_executions: Mapped[list["AgentExecution"]] = relationship("AgentExecution", back_populates="user")
+    questionnaire_drafts = relationship("QuestionnaireDraft", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:
         """String representation of User."""

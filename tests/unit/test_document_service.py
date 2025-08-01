@@ -2,7 +2,7 @@
 
 import hashlib
 import uuid
-from unittest.mock import AsyncMock, Mock, mock_open, patch
+from unittest.mock import AsyncMock, mock_open, patch
 
 import pytest
 

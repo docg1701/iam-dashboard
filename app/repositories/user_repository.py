@@ -64,6 +64,11 @@ class UserRepository:
         await self.session.delete(user)
         await self.session.commit()
 
+    async def get_all(self) -> list[User]:
+        """Get all users."""
+        result = await self.session.execute(select(User))
+        return list(result.scalars().all())
+
     async def is_username_taken(self, username: str) -> bool:
         """Check if a username is already taken."""
         user = await self.get_by_username(username)

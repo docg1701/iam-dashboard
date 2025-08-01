@@ -1,7 +1,7 @@
 """Unit tests for Questionnaire API endpoints."""
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -51,63 +51,53 @@ class TestQuestionnaireAPI:
             "medical_date": "16/06/2024",
         }
 
+    @patch("app.api.questionnaire.get_async_db")
+    @patch("app.api.questionnaire.ClientRepository")
+    @patch("app.api.questionnaire.ClientService")
+    @patch("app.containers.Container.agent_manager")
     def test_generate_questionnaire_success(
-        self, test_client, mock_client, valid_generate_request
+        self, mock_agent_manager, mock_client_service_class, mock_client_repo_class, mock_get_db,
+        test_client, mock_client, valid_generate_request
     ):
         """Test successful questionnaire generation endpoint."""
-        with pytest.MonkeyPatch().context() as mp:
-            # Mock dependencies
-            mock_client_service = AsyncMock()
-            mock_client_service.get_client_by_id.return_value = mock_client
+        # Mock database
+        mock_get_db.return_value = AsyncMock()
 
-            mock_questionnaire_service = AsyncMock()
-            mock_questionnaire_service.generate_questionnaire.return_value = {
-                "success": True,
-                "questionnaire": "Generated questionnaire content",
-                "context_chunks": 3,
-                "client_name": "Ana Costa",
-            }
+        # Mock repositories
+        mock_client_repo = AsyncMock()
+        mock_client_repo_class.return_value = mock_client_repo
 
-            # Mock the dependency injection
-            def mock_get_db():
-                yield AsyncMock()
+        # Mock services
+        mock_client_service = AsyncMock()
+        mock_client_service.get_client_by_id.return_value = mock_client
+        mock_client_service_class.return_value = mock_client_service
 
-            def mock_client_repo(db):
-                return AsyncMock()
+        # Mock agent
+        mock_agent = AsyncMock()
+        mock_agent.generate_questionnaire.return_value = {
+            "success": True,
+            "questionnaire": "Generated questionnaire content",
+            "context_chunks": 3,
+            "client_name": "Ana Costa",
+        }
 
-            def mock_chunk_repo(db):
-                return AsyncMock()
+        # Mock agent manager
+        mock_agent_manager.get_agent.return_value = mock_agent
+        mock_agent_manager.is_agent_active.return_value = True
 
-            def mock_client_service_factory(repo):
-                return mock_client_service
+        # Act
+        response = test_client.post(
+            "/v1/questionnaire/generate", json=valid_generate_request
+        )
 
-            def mock_questionnaire_service_factory(repo):
-                return mock_questionnaire_service
-
-            mp.setattr("app.api.questionnaire.get_async_db", mock_get_db)
-            mp.setattr("app.api.questionnaire.ClientRepository", mock_client_repo)
-            mp.setattr("app.api.questionnaire.DocumentChunkRepository", mock_chunk_repo)
-            mp.setattr(
-                "app.api.questionnaire.ClientService", mock_client_service_factory
-            )
-            mp.setattr(
-                "app.api.questionnaire.get_questionnaire_draft_service",
-                mock_questionnaire_service_factory,
-            )
-
-            # Act
-            response = test_client.post(
-                "/v1/questionnaire/generate", json=valid_generate_request
-            )
-
-            # Assert
-            assert response.status_code == 200
-            data = response.json()
-            assert data["success"] is True
-            assert data["questionnaire"] == "Generated questionnaire content"
-            assert data["context_chunks"] == 3
-            assert data["client_name"] == "Ana Costa"
-            assert "error" not in data or data["error"] is None
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert data["questionnaire"] == "Generated questionnaire content"
+        assert data["context_chunks"] == 3
+        assert data["client_name"] == "Ana Costa"
+        assert "error" not in data or data["error"] is None
 
     def test_generate_questionnaire_client_not_found(
         self, test_client, valid_generate_request

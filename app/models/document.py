@@ -10,7 +10,7 @@ from sqlalchemy.orm import relationship
 from .base import TimestampedModel
 
 if TYPE_CHECKING:
-    from .agent import AgentExecution
+    pass
 
 
 class DocumentType(str, Enum):
@@ -51,6 +51,9 @@ class Document(TimestampedModel):
 
     # Processing information
     task_id = Column(String(255), nullable=True)  # Agent processing ID
+    agent_execution_id = Column(
+        UUID(as_uuid=True), ForeignKey("agent_executions.execution_id"), nullable=True
+    )
     processed_at = Column(DateTime(timezone=True), nullable=True)
     error_message = Column(Text, nullable=True)
 
@@ -59,6 +62,7 @@ class Document(TimestampedModel):
 
     # Relationships
     client = relationship("Client", back_populates="documents")
+    agent_execution = relationship("AgentExecution", back_populates="processed_documents")
     chunks = relationship(
         "DocumentChunk", back_populates="document", cascade="all, delete-orphan"
     )

@@ -16,7 +16,7 @@ This guide provides comprehensive coverage for Redis integration in legal advoca
 pip install redis[hiredis]>=5.0.0  # Redis-py with C parser for performance
 pip install celery[redis]>=5.3.0   # Celery with Redis broker support
 pip install fastapi>=0.104.1       # Modern async web framework
-pip install nicegui>=1.4.0         # UI framework integration
+pip install nicegui>=2.21.0         # UI framework integration
 
 # Additional dependencies for legal document processing
 pip install redis-py-cluster        # For Redis cluster support

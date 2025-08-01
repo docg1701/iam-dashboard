@@ -99,6 +99,62 @@ class UserService:
         """Get a user by username."""
         return await self.user_repository.get_by_username(username)
 
+    async def get_all_users(self) -> list[User]:
+        """Get all users in the system."""
+        return await self.user_repository.get_all()
+
+    async def update_user(
+        self,
+        user_id: uuid.UUID,
+        username: str | None = None,
+        role: UserRole | None = None,
+        is_active: bool | None = None,
+        new_password: str | None = None,
+    ) -> User | None:
+        """Update an existing user."""
+        user = await self.user_repository.get_by_id(user_id)
+        if not user:
+            return None
+
+        # Update fields if provided
+        if username is not None:
+            # Check if username is taken by another user
+            existing_user = await self.user_repository.get_by_username(username)
+            if existing_user and existing_user.id != user.id:
+                raise ValueError(f"Username '{username}' is already taken")
+            user.username = username  # type: ignore[assignment]
+
+        if role is not None:
+            user.role = role  # type: ignore[assignment]
+
+        if is_active is not None:
+            user.is_active = is_active  # type: ignore[assignment]
+
+        if new_password is not None:
+            user.hashed_password = self.pwd_context.hash(new_password)  # type: ignore[assignment]
+
+        return await self.user_repository.update(user)
+
+    async def delete_user(self, user_id: uuid.UUID) -> bool:
+        """Delete a user by ID. Returns True if user was deleted, False if not found."""
+        user = await self.user_repository.get_by_id(user_id)
+        if not user:
+            return False
+
+        await self.user_repository.delete(user)
+        return True
+
+    async def reset_2fa(self, user_id: uuid.UUID) -> bool:
+        """Reset 2FA for a user by ID. Returns True if successful, False if user not found."""
+        user = await self.user_repository.get_by_id(user_id)
+        if not user:
+            return False
+
+        user.is_2fa_enabled = False  # type: ignore[assignment]
+        user.totp_secret = None  # type: ignore[assignment]
+        await self.user_repository.update(user)
+        return True
+
     def _generate_totp_secret(self) -> str:
         """Generate a random TOTP secret."""
         return pyotp.random_base32()

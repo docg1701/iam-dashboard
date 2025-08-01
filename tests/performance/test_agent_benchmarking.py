@@ -7,9 +7,7 @@ in Story 1.6 requirements (≤110% of baseline processing times).
 
 import time
 import uuid
-from pathlib import Path
-from typing import Dict, List
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -71,29 +69,29 @@ class TestPDFProcessingPerformance:
             "processing_summary": "Document processed successfully",
             "chunks_created": 5
         }
-        
+
         mock_agent_manager.return_value.get_agent.return_value = mock_pdf_agent
         mock_agent_manager.return_value.is_agent_active.return_value = True
 
         # Performance test parameters
         baseline_avg = baseline_metrics["pdf_processing"]["small_file"]["avg_time"]
         performance_threshold = baseline_avg * 1.1  # 110% of baseline
-        
+
         processing_times = []
-        
+
         # Run multiple tests to get average performance
         for i in range(5):
             client_id = str(uuid.uuid4())
-            
+
             start_time = time.time()
-            
+
             # Simulate document processing
             response = performance_client.post(
                 f"/documents/process/{client_id}",
                 files={"file": ("small_test.pdf", sample_pdf_files["small"], "application/pdf")},
                 data={"document_type": "simple"}
             )
-            
+
             end_time = time.time()
             processing_time = end_time - start_time
             processing_times.append(processing_time)
@@ -101,12 +99,12 @@ class TestPDFProcessingPerformance:
         # Calculate performance metrics
         avg_processing_time = sum(processing_times) / len(processing_times)
         max_processing_time = max(processing_times)
-        
+
         # Verify performance meets requirements
         # Note: In actual tests, this would measure real agent processing time
         # For now, we verify the test structure is correct
         assert len(processing_times) == 5
-        
+
         # Performance assertion (would be enabled when agents are fully operational)
         # assert avg_processing_time <= performance_threshold, \
         #     f"Average processing time {avg_processing_time:.2f}s exceeds threshold {performance_threshold:.2f}s"
@@ -124,32 +122,32 @@ class TestPDFProcessingPerformance:
             "processing_summary": "Medium document processed successfully",
             "chunks_created": 15
         }
-        
+
         mock_agent_manager.return_value.get_agent.return_value = mock_pdf_agent
         mock_agent_manager.return_value.is_agent_active.return_value = True
 
         baseline_avg = baseline_metrics["pdf_processing"]["medium_file"]["avg_time"]
         performance_threshold = baseline_avg * 1.1
-        
+
         processing_times = []
-        
+
         for i in range(3):  # Fewer iterations for larger files
             client_id = str(uuid.uuid4())
-            
+
             start_time = time.time()
-            
+
             response = performance_client.post(
                 f"/documents/process/{client_id}",
                 files={"file": ("medium_test.pdf", sample_pdf_files["medium"], "application/pdf")},
                 data={"document_type": "simple"}
             )
-            
+
             end_time = time.time()
             processing_time = end_time - start_time
             processing_times.append(processing_time)
 
         avg_processing_time = sum(processing_times) / len(processing_times)
-        
+
         # Verify test structure
         assert len(processing_times) == 3
         assert all(t > 0 for t in processing_times)
@@ -167,27 +165,27 @@ class TestPDFProcessingPerformance:
             "processing_summary": "Large document processed successfully",
             "chunks_created": 50
         }
-        
+
         mock_agent_manager.return_value.get_agent.return_value = mock_pdf_agent
         mock_agent_manager.return_value.is_agent_active.return_value = True
 
         baseline_avg = baseline_metrics["pdf_processing"]["large_file"]["avg_time"]
         performance_threshold = baseline_avg * 1.1
-        
+
         # Single test for large files to avoid long test runtime
         client_id = str(uuid.uuid4())
-        
+
         start_time = time.time()
-        
+
         response = performance_client.post(
             f"/documents/process/{client_id}",
             files={"file": ("large_test.pdf", sample_pdf_files["large"], "application/pdf")},
             data={"document_type": "complex"}
         )
-        
+
         end_time = time.time()
         processing_time = end_time - start_time
-        
+
         # Verify test executed
         assert processing_time > 0
 
@@ -208,20 +206,20 @@ class TestQuestionnaireGenerationPerformance:
             "context_chunks": 5,
             "generation_time": 5.2
         }
-        
+
         mock_agent_manager.return_value.get_agent.return_value = mock_questionnaire_agent
         mock_agent_manager.return_value.is_agent_active.return_value = True
 
         baseline_avg = baseline_metrics["questionnaire_generation"]["simple"]["avg_time"]
         performance_threshold = baseline_avg * 1.1
-        
+
         generation_times = []
-        
+
         for i in range(5):
             client_id = str(uuid.uuid4())
-            
+
             start_time = time.time()
-            
+
             response = performance_client.post(
                 "/questionnaire/generate",
                 json={
@@ -230,13 +228,13 @@ class TestQuestionnaireGenerationPerformance:
                     "reference_date": "2025-01-28"
                 }
             )
-            
+
             end_time = time.time()
             generation_time = end_time - start_time
             generation_times.append(generation_time)
 
         avg_generation_time = sum(generation_times) / len(generation_times)
-        
+
         # Verify test structure
         assert len(generation_times) == 5
         assert all(t > 0 for t in generation_times)
@@ -254,20 +252,20 @@ class TestQuestionnaireGenerationPerformance:
             "context_chunks": 15,
             "generation_time": 14.8
         }
-        
+
         mock_agent_manager.return_value.get_agent.return_value = mock_questionnaire_agent
         mock_agent_manager.return_value.is_agent_active.return_value = True
 
         baseline_avg = baseline_metrics["questionnaire_generation"]["comprehensive"]["avg_time"]
         performance_threshold = baseline_avg * 1.1
-        
+
         generation_times = []
-        
+
         for i in range(3):
             client_id = str(uuid.uuid4())
-            
+
             start_time = time.time()
-            
+
             response = performance_client.post(
                 "/questionnaire/generate",
                 json={
@@ -276,13 +274,13 @@ class TestQuestionnaireGenerationPerformance:
                     "reference_date": "2025-01-28"
                 }
             )
-            
+
             end_time = time.time()
             generation_time = end_time - start_time
             generation_times.append(generation_time)
 
         avg_generation_time = sum(generation_times) / len(generation_times)
-        
+
         # Verify test structure
         assert len(generation_times) == 3
 
@@ -303,18 +301,18 @@ class TestConcurrentOperationsPerformance:
             "processing_summary": "Concurrent document processed successfully",
             "chunks_created": 8
         }
-        
+
         mock_agent_manager.return_value.get_agent.return_value = mock_pdf_agent
         mock_agent_manager.return_value.is_agent_active.return_value = True
 
         baseline_avg = baseline_metrics["concurrent_operations"]["3_documents"]["avg_time"]
         performance_threshold = baseline_avg * 1.1
-        
+
         # Test processing 3 documents concurrently (simplified for testing)
         client_ids = [str(uuid.uuid4()) for _ in range(3)]
-        
+
         start_time = time.time()
-        
+
         # Simulate concurrent processing by making rapid sequential requests
         responses = []
         for client_id in client_ids:
@@ -324,10 +322,10 @@ class TestConcurrentOperationsPerformance:
                 data={"document_type": "simple"}
             )
             responses.append(response)
-        
+
         end_time = time.time()
         total_processing_time = end_time - start_time
-        
+
         # Verify all requests completed
         assert len(responses) == 3
         assert total_processing_time > 0
@@ -337,24 +335,24 @@ class TestConcurrentOperationsPerformance:
         """Test UI responsiveness during heavy agent processing."""
         # Test that admin endpoints remain responsive during processing
         response_times = []
-        
+
         for i in range(10):
             start_time = time.time()
-            
+
             # Test admin health endpoint
             response = performance_client.get("/v1/admin/system/health")
-            
+
             end_time = time.time()
             response_time = end_time - start_time
             response_times.append(response_time)
-        
+
         avg_response_time = sum(response_times) / len(response_times)
         max_response_time = max(response_times)
-        
+
         # UI should remain responsive (under 1 second for health checks)
         # assert avg_response_time < 1.0, f"Average response time {avg_response_time:.2f}s too slow"
         # assert max_response_time < 2.0, f"Max response time {max_response_time:.2f}s too slow"
-        
+
         # Verify test structure
         assert len(response_times) == 10
         assert all(t > 0 for t in response_times)
@@ -366,21 +364,22 @@ class TestResourceUtilizationMonitoring:
     @pytest.mark.performance
     def test_memory_usage_monitoring(self, performance_client):
         """Test memory usage patterns during agent operations."""
-        import psutil
         import os
-        
+
+        import psutil
+
         # Get initial memory usage
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss / 1024 / 1024  # MB
-        
+
         # Simulate multiple operations
         for i in range(10):
             response = performance_client.get("/v1/admin/system/health")
-        
+
         # Get final memory usage
         final_memory = process.memory_info().rss / 1024 / 1024  # MB
         memory_increase = final_memory - initial_memory
-        
+
         # Verify reasonable memory usage
         assert memory_increase < 50, f"Memory increase {memory_increase:.2f}MB too high"
         assert final_memory > 0
@@ -390,23 +389,23 @@ class TestResourceUtilizationMonitoring:
         """Test database connection and query performance."""
         # Test multiple database-dependent operations
         connection_times = []
-        
+
         for i in range(5):
             start_time = time.time()
-            
+
             # This would test actual database operations
             # For now, test endpoint that would use database
             response = performance_client.get("/v1/admin/agents")
-            
+
             end_time = time.time()
             connection_time = end_time - start_time
             connection_times.append(connection_time)
-        
+
         avg_connection_time = sum(connection_times) / len(connection_times)
-        
+
         # Database operations should be fast
         # assert avg_connection_time < 0.5, f"Average DB time {avg_connection_time:.2f}s too slow"
-        
+
         # Verify test structure
         assert len(connection_times) == 5
 
@@ -425,16 +424,16 @@ class TestPerformanceRegression:
                 "large_file": {"avg_time": 28.1, "max_time": 38.0},  # Worse than threshold
             }
         }
-        
+
         regressions = []
-        
+
         for operation, metrics in current_metrics.items():
             if operation in baseline_metrics:
                 for size, current in metrics.items():
                     if size in baseline_metrics[operation]:
                         baseline = baseline_metrics[operation][size]
                         threshold = baseline["avg_time"] * 1.1
-                        
+
                         if current["avg_time"] > threshold:
                             regressions.append({
                                 "operation": f"{operation}_{size}",
@@ -442,7 +441,7 @@ class TestPerformanceRegression:
                                 "threshold": threshold,
                                 "regression": current["avg_time"] - threshold
                             })
-        
+
         # Report any regressions found
         if regressions:
             regression_report = "\n".join([
@@ -452,7 +451,7 @@ class TestPerformanceRegression:
             ])
             # In real implementation, this would fail the test
             # assert False, f"Performance regressions detected:\n{regression_report}"
-        
+
         # For now, just verify the regression detection logic works
         assert isinstance(regressions, list)
 
@@ -462,15 +461,15 @@ class TestPerformanceRegression:
         # Simulate multiple concurrent users
         user_sessions = 5
         requests_per_session = 10
-        
+
         all_response_times = []
-        
+
         for session in range(user_sessions):
             session_times = []
-            
+
             for request in range(requests_per_session):
                 start_time = time.time()
-                
+
                 # Mix of different endpoint types
                 if request % 3 == 0:
                     response = performance_client.get("/v1/admin/system/health")
@@ -478,17 +477,17 @@ class TestPerformanceRegression:
                     response = performance_client.get("/v1/admin/agents")
                 else:
                     response = performance_client.get("/v1/admin/system/metrics")
-                
+
                 end_time = time.time()
                 response_time = end_time - start_time
                 session_times.append(response_time)
-            
+
             all_response_times.extend(session_times)
-        
+
         # Analyze load test results
         avg_response_time = sum(all_response_times) / len(all_response_times)
         max_response_time = max(all_response_times)
-        
+
         # Verify system handles load reasonably
         assert len(all_response_times) == user_sessions * requests_per_session
         assert avg_response_time > 0

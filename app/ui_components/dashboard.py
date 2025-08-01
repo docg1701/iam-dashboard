@@ -107,7 +107,7 @@ class DashboardPage:
                         )
 
                     # Admin Panel - only show for admin users
-                    if current_user.get("role") in ["admin_user", "sysadmin"]:
+                    if AuthManager.has_admin_access(current_user):
                         with ui.card().classes("flex-1 p-4"):
                             ui.icon("admin_panel_settings", size="2rem").classes(
                                 "text-red-500 mb-2"

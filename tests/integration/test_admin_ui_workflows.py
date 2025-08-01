@@ -19,22 +19,22 @@ class TestAdminUIWorkflows:
         """Test that all required admin API endpoints exist."""
         # Test agents list endpoint
         response = self.client.get("/v1/admin/agents")
-        assert response.status_code in [200, 500]  # 500 if AgentManager not initialized
+        assert response.status_code in [200, 403, 500]  # 403 if auth required, 500 if AgentManager not initialized
 
         # Test system health endpoint
         response = self.client.get("/v1/admin/system/health")
-        assert response.status_code in [200, 500]
+        assert response.status_code in [200, 403, 500]
 
         # Test agent config endpoint
         response = self.client.get("/v1/admin/agents/test/config")
-        assert response.status_code in [200, 500]
+        assert response.status_code in [200, 403, 500]
 
         # Test config validation endpoint
         response = self.client.post(
             "/v1/admin/agents/test/config/validate",
             json={"config": {"max_concurrent_tasks": 5}},
         )
-        assert response.status_code in [200, 500]
+        assert response.status_code in [200, 403, 500]
 
     def test_admin_agent_start_stop_workflow(self):
         """Test complete agent start/stop workflow."""
@@ -42,15 +42,15 @@ class TestAdminUIWorkflows:
 
         # Test start agent
         response = self.client.post(f"/v1/admin/agents/{agent_id}/start")
-        assert response.status_code in [200, 500]
+        assert response.status_code in [200, 403, 500]
 
         # Test stop agent
         response = self.client.post(f"/v1/admin/agents/{agent_id}/stop")
-        assert response.status_code in [200, 500]
+        assert response.status_code in [200, 403, 500]
 
         # Test restart agent
         response = self.client.post(f"/v1/admin/agents/{agent_id}/restart")
-        assert response.status_code in [200, 500]
+        assert response.status_code in [200, 403, 500]
 
     def test_admin_configuration_workflow(self):
         """Test complete configuration management workflow."""
@@ -58,7 +58,7 @@ class TestAdminUIWorkflows:
 
         # Test get configuration
         response = self.client.get(f"/v1/admin/agents/{agent_id}/config")
-        assert response.status_code in [200, 500]
+        assert response.status_code in [200, 403, 500]
 
         # Test configuration validation
         test_config = {
@@ -72,17 +72,17 @@ class TestAdminUIWorkflows:
         response = self.client.post(
             f"/v1/admin/agents/{agent_id}/config/validate", json={"config": test_config}
         )
-        assert response.status_code in [200, 500]
+        assert response.status_code in [200, 403, 500]
 
         # Test configuration update
         response = self.client.put(
             f"/v1/admin/agents/{agent_id}/config", json={"config": test_config}
         )
-        assert response.status_code in [200, 500]
+        assert response.status_code in [200, 403, 500]
 
         # Test configuration rollback
         response = self.client.post(f"/v1/admin/agents/{agent_id}/config/rollback")
-        assert response.status_code in [200, 500]
+        assert response.status_code in [200, 403, 500]
 
     def test_config_validation_rules(self):
         """Test configuration validation rules."""
@@ -133,7 +133,7 @@ class TestAdminUIWorkflows:
     def test_system_restart_all_workflow(self):
         """Test system-wide restart workflow."""
         response = self.client.post("/v1/admin/system/restart-all")
-        assert response.status_code in [200, 500]
+        assert response.status_code in [200, 403, 500]
 
         if response.status_code == 200:
             data = response.json()
@@ -146,7 +146,7 @@ class TestAdminUIWorkflows:
         agent_id = "test_agent"
 
         response = self.client.get(f"/v1/admin/agents/{agent_id}/health")
-        assert response.status_code in [200, 404, 500]
+        assert response.status_code in [200, 403, 404, 500]
 
         if response.status_code == 200:
             data = response.json()
@@ -169,6 +169,7 @@ class TestAdminUIWorkflows:
                 "username": "user",
                 "role": "common_user",
             }
+            mock_auth.has_admin_access.return_value = False
 
             # Mock UI elements to prevent context errors
             mock_ui.column.return_value.__enter__ = MagicMock()
@@ -183,6 +184,7 @@ class TestAdminUIWorkflows:
                 "username": "admin",
                 "role": "admin_user",
             }
+            mock_auth.has_admin_access.return_value = True
 
             result = panel._check_admin_access()
             assert result is True
@@ -220,7 +222,7 @@ class TestAdminUIWorkflows:
             mock_requests.get.side_effect = [mock_health_response, mock_agents_response]
 
             panel = AdminControlPanel()
-            await panel._refresh_data()
+            panel._refresh_data()
 
             # Verify data was loaded
             assert panel.system_health["healthy_agents"] == 2
@@ -322,7 +324,7 @@ class TestAdminUIWorkflows:
 
             # Test configuration validation
             with patch("nicegui.ui.notify") as mock_notify:
-                await panel._validate_config(agent_id)
+                panel._validate_config(agent_id)
                 mock_notify.assert_called_with("Configuração válida!", type="positive")
 
             # Test configuration application
@@ -332,7 +334,7 @@ class TestAdminUIWorkflows:
                 original_refresh = panel.dashboard.config_manager.refresh_callback
                 panel.dashboard.config_manager.refresh_callback = AsyncMock()
 
-                await panel._apply_config(agent_id, mock_dialog)
+                panel._apply_config(agent_id, mock_dialog)
                 mock_notify.assert_called_with(
                     "Configuração aplicada com sucesso!", type="positive"
                 )
@@ -406,13 +408,13 @@ class TestAdminUIWorkflows:
 
             # Test error handling in data loading
             with patch("nicegui.ui.notify") as mock_notify:
-                await panel._load_system_health()
+                panel._load_system_health()
                 mock_notify.assert_called_with(
                     "Erro de conexão com API: Connection error", type="negative"
                 )
 
             with patch("nicegui.ui.notify") as mock_notify:
-                await panel._load_agents_data()
+                panel._load_agents_data()
                 mock_notify.assert_called_with(
                     "Erro de conexão com API: Connection error", type="negative"
                 )

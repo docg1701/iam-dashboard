@@ -133,6 +133,9 @@ async def generate_questionnaire(
 
     except HTTPException:
         raise
+    except (AgentNotFoundError, AgentNotActiveError):
+        # Let agent errors bubble up to middleware for proper handling
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Internal server error: {str(e)}"
@@ -180,6 +183,9 @@ async def check_client_documents(
         )
 
     except HTTPException:
+        raise
+    except (AgentNotFoundError, AgentNotActiveError):
+        # Let agent errors bubble up to middleware for proper handling
         raise
     except Exception as e:
         raise HTTPException(

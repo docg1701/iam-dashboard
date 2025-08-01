@@ -5,7 +5,6 @@ import tempfile
 import uuid
 from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from typing import Dict, Any
 
 import pytest
 import pytest_asyncio
@@ -128,14 +127,13 @@ async def mcp_navigate(url: str) -> None:
     """Navigate to URL using Playwright MCP."""
     import asyncio
     from concurrent.futures import ThreadPoolExecutor
-    
+
     def sync_navigate():
         # Import the MCP function directly
-        import sys
         # This would call the actual MCP function
         # For now, we'll simulate the navigation
         return {"success": True}
-    
+
     # Run in thread pool to handle sync/async bridge
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as executor:
@@ -147,7 +145,7 @@ async def mcp_snapshot() -> str:
     """Take page snapshot using Playwright MCP."""
     import asyncio
     from concurrent.futures import ThreadPoolExecutor
-    
+
     def sync_snapshot():
         # This would call the actual MCP snapshot function
         # For now, we'll return a mock snapshot
@@ -158,7 +156,7 @@ async def mcp_snapshot() -> str:
         - Content: Agent Management Interface
         - Status: Active
         """
-    
+
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as executor:
         result = await loop.run_in_executor(executor, sync_snapshot)
@@ -169,11 +167,11 @@ async def mcp_click(element: str, ref: str) -> None:
     """Click element using Playwright MCP."""
     import asyncio
     from concurrent.futures import ThreadPoolExecutor
-    
+
     def sync_click():
         # This would call the actual MCP click function
         return {"success": True, "element": element, "ref": ref}
-    
+
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as executor:
         result = await loop.run_in_executor(executor, sync_click)
@@ -195,11 +193,11 @@ async def mcp_resize(width: int, height: int) -> None:
     """Resize browser window using Playwright MCP."""
     import asyncio
     from concurrent.futures import ThreadPoolExecutor
-    
+
     def sync_resize():
         # This would call the actual MCP resize function
         return {"success": True, "width": width, "height": height}
-    
+
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as executor:
         result = await loop.run_in_executor(executor, sync_resize)
@@ -210,11 +208,11 @@ async def mcp_type(element: str, ref: str, text: str) -> None:
     """Type text into element using Playwright MCP."""
     import asyncio
     from concurrent.futures import ThreadPoolExecutor
-    
+
     def sync_type():
         # This would call the actual MCP type function
         return {"success": True, "text": text}
-    
+
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as executor:
         result = await loop.run_in_executor(executor, sync_type)
@@ -225,12 +223,12 @@ async def mcp_screenshot(filename: str = None) -> str:
     """Take screenshot using Playwright MCP."""
     import asyncio
     from concurrent.futures import ThreadPoolExecutor
-    
+
     def sync_screenshot():
         # This would call the actual MCP screenshot function
         screenshot_path = f"/tmp/screenshots/{filename or 'screenshot.png'}"
         return {"path": screenshot_path}
-    
+
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as executor:
         result = await loop.run_in_executor(executor, sync_screenshot)
@@ -341,9 +339,9 @@ startxref
 %%EOF"""
         tmp_file.write(pdf_content)
         tmp_file.flush()
-        
+
         yield tmp_file.name
-        
+
         # Cleanup
         Path(tmp_file.name).unlink(missing_ok=True)
 
@@ -361,10 +359,10 @@ def mock_agent_responses():
                 "last_activity": "2025-01-28T10:00:00Z"
             },
             {
-                "id": "questionnaire_writer", 
+                "id": "questionnaire_writer",
                 "name": "Questionnaire Writer Agent",
                 "status": "active",
-                "health": "healthy", 
+                "health": "healthy",
                 "last_activity": "2025-01-28T10:05:00Z"
             }
         ],
@@ -397,7 +395,7 @@ def pytest_addoption(parser):
     """Add command line options for E2E testing."""
     parser.addoption(
         "--e2e",
-        action="store_true", 
+        action="store_true",
         default=False,
         help="run end-to-end tests"
     )
@@ -410,6 +408,6 @@ def pytest_addoption(parser):
     parser.addoption(
         "--slow",
         action="store_true",
-        default=False, 
+        default=False,
         help="run slow tests"
     )

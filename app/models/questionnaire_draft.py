@@ -2,7 +2,7 @@
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, ForeignKey, String, Text
+from sqlalchemy import Column, ForeignKey, Index, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import relationship
 
@@ -17,8 +17,15 @@ class QuestionnaireDraft(TimestampedModel):
 
     __tablename__ = "questionnaire_drafts"
 
-    # Foreign key to client
-    client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id"), nullable=False)
+    # Foreign key to client with CASCADE delete
+    client_id = Column(UUID(as_uuid=True), ForeignKey("clients.id", ondelete="CASCADE"), nullable=False)
+
+    # Foreign key to user (required by story) with CASCADE delete
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+
+    # Template type and status (required by story)
+    template_type = Column(String(100), nullable=False, default="standard", server_default="'standard'")
+    status = Column(String(50), nullable=False, default="draft", server_default="'draft'")
 
     # Questionnaire content
     content = Column(Text, nullable=False)
@@ -36,6 +43,7 @@ class QuestionnaireDraft(TimestampedModel):
 
     # Relationships
     client = relationship("Client", back_populates="questionnaire_drafts")
+    user = relationship("User", back_populates="questionnaire_drafts")
 
     def __repr__(self) -> str:
         """String representation of QuestionnaireDraft."""
@@ -59,3 +67,10 @@ class QuestionnaireDraft(TimestampedModel):
     def character_count(self) -> int:
         """Get character count of questionnaire content."""
         return len(self.content) if self.content else 0
+
+
+# Define indexes for performance
+Index('idx_questionnaire_drafts_client_id', QuestionnaireDraft.client_id)
+Index('idx_questionnaire_drafts_user_id', QuestionnaireDraft.user_id)
+Index('idx_questionnaire_drafts_status', QuestionnaireDraft.status)
+Index('idx_questionnaire_drafts_template_type', QuestionnaireDraft.template_type)

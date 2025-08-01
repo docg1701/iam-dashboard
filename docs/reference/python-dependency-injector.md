@@ -108,7 +108,7 @@ pip install "dependency-injector[aiohttp]"         # Async web support
 
 # Additional legal document processing dependencies
 pip install fastapi>=0.104.1          # API framework
-pip install nicegui>=1.4.0            # UI framework integration
+pip install nicegui>=2.21.0            # UI framework integration
 pip install sqlalchemy>=2.0.0         # Database ORM
 pip install celery[redis]>=5.3.0      # Task queue for document processing
 pip install pydantic>=2.0.0           # Data validation for legal schemas

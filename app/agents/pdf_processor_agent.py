@@ -330,31 +330,45 @@ class PDFProcessorAgent(Agent):
             return {"success": False, "error": error_msg}
 
     async def process_document(
-        self, file_path: str, user_id: int, perform_ocr: bool = True
+        self, file_path: str, user_id: int, perform_ocr: bool = True, progress_callback = None
     ) -> dict[str, Any]:
-        """Main workflow for processing a PDF document.
+        """Main workflow for processing a PDF document with progress tracking.
 
         Args:
             file_path: Path to the PDF file to process
             user_id: ID of the user who uploaded the document
             perform_ocr: Whether to perform OCR on the document
+            progress_callback: Optional callback function for progress updates
 
         Returns:
             Dictionary containing complete processing results
         """
         logger.info(f"Starting document processing workflow for: {file_path}")
 
+        # Helper function to send progress updates
+        async def send_progress(step: str, progress: int, message: str, status: str = "processing"):
+            if progress_callback:
+                try:
+                    await progress_callback(step, progress, message, status)
+                except Exception as e:
+                    logger.warning(f"Progress callback failed: {str(e)}")
+
         try:
             # Step 1: Extract PDF text
+            await send_progress("extract", 10, "Extraindo texto do PDF...")
             text_result = self.extract_pdf_text(file_path)
             if not text_result["success"]:
+                await send_progress("extract", 0, f"Erro na extração: {text_result.get('error')}", "error")
                 return text_result
 
             all_text = " ".join([page["text"] for page in text_result["text_content"]])
+            await send_progress("extract", 25, f"Texto extraído - {text_result['page_count']} páginas", "completed")
 
             # Step 2: Perform OCR if needed
             ocr_result = None
             if perform_ocr:
+                await send_progress("ocr", 30, "Verificando necessidade de OCR...")
+
                 # Identify pages that might need OCR (pages with very little text)
                 pages_needing_ocr = [
                     page["page_number"]
@@ -363,6 +377,7 @@ class PDFProcessorAgent(Agent):
                 ]
 
                 if pages_needing_ocr:
+                    await send_progress("ocr", 35, f"Processando OCR em {len(pages_needing_ocr)} páginas...")
                     ocr_result = self.process_ocr(file_path, pages_needing_ocr)
                     if ocr_result["success"]:
                         # Combine OCR text with extracted text
@@ -370,8 +385,17 @@ class PDFProcessorAgent(Agent):
                             [page["ocr_text"] for page in ocr_result["ocr_results"]]
                         )
                         all_text += " " + ocr_text
+                        await send_progress("ocr", 50, f"OCR concluído - {ocr_result['pages_processed']} páginas processadas", "completed")
+                    else:
+                        await send_progress("ocr", 0, f"Erro no OCR: {ocr_result.get('error')}", "error")
+                        logger.warning(f"OCR failed but continuing: {ocr_result.get('error')}")
+                else:
+                    await send_progress("ocr", 50, "OCR não necessário - texto já extraído", "completed")
+            else:
+                await send_progress("ocr", 50, "OCR desabilitado", "completed")
 
-            # Step 3: Generate and store embeddings using integrated workflow
+            # Step 3: Generate embeddings
+            await send_progress("embeddings", 60, "Gerando embeddings para busca...")
             document_data = {
                 "file_path": file_path,
                 "extracted_text": all_text,
@@ -383,8 +407,42 @@ class PDFProcessorAgent(Agent):
                 "file_size": Path(file_path).stat().st_size,
             }
 
-            # Step 4: Store document and generate embeddings
+            # Generate embeddings before storage
+            embeddings_generated = 0
+            if all_text.strip():
+                try:
+                    embedding_result = self.generate_embeddings(all_text)
+                    if embedding_result["success"]:
+                        embeddings_generated = embedding_result["successful_embeddings"]
+                        await send_progress("embeddings", 80, f"Embeddings gerados - {embeddings_generated} chunks", "completed")
+                    else:
+                        await send_progress("embeddings", 0, f"Erro nos embeddings: {embedding_result.get('error')}", "error")
+                        logger.warning(f"Embedding generation failed: {embedding_result.get('error')}")
+                except Exception as e:
+                    await send_progress("embeddings", 0, f"Erro nos embeddings: {str(e)}", "error")
+                    logger.warning(f"Embedding generation failed: {str(e)}")
+            else:
+                await send_progress("embeddings", 80, "Nenhum texto para gerar embeddings", "completed")
+
+            # Step 4: Store document
+            await send_progress("storage", 85, "Armazenando documento no banco de dados...")
             storage_result = self.store_document(document_data, user_id)
+
+            if not storage_result["success"]:
+                await send_progress("storage", 0, f"Erro no armazenamento: {storage_result.get('error')}", "error")
+                # Return partial success with storage error
+                final_result = {
+                    "success": False,
+                    "error": storage_result["error"],
+                    "partial_results": {
+                        "text_extraction": text_result["success"],
+                        "ocr_processing": ocr_result["success"] if ocr_result else "skipped",
+                        "embeddings_generated": embeddings_generated,
+                    }
+                }
+                return final_result
+
+            await send_progress("storage", 100, "Documento processado com sucesso!", "completed")
 
             # Compile final result
             final_result = {
@@ -411,6 +469,7 @@ class PDFProcessorAgent(Agent):
         except Exception as e:
             error_msg = f"Document processing workflow failed for {file_path}: {str(e)}"
             logger.error(error_msg)
+            await send_progress("storage", 0, f"Erro crítico: {str(e)}", "error")
             return {"success": False, "error": error_msg, "file_path": file_path}
 
 

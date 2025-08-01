@@ -1,5 +1,6 @@
 """Document API endpoints."""
 
+import asyncio
 import uuid
 from pathlib import Path
 from typing import Any
@@ -196,28 +197,68 @@ async def upload_document(
     db: AsyncSession = Depends(get_async_db),
     agent_manager: AgentManager = Depends(Provide[Container.agent_manager]),
 ) -> dict[str, Any]:
-    """Upload and process a PDF document using the PDF Processor Agent."""
+    """Upload and process a PDF document using the PDF Processor Agent with comprehensive validation."""
     import logging
 
     logger = logging.getLogger(__name__)
+    file_path = None
+    start_time = asyncio.get_event_loop().time()
 
     try:
-        # Validate file type
-        if not file.filename or not file.filename.lower().endswith(".pdf"):
+        # Enhanced file validation
+        if not file.filename:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Only PDF files are supported",
+                detail="No filename provided",
             )
 
-        # Save uploaded file temporarily
-        upload_dir = Path("/tmp/pdf_uploads")
-        upload_dir.mkdir(exist_ok=True)
+        if not file.filename.lower().endswith(".pdf"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only PDF files are supported. Uploaded file must have .pdf extension.",
+            )
 
-        file_path = upload_dir / f"{uuid.uuid4()}_{file.filename}"
+        # Read file content for size validation
+        content = await file.read()
+        await file.seek(0)  # Reset file pointer
+
+        # Validate file size (50MB limit)
+        max_size = 50 * 1024 * 1024  # 50MB
+        if len(content) > max_size:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"File too large. Maximum size is {max_size / (1024 * 1024):.1f}MB, got {len(content) / (1024 * 1024):.1f}MB",
+            )
+
+        # Validate file is not empty
+        if len(content) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Empty file not allowed",
+            )
+
+        # Basic PDF header validation
+        if not content.startswith(b'%PDF-'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid PDF file. File does not have valid PDF header.",
+            )
+
+        logger.info(f"Processing PDF upload: {file.filename} ({len(content)} bytes) for user {user_id}")
+
+        # Save uploaded file temporarily with secure naming
+        upload_dir = Path("/tmp/pdf_uploads")
+        upload_dir.mkdir(exist_ok=True, mode=0o700)  # Secure directory permissions
+
+        # Create secure temporary filename
+        secure_filename = f"{uuid.uuid4()}_{Path(file.filename).stem}.pdf"
+        file_path = upload_dir / secure_filename
 
         with open(file_path, "wb") as buffer:
-            content = await file.read()
             buffer.write(content)
+
+        # Set secure file permissions
+        file_path.chmod(0o600)
 
         # Get PDF processor agent instance from AgentManager
         pdf_agent_instance = agent_manager.get_agent("pdf_processor")
@@ -232,39 +273,109 @@ async def upload_document(
                 "PDF Processor Agent is not active", agent_id="pdf_processor"
             )
 
-        # Process document using the agent
-        processing_result = await pdf_agent_instance.process_document(
-            file_path=str(file_path), user_id=user_id, perform_ocr=perform_ocr
-        )
+        logger.info(f"Starting PDF processing for {file.filename} using agent")
+
+        # Create progress callback for WebSocket updates
+        processing_id = str(uuid.uuid4())
+
+        async def progress_callback(step: str, progress: int, message: str, status: str = "processing"):
+            """Send progress updates via WebSocket."""
+            try:
+                from datetime import UTC, datetime
+
+                from app.api.websockets import get_document_websocket_manager
+
+                ws_manager = get_document_websocket_manager()
+
+                progress_data = {
+                    "processing_id": processing_id,
+                    "filename": file.filename,
+                    "step": step,
+                    "progress": progress,
+                    "message": message,
+                    "status": status,
+                    "timestamp": datetime.now(UTC).isoformat()
+                }
+
+                await ws_manager.broadcast_progress(processing_id, progress_data)
+
+            except Exception as e:
+                logger.warning(f"Failed to send progress update: {str(e)}")
+
+        # Process document using the agent with timeout protection and progress tracking
+        try:
+            processing_result = await asyncio.wait_for(
+                pdf_agent_instance.process_document(
+                    file_path=str(file_path),
+                    user_id=user_id,
+                    perform_ocr=perform_ocr,
+                    progress_callback=progress_callback
+                ),
+                timeout=300.0  # 5 minute timeout
+            )
+        except TimeoutError as timeout_error:
+            logger.error(f"PDF processing timeout for {file.filename}")
+            # Send timeout update via WebSocket
+            await progress_callback("storage", 0, "Timeout - processamento excedeu 5 minutos", "error")
+            raise HTTPException(
+                status_code=status.HTTP_408_REQUEST_TIMEOUT,
+                detail="Document processing timed out. Please try with a smaller file or contact support.",
+            ) from timeout_error
+
+        # Calculate processing time
+        processing_time = asyncio.get_event_loop().time() - start_time
 
         # Clean up temporary file
         try:
-            file_path.unlink()
+            if file_path and file_path.exists():
+                file_path.unlink()
         except Exception as cleanup_error:
-            logger.warning(f"Failed to clean up temporary file: {str(cleanup_error)}")
+            logger.warning(f"Failed to clean up temporary file {file_path}: {str(cleanup_error)}")
 
         if processing_result["success"]:
+            logger.info(
+                f"Successfully processed PDF {file.filename} in {processing_time:.2f}s "
+                f"(document_id: {processing_result.get('document_id')})"
+            )
+
             return {
                 "success": True,
                 "document_id": processing_result["document_id"],
                 "filename": processing_result["filename"],
-                "processing_summary": processing_result["processing_summary"],
+                "processing_id": processing_id,
+                "processing_summary": {
+                    **processing_result["processing_summary"],
+                    "processing_time_seconds": round(processing_time, 2),
+                    "file_size_mb": round(len(content) / (1024 * 1024), 2),
+                },
                 "message": "Document processed successfully using PDF Processor Agent",
             }
         else:
+            logger.error(f"PDF processing failed for {file.filename}: {processing_result.get('error')}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=(
                     f"Document processing failed: "
-                    f"{processing_result.get('error', 'Unknown error')}"
+                    f"{processing_result.get('error', 'Unknown processing error')}"
                 ),
             )
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (AgentNotFoundError, AgentNotActiveError):
+        # Let agent errors bubble up to middleware for proper handling
         # Clean up temporary file if it exists
-        if "file_path" in locals():
+        if file_path and file_path.exists():
+            try:
+                file_path.unlink()
+            except Exception:
+                pass
+        raise
+    except Exception as e:
+        logger.error(f"Document upload error for {file.filename if file else 'unknown'}: {str(e)}")
+
+        # Clean up temporary file if it exists
+        if file_path and file_path.exists():
             try:
                 file_path.unlink()
             except Exception:
@@ -409,3 +520,106 @@ async def check_agent_health(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error checking agent health: {str(e)}",
         ) from e
+
+
+@router.post("/search/similarity", response_model=dict[str, Any])
+async def search_similar_documents(
+    query: dict[str, Any],
+    db: AsyncSession = Depends(get_async_db),
+) -> dict[str, Any]:
+    """Search for similar documents using vector similarity search."""
+    try:
+        query_text = query.get("query")
+        if not query_text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Query text is required",
+            )
+
+        limit = query.get("limit", 10)
+        similarity_threshold = query.get("similarity_threshold", 0.7)
+        document_ids = query.get("document_ids")  # Optional filter by document IDs
+
+        # Validate parameters
+        if limit < 1 or limit > 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Limit must be between 1 and 100",
+            )
+
+        if similarity_threshold < 0.0 or similarity_threshold > 1.0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Similarity threshold must be between 0.0 and 1.0",
+            )
+
+        # Import vector storage tool
+        from app.tools.vector_storage_tools import VectorStorageTool
+
+        # Initialize vector storage tool
+        vector_tool = VectorStorageTool()
+
+        # Perform similarity search
+        search_result = vector_tool.search_similar_content(
+            query_text=query_text,
+            limit=limit,
+            similarity_threshold=similarity_threshold,
+            document_ids=document_ids
+        )
+
+        if search_result["success"]:
+            return {
+                "success": True,
+                "query": query_text,
+                "results": search_result["results"],
+                "total_results": search_result["total_results"],
+                "similarity_threshold": similarity_threshold,
+                "message": f"Found {search_result['total_results']} similar content chunks"
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Similarity search failed: {search_result.get('error', 'Unknown error')}",
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Similarity search error: {str(e)}",
+        ) from e
+
+
+@router.get("/search/validate", response_model=dict[str, Any])
+async def validate_vector_search_setup() -> dict[str, Any]:
+    """Validate that vector search capabilities are properly configured."""
+    try:
+        from app.tools.vector_storage_tools import VectorStorageTool
+
+        vector_tool = VectorStorageTool()
+
+        # Validate pgvector setup
+        validation_result = vector_tool.validate_pgvector_setup()
+
+        if validation_result["valid"]:
+            return {
+                "success": True,
+                "message": "Vector search is properly configured",
+                "pgvector_available": validation_result.get("pgvector_available", False),
+                "embedding_model": vector_tool.embedding_model,
+                "chunk_size": vector_tool.chunk_size,
+            }
+        else:
+            return {
+                "success": False,
+                "error": validation_result.get("error", "Unknown validation error"),
+                "message": "Vector search is not properly configured",
+            }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Validation failed: {str(e)}",
+            "message": "Unable to validate vector search setup",
+        }

@@ -1,6 +1,6 @@
 """Agent status monitoring component for real-time display."""
 
-import asyncio
+from datetime import datetime
 from typing import Any
 
 import requests
@@ -17,44 +17,80 @@ class AgentStatusMonitor:
         self.agents_data: list[dict[str, Any]] = []
         self.system_health: dict[str, Any] = {}
         self.refresh_timer: ui.timer | None = None
+        self.websocket_connected: bool = False
+        self.status_cards: dict[str, Any] = {}
+        self.agent_table: ui.table | None = None
+        self.last_update: str = "Nunca"
 
     def create(self) -> None:
         """Create the agent status monitoring UI."""
         with ui.column().classes("w-full gap-6"):
+            # Real-time status indicator
+            self.create_real_time_status_indicator()
+
             # System health overview
             with ui.card().classes("w-full p-4"):
                 ui.label("Status do Sistema").classes("text-xl font-bold mb-4")
 
-                with ui.row().classes("w-full gap-4"):
-                    # Health status cards
-                    with ui.card().classes("flex-1 p-4 bg-green-50"):
-                        ui.label("Agentes Ativos").classes("text-sm text-gray-600")
-                        ui.label("0").classes(
-                            "text-2xl font-bold text-green-600"
-                        ).bind_text_from(
+                with ui.grid().classes("row q-gutter-md"):
+                    # Active agents card with icon
+                    with ui.card().classes("col-xs-12 col-sm-6 col-md-3 q-pa-md text-center"):
+                        ui.icon("check_circle", size="2rem", color="green").classes("q-mb-sm")
+                        ui.label("Agentes Ativos").classes("text-subtitle1 text-grey-7")
+                        status_active = ui.label("0").classes("text-h4 text-green text-weight-bold")
+                        status_active.bind_text_from(
                             self,
                             "system_health",
                             lambda x: str(x.get("healthy_agents", 0)),
                         )
 
-                    with ui.card().classes("flex-1 p-4 bg-blue-50"):
-                        ui.label("Total de Agentes").classes("text-sm text-gray-600")
-                        ui.label("0").classes(
-                            "text-2xl font-bold text-blue-600"
-                        ).bind_text_from(
+                    # Total agents card with icon
+                    with ui.card().classes("col-xs-12 col-sm-6 col-md-3 q-pa-md text-center"):
+                        ui.icon("smart_toy", size="2rem", color="blue").classes("q-mb-sm")
+                        ui.label("Total de Agentes").classes("text-subtitle1 text-grey-7")
+                        status_total = ui.label("0").classes("text-h4 text-blue text-weight-bold")
+                        status_total.bind_text_from(
                             self,
                             "system_health",
                             lambda x: str(x.get("total_agents", 0)),
                         )
 
-                    with ui.card().classes("flex-1 p-4 bg-yellow-50"):
-                        ui.label("Status do Sistema").classes("text-sm text-gray-600")
-                        ui.label("Unknown").classes(
-                            "text-lg font-bold text-yellow-600"
-                        ).bind_text_from(
+                    # System status card with dynamic icon
+                    with ui.card().classes("col-xs-12 col-sm-6 col-md-3 q-pa-md text-center"):
+                        status_icon = ui.icon("help", size="2rem", color="grey").classes("q-mb-sm")
+                        ui.label("Status do Sistema").classes("text-subtitle1 text-grey-7")
+                        status_label = ui.label("Verificando...").classes("text-h6 text-weight-bold")
+
+                        def update_status_display(health_data):
+                            status = health_data.get("system_status", "unknown")
+                            if status == "healthy":
+                                status_icon.props("name=health_and_safety color=green")
+                                status_label.props("class=text-h6 text-weight-bold text-green")
+                                return "Saudável"
+                            elif status == "degraded":
+                                status_icon.props("name=warning color=orange")
+                                status_label.props("class=text-h6 text-weight-bold text-orange")
+                                return "Degradado"
+                            elif status == "error":
+                                status_icon.props("name=error color=red")
+                                status_label.props("class=text-h6 text-weight-bold text-red")
+                                return "Erro"
+                            else:
+                                status_icon.props("name=help color=grey")
+                                status_label.props("class=text-h6 text-weight-bold text-grey")
+                                return "Desconhecido"
+
+                        status_label.bind_text_from(self, "system_health", update_status_display)
+
+                    # Response time card
+                    with ui.card().classes("col-xs-12 col-sm-6 col-md-3 q-pa-md text-center"):
+                        ui.icon("speed", size="2rem", color="purple").classes("q-mb-sm")
+                        ui.label("Tempo de Resposta").classes("text-subtitle1 text-grey-7")
+                        response_time = ui.label("--ms").classes("text-h6 text-purple text-weight-bold")
+                        response_time.bind_text_from(
                             self,
                             "system_health",
-                            lambda x: x.get("system_status", "Unknown"),
+                            lambda x: f"{x.get('avg_response_time', '--')}ms",
                         )
 
             # Performance summary
@@ -86,11 +122,13 @@ class AgentStatusMonitor:
 
     def load_initial_data(self) -> None:
         """Load initial data for the status monitor."""
-        asyncio.create_task(self._load_initial_data())
+        ui.timer(0.1, self._load_initial_data, once=True)
+        # Setup WebSocket connection for real-time updates
+        self.setup_websocket_connection()
 
-    async def _load_initial_data(self) -> None:
+    def _load_initial_data(self) -> None:
         """Load initial system and agent data."""
-        await self._refresh_data()
+        self._refresh_data()
 
         # Set up auto-refresh timer (every 30 seconds)
         if self.refresh_timer:
@@ -98,21 +136,21 @@ class AgentStatusMonitor:
 
         self.refresh_timer = ui.timer(30.0, self._refresh_data)
 
-    async def _refresh_data(self) -> None:
+    def _refresh_data(self) -> None:
         """Refresh system health and agents data."""
         try:
             # Load system health
-            await self._load_system_health()
+            self._load_system_health()
 
             # Load agents data
-            await self._load_agents_data()
+            self._load_agents_data()
 
         except Exception as e:
             # Only show UI notifications if UI is available
             if hasattr(ui, "notify"):
                 ui.notify(f"Erro ao carregar dados: {str(e)}", type="negative")
 
-    async def _load_system_health(self) -> None:
+    def _load_system_health(self) -> None:
         """Load system health data."""
         try:
             response = requests.get(
@@ -136,7 +174,7 @@ class AgentStatusMonitor:
                 "system_status": "disconnected",
             }
 
-    async def _load_agents_data(self) -> None:
+    def _load_agents_data(self) -> None:
         """Load agents data from API."""
         try:
             response = requests.get(
@@ -275,7 +313,7 @@ class AgentStatusMonitor:
                     on_click=lambda aid=agent_id: self._show_agent_config(aid),
                 ).classes("bg-purple-500 text-white w-8 h-8").tooltip("Configurar")
 
-    async def _start_agent(self, agent_id: str) -> None:
+    def _start_agent(self, agent_id: str) -> None:
         """Start an agent."""
         try:
             ui.notify(f"Iniciando agente {agent_id}...", type="info")
@@ -286,7 +324,7 @@ class AgentStatusMonitor:
 
             if response.status_code == 200:
                 ui.notify(f"Agente {agent_id} iniciado com sucesso!", type="positive")
-                await self._refresh_data()
+                self._refresh_data()
             else:
                 error_msg = response.json().get("detail", "Erro desconhecido")
                 ui.notify(f"Erro ao iniciar agente: {error_msg}", type="negative")
@@ -294,7 +332,7 @@ class AgentStatusMonitor:
         except Exception as e:
             ui.notify(f"Erro de conexão: {str(e)}", type="negative")
 
-    async def _stop_agent(self, agent_id: str) -> None:
+    def _stop_agent(self, agent_id: str) -> None:
         """Stop an agent."""
         try:
             ui.notify(f"Parando agente {agent_id}...", type="info")
@@ -305,7 +343,7 @@ class AgentStatusMonitor:
 
             if response.status_code == 200:
                 ui.notify(f"Agente {agent_id} parado com sucesso!", type="positive")
-                await self._refresh_data()
+                self._refresh_data()
             else:
                 error_msg = response.json().get("detail", "Erro desconhecido")
                 ui.notify(f"Erro ao parar agente: {error_msg}", type="negative")
@@ -313,7 +351,7 @@ class AgentStatusMonitor:
         except Exception as e:
             ui.notify(f"Erro de conexão: {str(e)}", type="negative")
 
-    async def _restart_agent(self, agent_id: str) -> None:
+    def _restart_agent(self, agent_id: str) -> None:
         """Restart an agent."""
         try:
             ui.notify(f"Reiniciando agente {agent_id}...", type="info")
@@ -325,7 +363,7 @@ class AgentStatusMonitor:
 
             if response.status_code == 200:
                 ui.notify(f"Agente {agent_id} reiniciado com sucesso!", type="positive")
-                await self._refresh_data()
+                self._refresh_data()
             else:
                 error_msg = response.json().get("detail", "Erro desconhecido")
                 ui.notify(f"Erro ao reiniciar agente: {error_msg}", type="negative")
@@ -333,7 +371,7 @@ class AgentStatusMonitor:
         except Exception as e:
             ui.notify(f"Erro de conexão: {str(e)}", type="negative")
 
-    async def _restart_all_agents(self) -> None:
+    def _restart_all_agents(self) -> None:
         """Restart all agents with confirmation."""
         with ui.dialog() as confirm_dialog:
             with ui.card().classes("w-96"):
@@ -352,7 +390,7 @@ class AgentStatusMonitor:
 
                     def confirm_restart() -> None:
                         confirm_dialog.close()
-                        asyncio.create_task(self._perform_restart_all())
+                        ui.timer(0.1, self._perform_restart_all, once=True)
 
                     ui.button("Reiniciar Todos", on_click=confirm_restart).classes(
                         "bg-red-500 text-white"
@@ -360,7 +398,7 @@ class AgentStatusMonitor:
 
         confirm_dialog.open()
 
-    async def _perform_restart_all(self) -> None:
+    def _perform_restart_all(self) -> None:
         """Perform the actual restart of all agents."""
         try:
             ui.notify("Iniciando reinicialização de todos os agentes...", type="info")
@@ -380,7 +418,7 @@ class AgentStatusMonitor:
                     f"Reinicialização concluída. {successful}/{total} agentes reiniciados com sucesso.",
                     type="positive" if successful == total else "warning",
                 )
-                await self._refresh_data()
+                self._refresh_data()
             else:
                 error_msg = response.json().get("detail", "Erro desconhecido")
                 ui.notify(f"Erro na reinicialização: {error_msg}", type="negative")
@@ -454,3 +492,109 @@ class AgentStatusMonitor:
             "Use a aba 'Configuração' para gerenciar configurações dos agentes.",
             type="info",
         )
+
+    def setup_websocket_connection(self) -> None:
+        """Setup WebSocket connection for real-time updates."""
+        ui.run_javascript("""
+            const connectWebSocket = () => {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/agents/status`;
+
+                const ws = new WebSocket(wsUrl);
+
+                ws.onopen = function(event) {
+                    console.log('WebSocket connected to agent status');
+                    window.agentStatusWS = ws;
+
+                    // Send ping every 30 seconds to keep connection alive
+                    setInterval(() => {
+                        if (ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({type: 'ping'}));
+                        }
+                    }, 30000);
+                };
+
+                ws.onmessage = function(event) {
+                    const message = JSON.parse(event.data);
+
+                    if (message.type === 'agent_status_update' || message.type === 'initial_status') {
+                        // Update Python side with received data
+                        window.pywebview.api.update_agent_status_from_websocket(message.data);
+                    }
+                };
+
+                ws.onclose = function(event) {
+                    console.log('WebSocket disconnected, attempting to reconnect...');
+                    setTimeout(connectWebSocket, 3000);
+                };
+
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                };
+            };
+
+            connectWebSocket();
+        """)
+
+    def update_status_from_websocket(self, status_data: dict[str, Any]) -> None:
+        """Update status display from WebSocket data."""
+        try:
+            self.websocket_connected = True
+
+            # Update system health data
+            if "system_health" in status_data:
+                self.system_health = status_data["system_health"]
+
+            # Update agents data
+            if "agents" in status_data:
+                self.agents_data = status_data["agents"]
+
+            # Update last update time
+            if "timestamp" in status_data:
+                try:
+                    timestamp = datetime.fromisoformat(status_data["timestamp"].replace('Z', '+00:00'))
+                    self.last_update = timestamp.strftime("%H:%M:%S")
+                except Exception:
+                    self.last_update = "Agora"
+
+            # Update UI components if they exist
+            self._update_status_display()
+
+        except Exception as e:
+            print(f"Error updating from WebSocket: {e}")
+            self.websocket_connected = False
+
+    def _update_status_display(self) -> None:
+        """Update the status display with current data."""
+        try:
+            # Update agents table if it exists
+            if hasattr(self, "agents_container") and self.agents_container:
+                self._update_agents_table()
+
+            # Trigger UI refresh
+            ui.update()
+
+        except Exception as e:
+            print(f"Error updating status display: {e}")
+
+    def create_real_time_status_indicator(self) -> None:
+        """Create a real-time status indicator showing WebSocket connection."""
+        with ui.row().classes("w-full justify-between items-center mb-4"):
+            ui.label("Status dos Agentes em Tempo Real").classes("text-xl font-bold")
+
+            # Connection status indicator
+            with ui.row().classes("items-center gap-2"):
+                connection_icon = ui.icon("wifi", size="sm")
+                connection_label = ui.label("Conectando...")
+
+                # Update connection status periodically
+                def update_connection_status():
+                    if self.websocket_connected:
+                        connection_icon.props("name=wifi color=green")
+                        connection_label.text = f"Conectado - Última atualização: {self.last_update}"
+                    else:
+                        connection_icon.props("name=wifi_off color=red")
+                        connection_label.text = "Desconectado"
+
+                # Timer to update connection status every 2 seconds
+                ui.timer(2.0, update_connection_status)

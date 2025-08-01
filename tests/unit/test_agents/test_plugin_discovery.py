@@ -108,37 +108,32 @@ class NotAPlugin:
         # Track if our mock function was called
         mock_load_called = False
 
-        # Mock Path.glob to return plugin file
-        with patch("pathlib.Path.glob") as mock_glob:
-            mock_file = Mock()
-            mock_file.name = "mock_plugin.py"
-            mock_glob.return_value = [mock_file]
+        # Mock the file loading to add our plugin after clear()
+        async def mock_load_plugin_side_effect(file_path):
+            nonlocal mock_load_called
+            mock_load_called = True
+            discovery._discovered_plugins["MockPlugin"] = MockPlugin
 
-            # Mock the file loading to add our plugin after clear()
-            async def mock_load_plugin_side_effect(file_path):
-                nonlocal mock_load_called
-                mock_load_called = True
-                discovery._discovered_plugins["MockPlugin"] = MockPlugin
+        # Mock the _scan_directory_for_plugins method directly
+        with patch.object(
+            discovery,
+            "_scan_directory_for_plugins",
+            side_effect=mock_load_plugin_side_effect,
+        ) as mock_scan:
+            result = await discovery.discover_plugins()
 
-            with patch.object(
-                discovery,
-                "_load_plugin_from_file",
-                side_effect=mock_load_plugin_side_effect,
-            ) as mock_load:
-                result = await discovery.discover_plugins()
+            # Debug information
+            print(f"Mock scan called: {mock_load_called}")
+            print(f"Mock scan call count: {mock_scan.call_count}")
+            print(f"Import called with: {mock_import.call_args_list}")
+            print(f"Discovered plugins: {discovery._discovered_plugins}")
+            print(f"Result: {result}")
 
-                # Debug information
-                print(f"Mock load called: {mock_load_called}")
-                print(f"Mock load call count: {mock_load.call_count}")
-                print(f"Import called with: {mock_import.call_args_list}")
-                print(f"Discovered plugins: {discovery._discovered_plugins}")
-                print(f"Result: {result}")
-
-                # Verify the import was called with the fixture's plugin dir
-                mock_import.assert_called_with("test.plugins")
-                assert mock_load_called, "Load plugin function should have been called"
-                assert "MockPlugin" in result
-                assert result["MockPlugin"] == MockPlugin
+            # Verify the import was called with the fixture's plugin dir
+            mock_import.assert_called_with("test.plugins")
+            assert mock_load_called, "Scan directory function should have been called"
+            assert "MockPlugin" in result
+            assert result["MockPlugin"] == MockPlugin
 
     @pytest.mark.asyncio
     async def test_discover_plugins_import_error(self, discovery):

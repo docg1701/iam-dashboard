@@ -392,7 +392,7 @@ class AgentConfigManager:
         except Exception as e:
             ui.notify(f"Erro ao carregar configuração: {str(e)}", type="negative")
 
-    async def _validate_config(self, agent_id: str) -> None:
+    def _validate_config(self, agent_id: str) -> None:
         """Validate agent configuration."""
         if agent_id not in self.config_forms:
             ui.notify("Formulário de configuração não encontrado", type="warning")
@@ -465,7 +465,7 @@ class AgentConfigManager:
         except Exception as e:
             ui.notify(f"Erro durante validação: {str(e)}", type="negative")
 
-    async def _apply_config(self, agent_id: str, dialog: ui.dialog) -> None:
+    def _apply_config(self, agent_id: str, dialog: ui.dialog) -> None:
         """Apply configuration changes."""
         if agent_id not in self.config_forms:
             ui.notify("Formulário de configuração não encontrado", type="warning")
@@ -544,7 +544,7 @@ class AgentConfigManager:
 
                 # Refresh data if callback is available
                 if self.refresh_callback:
-                    await self.refresh_callback()
+                    self.refresh_callback()
 
             else:
                 error_msg = response.json().get("detail", "Erro desconhecido")
@@ -553,7 +553,7 @@ class AgentConfigManager:
         except Exception as e:
             ui.notify(f"Erro durante aplicação: {str(e)}", type="negative")
 
-    async def _rollback_config(self, agent_id: str) -> None:
+    def _rollback_config(self, agent_id: str) -> None:
         """Rollback configuration to previous state."""
         with ui.dialog() as rollback_dialog:
             with ui.card().classes("w-96"):
@@ -580,7 +580,7 @@ class AgentConfigManager:
 
         rollback_dialog.open()
 
-    async def _perform_rollback(self, agent_id: str) -> None:
+    def _perform_rollback(self, agent_id: str) -> None:
         """Perform the actual configuration rollback."""
         try:
             ui.notify("Revertendo configuração...", type="info")

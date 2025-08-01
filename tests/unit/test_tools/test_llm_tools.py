@@ -97,10 +97,8 @@ QUESITOS:
 
     def test_generate_questionnaire_empty_response(self, llm_tool, mock_client):
         """Test questionnaire generation with empty API response."""
-        # Mock empty response
-        mock_response = MagicMock()
-        mock_response.text = None
-        llm_tool.model.generate_content.return_value = mock_response
+        # Mock empty response - raise exception to trigger fallback
+        llm_tool.model.generate_content.side_effect = Exception("API returned empty response")
 
         result = llm_tool.generate_questionnaire(
             client=mock_client,

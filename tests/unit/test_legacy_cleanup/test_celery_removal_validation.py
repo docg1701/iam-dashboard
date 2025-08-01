@@ -4,8 +4,6 @@ This module ensures that all Celery components have been completely removed
 and no legacy code dependencies remain in the system.
 """
 
-import os
-import subprocess
 from pathlib import Path
 
 import pytest
@@ -25,7 +23,7 @@ class TestCeleryRemovalValidation:
         app_dir = Path("app")
         if not app_dir.exists():
             pytest.skip("App directory not found")
-            
+
         celery_patterns = [
             "from celery",
             "import celery",
@@ -34,14 +32,14 @@ class TestCeleryRemovalValidation:
             "@task",
             "apply_async"
         ]
-        
+
         violations = {}
-        
+
         for py_file in app_dir.rglob("*.py"):
             try:
-                with open(py_file, 'r', encoding='utf-8') as f:
+                with open(py_file, encoding='utf-8') as f:
                     content = f.read()
-                    
+
                 for pattern in celery_patterns:
                     if pattern.lower() in content.lower():
                         if str(py_file) not in violations:
@@ -49,19 +47,19 @@ class TestCeleryRemovalValidation:
                         violations[str(py_file)].append(pattern)
             except (UnicodeDecodeError, PermissionError):
                 continue  # Skip files that can't be read
-        
+
         # Exclude files that are allowed to reference Celery (like documentation)
         allowed_files = {
             "docs/",  # Documentation files
             "tests/",  # Test files may reference for comparison
             ".git/",   # Git files
         }
-        
+
         filtered_violations = {}
         for file_path, patterns in violations.items():
             if not any(allowed in file_path for allowed in allowed_files):
                 filtered_violations[file_path] = patterns
-        
+
         assert not filtered_violations, \
             f"Celery imports found in: {filtered_violations}"
 
@@ -70,22 +68,22 @@ class TestCeleryRemovalValidation:
         pyproject_path = Path("pyproject.toml")
         if not pyproject_path.exists():
             pytest.skip("pyproject.toml not found")
-            
-        with open(pyproject_path, 'r') as f:
+
+        with open(pyproject_path) as f:
             content = f.read()
-        
+
         celery_deps = [
             "celery>=",
             "celery==",
             '"celery',
             "'celery"
         ]
-        
+
         violations = []
         for dep in celery_deps:
             if dep in content.lower():
                 violations.append(dep)
-        
+
         assert not violations, \
             f"Celery dependencies still present in pyproject.toml: {violations}"
 
@@ -94,27 +92,27 @@ class TestCeleryRemovalValidation:
         compose_files = [
             "docker-compose.yml"
         ]
-        
+
         for compose_file in compose_files:
             compose_path = Path(compose_file)
             if not compose_path.exists():
                 continue
-                
-            with open(compose_path, 'r') as f:
+
+            with open(compose_path) as f:
                 content = f.read()
-            
+
             # Check for worker service definition
             worker_indicators = [
                 "celery -A",
                 "worker --loglevel",
                 "celery_app worker",
             ]
-            
+
             violations = []
             for indicator in worker_indicators:
                 if indicator in content:
                     violations.append(indicator)
-            
+
             assert not violations, \
                 f"Worker service references found in {compose_file}: {violations}"
 
@@ -126,12 +124,12 @@ class TestCeleryRemovalValidation:
             Path("app/tools"),
             Path("app/plugins")
         ]
-        
+
         existing_dirs = []
         for agent_dir in required_agent_dirs:
             if agent_dir.exists() and agent_dir.is_dir():
                 existing_dirs.append(agent_dir)
-        
+
         # At least agents directory should exist
         assert Path("app/agents").exists(), "Core agents directory missing"
 
@@ -140,10 +138,10 @@ class TestCeleryRemovalValidation:
         main_file = Path("app/main.py")
         if not main_file.exists():
             pytest.skip("Main application file not found")
-            
-        with open(main_file, 'r') as f:
+
+        with open(main_file) as f:
             content = f.read()
-        
+
         celery_init_patterns = [
             "celery_app",
             "Celery(",
@@ -151,12 +149,12 @@ class TestCeleryRemovalValidation:
             "worker_main",
             "celery worker"
         ]
-        
+
         violations = []
         for pattern in celery_init_patterns:
             if pattern in content:
                 violations.append(pattern)
-        
+
         assert not violations, \
             f"Celery initialization found in main.py: {violations}"
 
@@ -179,7 +177,7 @@ class TestSystemIntegrityAfterCleanup:
         app_dir = Path("app")
         if not app_dir.exists():
             pytest.skip("App directory not found")
-            
+
         # We can't actually test all imports without running the app
         # But we can check that main modules exist
         critical_modules = [
@@ -188,12 +186,12 @@ class TestSystemIntegrityAfterCleanup:
             Path("app/models/__init__.py"),
             Path("app/api/__init__.py")
         ]
-        
+
         missing_modules = []
         for module in critical_modules:
             if not module.exists():
                 missing_modules.append(str(module))
-        
+
         assert not missing_modules, \
             f"Critical modules missing after cleanup: {missing_modules}"
 
@@ -202,20 +200,20 @@ class TestSystemIntegrityAfterCleanup:
         models_dir = Path("app/models")
         if not models_dir.exists():
             pytest.skip("Models directory not found")
-            
+
         # Check that core models exist
         core_models = [
             "client.py",
-            "document.py", 
+            "document.py",
             "user.py"
         ]
-        
+
         missing_models = []
         for model in core_models:
             model_path = models_dir / model
             if not model_path.exists():
                 missing_models.append(model)
-        
+
         assert not missing_models, \
             f"Core models missing: {missing_models}"
 
@@ -224,18 +222,18 @@ class TestSystemIntegrityAfterCleanup:
         api_dir = Path("app/api")
         if not api_dir.exists():
             pytest.skip("API directory not found")
-            
+
         # Check that core API modules exist
         core_apis = [
             "documents.py",
             "clients.py"
         ]
-        
+
         missing_apis = []
         for api in core_apis:
             api_path = api_dir / api
             if not api_path.exists():
                 missing_apis.append(api)
-        
+
         # Some APIs might not exist yet, so we just check structure
         assert api_dir.exists(), "API directory should exist"

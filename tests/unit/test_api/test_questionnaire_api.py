@@ -4,16 +4,41 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import status
+from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
-from app.main import fastapi_app
+from app.api.middleware.agent_error_handler import agent_error_handler
+from app.api.questionnaire import router as questionnaire_router
 
 
 @pytest.fixture
-def client():
-    """Create test client."""
-    return TestClient(fastapi_app)
+def container():
+    """Create container for testing."""
+    from app.containers import Container
+    return Container()
+
+
+@pytest.fixture
+def client(mock_agent_manager, container):
+    """Create test client with mocked dependencies."""
+    # Create a clean FastAPI app for testing
+    app = FastAPI(title="Test Questionnaire API")
+
+    # Add agent error handler middleware
+    app.middleware("http")(agent_error_handler)
+
+    app.include_router(questionnaire_router)
+
+    # Override the container provider
+    container.agent_manager.override(mock_agent_manager)
+    container.wire(modules=["app.api.questionnaire"])
+
+    with TestClient(app) as test_client:
+        yield test_client
+
+    # Clean up
+    container.unwire()
+    container.reset_override()
 
 
 @pytest.fixture
@@ -60,12 +85,10 @@ def valid_questionnaire_request():
 class TestQuestionnaireGeneration:
     """Test questionnaire generation endpoint."""
 
-    @patch("app.api.questionnaire.Container.agent_manager")
     @patch("app.api.questionnaire.get_async_db")
     def test_generate_questionnaire_success(
         self,
         mock_db,
-        mock_container,
         client,
         mock_agent_manager,
         mock_questionnaire_agent,
@@ -74,7 +97,6 @@ class TestQuestionnaireGeneration:
     ):
         """Test successful questionnaire generation."""
         # Setup mocks
-        mock_container.return_value = mock_agent_manager
         mock_agent_manager.get_agent.return_value = mock_questionnaire_agent
         mock_agent_manager.is_agent_active.return_value = True
 
@@ -84,7 +106,7 @@ class TestQuestionnaireGeneration:
         # Mock client service
         with patch("app.api.questionnaire.ClientService") as mock_service_class:
             mock_service = mock_service_class.return_value
-            mock_service.get_client_by_id.return_value = mock_client
+            mock_service.get_client_by_id = AsyncMock(return_value=mock_client)
 
             # Make request
             response = client.post(
@@ -100,26 +122,23 @@ class TestQuestionnaireGeneration:
             assert data["client_name"] == "John Doe"
             assert data["error"] is None
 
-    @patch("app.api.questionnaire.Container.agent_manager")
     @patch("app.api.questionnaire.get_async_db")
     def test_generate_questionnaire_client_not_found(
         self,
         mock_db,
-        mock_container,
         client,
         mock_agent_manager,
         valid_questionnaire_request,
     ):
         """Test questionnaire generation when client is not found."""
         # Setup mocks
-        mock_container.return_value = mock_agent_manager
         mock_session = AsyncMock()
         mock_db.return_value = mock_session
 
         # Mock client service
         with patch("app.api.questionnaire.ClientService") as mock_service_class:
             mock_service = mock_service_class.return_value
-            mock_service.get_client_by_id.return_value = None
+            mock_service.get_client_by_id = AsyncMock(return_value=None)
 
             # Make request
             response = client.post(
@@ -131,12 +150,10 @@ class TestQuestionnaireGeneration:
             data = response.json()
             assert "Client not found" in data["detail"]
 
-    @patch("app.api.questionnaire.Container.agent_manager")
     @patch("app.api.questionnaire.get_async_db")
     def test_generate_questionnaire_agent_not_found(
         self,
         mock_db,
-        mock_container,
         client,
         mock_agent_manager,
         mock_client,
@@ -144,7 +161,6 @@ class TestQuestionnaireGeneration:
     ):
         """Test questionnaire generation when agent is not found."""
         # Setup mocks
-        mock_container.return_value = mock_agent_manager
         mock_agent_manager.get_agent.return_value = None
 
         mock_session = AsyncMock()
@@ -153,7 +169,7 @@ class TestQuestionnaireGeneration:
         # Mock client service
         with patch("app.api.questionnaire.ClientService") as mock_service_class:
             mock_service = mock_service_class.return_value
-            mock_service.get_client_by_id.return_value = mock_client
+            mock_service.get_client_by_id = AsyncMock(return_value=mock_client)
 
             # Make request
             response = client.post(
@@ -166,12 +182,10 @@ class TestQuestionnaireGeneration:
             assert data["error"] == "agent_not_found"
             assert data["agent_id"] == "questionnaire"
 
-    @patch("app.api.questionnaire.Container.agent_manager")
     @patch("app.api.questionnaire.get_async_db")
     def test_generate_questionnaire_agent_not_active(
         self,
         mock_db,
-        mock_container,
         client,
         mock_agent_manager,
         mock_questionnaire_agent,
@@ -180,7 +194,6 @@ class TestQuestionnaireGeneration:
     ):
         """Test questionnaire generation when agent is not active."""
         # Setup mocks
-        mock_container.return_value = mock_agent_manager
         mock_agent_manager.get_agent.return_value = mock_questionnaire_agent
         mock_agent_manager.is_agent_active.return_value = False
 
@@ -190,7 +203,7 @@ class TestQuestionnaireGeneration:
         # Mock client service
         with patch("app.api.questionnaire.ClientService") as mock_service_class:
             mock_service = mock_service_class.return_value
-            mock_service.get_client_by_id.return_value = mock_client
+            mock_service.get_client_by_id = AsyncMock(return_value=mock_client)
 
             # Make request
             response = client.post(
@@ -203,12 +216,10 @@ class TestQuestionnaireGeneration:
             assert data["error"] == "agent_not_active"
             assert data["agent_id"] == "questionnaire"
 
-    @patch("app.api.questionnaire.Container.agent_manager")
     @patch("app.api.questionnaire.get_async_db")
     def test_generate_questionnaire_processing_failure(
         self,
         mock_db,
-        mock_container,
         client,
         mock_agent_manager,
         mock_questionnaire_agent,
@@ -217,7 +228,6 @@ class TestQuestionnaireGeneration:
     ):
         """Test questionnaire generation when processing fails."""
         # Setup mocks
-        mock_container.return_value = mock_agent_manager
         mock_agent_manager.get_agent.return_value = mock_questionnaire_agent
         mock_agent_manager.is_agent_active.return_value = True
 
@@ -233,7 +243,7 @@ class TestQuestionnaireGeneration:
         # Mock client service
         with patch("app.api.questionnaire.ClientService") as mock_service_class:
             mock_service = mock_service_class.return_value
-            mock_service.get_client_by_id.return_value = mock_client
+            mock_service.get_client_by_id = AsyncMock(return_value=mock_client)
 
             # Make request
             response = client.post(
@@ -297,12 +307,8 @@ class TestClientDocumentsCheck:
             with patch(
                 "app.api.questionnaire.DocumentChunkRepository"
             ) as mock_chunk_repo:
-                mock_client_service.return_value.get_client_by_id.return_value = (
-                    mock_client
-                )
-                mock_chunk_repo.return_value.get_chunks_by_client.return_value = (
-                    mock_chunks
-                )
+                mock_client_service.return_value.get_client_by_id = AsyncMock(return_value=mock_client)
+                mock_chunk_repo.return_value.get_chunks_by_client = AsyncMock(return_value=mock_chunks)
 
                 client_id = str(uuid.uuid4())
                 response = client.get(
@@ -328,10 +334,8 @@ class TestClientDocumentsCheck:
             with patch(
                 "app.api.questionnaire.DocumentChunkRepository"
             ) as mock_chunk_repo:
-                mock_client_service.return_value.get_client_by_id.return_value = (
-                    mock_client
-                )
-                mock_chunk_repo.return_value.get_chunks_by_client.return_value = []
+                mock_client_service.return_value.get_client_by_id = AsyncMock(return_value=mock_client)
+                mock_chunk_repo.return_value.get_chunks_by_client = AsyncMock(return_value=[])
 
                 client_id = str(uuid.uuid4())
                 response = client.get(
@@ -354,7 +358,7 @@ class TestClientDocumentsCheck:
 
         # Mock service
         with patch("app.api.questionnaire.ClientService") as mock_client_service:
-            mock_client_service.return_value.get_client_by_id.return_value = None
+            mock_client_service.return_value.get_client_by_id = AsyncMock(return_value=None)
 
             client_id = str(uuid.uuid4())
             response = client.get(

@@ -3,13 +3,18 @@
 import uuid
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import JSON, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from .client import Client
+    from .document import Document
+    from .user import User
 
 
 class AgentExecutionStatus(Enum):
@@ -32,9 +37,9 @@ class AgentExecution(Base):
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
     agent_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
-    client_id: Mapped[int | None] = mapped_column(
-        ForeignKey("clients.client_id"), nullable=True
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), nullable=False)
+    client_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("clients.id"), nullable=True
     )
     status: Mapped[AgentExecutionStatus] = mapped_column(
         String(50), nullable=False, default=AgentExecutionStatus.PENDING, index=True

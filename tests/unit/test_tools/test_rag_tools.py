@@ -34,16 +34,20 @@ class TestRAGRetrieverTool:
         self, mock_query_bundle, mock_retriever_class, mock_index_class, rag_tool
     ):
         """Test successful client context retrieval."""
+        # Use a specific UUID for testing
+        test_uuid = uuid.UUID("12345678-1234-5678-9012-123456789012")
+        test_client_id_str = str(test_uuid)
+
         # Mock retrieval results
         mock_node1 = MagicMock()
         mock_node1.text = "Medical report shows back injury"
         mock_node1.score = 0.9
-        mock_node1.metadata = {"client_id": "test-client-id"}
+        mock_node1.metadata = {"client_id": test_client_id_str}
 
         mock_node2 = MagicMock()
         mock_node2.text = "X-ray results indicate herniated disc"
         mock_node2.score = 0.8
-        mock_node2.metadata = {"client_id": "test-client-id"}
+        mock_node2.metadata = {"client_id": test_client_id_str}
 
         mock_retriever = MagicMock()
         mock_retriever.retrieve.return_value = [mock_node1, mock_node2]
@@ -54,8 +58,8 @@ class TestRAGRetrieverTool:
 
         # Test context retrieval
         result = rag_tool.retrieve_client_context(
-            client_id=uuid.UUID("12345678-1234-5678-9012-123456789012"),
-            profession="Engineer",
+            client_id=test_uuid,
+            profession="Engineer", 
             disease="Back pain",
             incident_date="01/01/2023",
         )
@@ -95,11 +99,15 @@ class TestRAGRetrieverTool:
         self, mock_index_class, rag_tool
     ):
         """Test context retrieval filters out other clients."""
+        # Use a specific UUID for testing
+        test_uuid = uuid.UUID("12345678-1234-5678-9012-123456789012")
+        test_client_id_str = str(test_uuid)
+
         # Mock retrieval results with mixed client IDs
         mock_node1 = MagicMock()
         mock_node1.text = "Client A medical report"
         mock_node1.score = 0.9
-        mock_node1.metadata = {"client_id": "test-client-id"}
+        mock_node1.metadata = {"client_id": test_client_id_str}
 
         mock_node2 = MagicMock()
         mock_node2.text = "Client B medical report"
@@ -116,7 +124,7 @@ class TestRAGRetrieverTool:
             "app.tools.rag_tools.VectorIndexRetriever", return_value=mock_retriever
         ):
             result = rag_tool.retrieve_client_context(
-                client_id=uuid.UUID("12345678-1234-5678-9012-123456789012"),
+                client_id=test_uuid,
                 profession="Engineer",
                 disease="Back pain",
                 incident_date="01/01/2023",

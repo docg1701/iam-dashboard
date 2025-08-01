@@ -5,16 +5,13 @@ questionnaire generation, and complete user scenarios as specified in
 Story 1.6 requirements.
 """
 
-import asyncio
 import tempfile
 import uuid
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.agent_manager import AgentManager
 from app.main import fastapi_app
 from app.models.client import Client
 from app.models.document import Document, DocumentStatus, DocumentType
@@ -64,7 +61,7 @@ class TestCompleteDocumentProcessingWorkflow:
         # Setup mocks
         mock_client = Client(**mock_client_data)
         mock_client_repo.return_value.get_by_id.return_value = mock_client
-        
+
         mock_document = Document(
             id=uuid.uuid4(),
             client_id=mock_client_data["id"],
@@ -87,7 +84,7 @@ class TestCompleteDocumentProcessingWorkflow:
             "processing_summary": "Document processed successfully",
             "chunks_created": 5
         }
-        
+
         mock_agent_manager.return_value.get_agent.return_value = mock_pdf_agent
         mock_agent_manager.return_value.is_agent_active.return_value = True
 
@@ -95,7 +92,7 @@ class TestCompleteDocumentProcessingWorkflow:
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
             tmp_file.write(sample_pdf_content)
             tmp_file.flush()
-            
+
             upload_response = self.client.post(
                 f"/documents/process/{mock_client_data['id']}",
                 files={"file": ("integration_test.pdf", open(tmp_file.name, "rb"), "application/pdf")},
@@ -104,10 +101,10 @@ class TestCompleteDocumentProcessingWorkflow:
 
         # Verify upload response
         assert upload_response.status_code in [200, 201]
-        
+
         # Step 2: Verify agent processing was triggered
         mock_pdf_agent.process_document.assert_called()
-        
+
         # Step 3: Verify document status updates
         assert mock_document.status == DocumentStatus.UPLOADED
 
@@ -118,7 +115,7 @@ class TestCompleteDocumentProcessingWorkflow:
         # Mock agent that fails processing
         mock_pdf_agent = AsyncMock()
         mock_pdf_agent.process_document.side_effect = Exception("Processing failed")
-        
+
         mock_agent_manager.return_value.get_agent.return_value = mock_pdf_agent
         mock_agent_manager.return_value.is_agent_active.return_value = True
 
@@ -179,7 +176,7 @@ class TestQuestionnaireGenerationWorkflow:
             "context_chunks": 3,
             "client_name": mock_client_data["name"]
         }
-        
+
         mock_agent_manager.return_value.get_agent.return_value = mock_questionnaire_agent
         mock_agent_manager.return_value.is_agent_active.return_value = True
 
@@ -206,7 +203,7 @@ class TestQuestionnaireGenerationWorkflow:
         # Mock failing questionnaire agent
         mock_questionnaire_agent = AsyncMock()
         mock_questionnaire_agent.generate_questionnaire.side_effect = Exception("Generation failed")
-        
+
         mock_agent_manager.return_value.get_agent.return_value = mock_questionnaire_agent
         mock_agent_manager.return_value.is_agent_active.return_value = True
 
@@ -236,7 +233,7 @@ class TestAgentManagementWorkflows:
     def test_agent_lifecycle_management(self, mock_agent_manager):
         """Test complete agent lifecycle management."""
         agent_id = "pdf_processor"
-        
+
         # Mock agent manager responses
         mock_agent_manager.return_value.get_all_agents_metadata.return_value = [
             {
@@ -246,7 +243,7 @@ class TestAgentManagementWorkflows:
                 "health": "healthy"
             }
         ]
-        
+
         # Test getting all agents
         response = self.client.get("/v1/admin/agents")
         assert response.status_code in [200, 500]  # 500 if not properly initialized
@@ -288,7 +285,7 @@ class TestDatabaseIntegrityValidation:
         # Setup mocks to simulate database operations
         mock_client = Client(**mock_client_data)
         mock_client_repo.return_value.get_by_id.return_value = mock_client
-        
+
         mock_document = Document(
             id=uuid.uuid4(),
             client_id=mock_client_data["id"],
@@ -310,13 +307,13 @@ class TestDatabaseIntegrityValidation:
         """Test database integrity under concurrent agent operations."""
         # This test would require actual concurrent processing
         # For now, verify endpoints can handle multiple requests
-        
+
         # Test multiple concurrent requests (simplified for integration testing)
         responses = []
         for i in range(3):
             response = self.client.get("/v1/admin/system/health")
             responses.append(response)
-        
+
         # Verify all requests completed (success or expected failure)
         for response in responses:
             if hasattr(response, 'status_code'):
@@ -340,15 +337,15 @@ class TestErrorScenarioRecovery:
             Exception("Health check failed"),  # First call fails
             {"healthy": True, "details": {}}     # Second call succeeds
         ]
-        
+
         mock_agent_manager.return_value.get_agent.return_value = mock_agent
-        
+
         agent_id = "pdf_processor"
-        
+
         # First health check should fail
         response1 = self.client.get(f"/v1/admin/agents/{agent_id}/health")
         assert response1.status_code in [500, 503]
-        
+
         # Simulate recovery attempt
         response2 = self.client.post(f"/v1/admin/agents/{agent_id}/restart")
         assert response2.status_code in [200, 500]
@@ -363,7 +360,7 @@ class TestErrorScenarioRecovery:
             data={"document_type": "simple"}
         )
         assert response.status_code in [400, 422]
-        
+
         # Test invalid document type
         client_id = str(uuid.uuid4())
         response = self.client.post(
@@ -378,12 +375,12 @@ class TestErrorScenarioRecovery:
         """Test system behavior under load conditions."""
         # Simulate multiple concurrent requests
         client_id = str(uuid.uuid4())
-        
+
         responses = []
         for i in range(10):  # Send 10 concurrent requests
             response = self.client.get("/v1/admin/system/health")
             responses.append(response.status_code)
-        
+
         # System should handle multiple requests gracefully
         # Either succeed or fail gracefully with appropriate status codes
         for status_code in responses:

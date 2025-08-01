@@ -8,7 +8,7 @@ This document defines the DEFINITIVE technology selection for the IAM Dashboard 
 |----------|------------|---------|---------|-----------|
 | **Language** | Python | 3.12+ | Primary development language | Modern Python with latest features, excellent async support, rich ecosystem for AI/ML |
 | **Web Framework** | FastAPI | >= 0.116.0 | Backend API and web server | High performance, automatic OpenAPI docs, excellent async support, type hints |
-| **UI Framework** | NiceGUI | >= 1.4.0 | Web-based user interface | Python-native UI, rapid development, real-time updates, no separate frontend build |
+| **UI Framework** | NiceGUI | >= 2.21.0 | Web-based user interface | Python-native UI, rapid development, real-time updates, no separate frontend build |
 | **Database** | PostgreSQL | >= 14 | Primary data storage | ACID compliance, JSON support, excellent performance, mature ecosystem |
 | **Vector Database** | pgvector | >= 0.5.0 | Vector embeddings storage | Native PostgreSQL extension, efficient similarity search, integrated with main DB |
 | **ORM** | SQLAlchemy | >= 2.0.41 | Database abstraction layer | Modern async support, excellent type hints, powerful query capabilities |

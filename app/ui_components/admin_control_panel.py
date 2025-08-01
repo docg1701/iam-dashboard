@@ -29,17 +29,17 @@ class AdminControlPanel:
         """Check if current user has admin access."""
         return self.dashboard._check_admin_access()
 
-    async def _refresh_data(self) -> None:
+    def _refresh_data(self) -> None:
         """Refresh system health and agents data."""
-        await self.dashboard.status_monitor._refresh_data()
+        self.dashboard.status_monitor._refresh_data()
 
-    async def _load_system_health(self) -> None:
+    def _load_system_health(self) -> None:
         """Load system health data."""
-        await self.dashboard.status_monitor._load_system_health()
+        self.dashboard.status_monitor._load_system_health()
 
-    async def _load_agents_data(self) -> None:
+    def _load_agents_data(self) -> None:
         """Load agents data from API."""
-        await self.dashboard.status_monitor._load_agents_data()
+        self.dashboard.status_monitor._load_agents_data()
 
     def _create_performance_summary(self) -> None:
         """Create performance summary cards."""
@@ -49,37 +49,37 @@ class AdminControlPanel:
         """Create a row for an agent in the table."""
         self.dashboard.status_monitor._create_agent_row(agent)
 
-    async def _start_agent(self, agent_id: str) -> None:
+    def _start_agent(self, agent_id: str) -> None:
         """Start an agent."""
-        await self.dashboard.status_monitor._start_agent(agent_id)
+        self.dashboard.status_monitor._start_agent(agent_id)
 
-    async def _stop_agent(self, agent_id: str) -> None:
+    def _stop_agent(self, agent_id: str) -> None:
         """Stop an agent."""
-        await self.dashboard.status_monitor._stop_agent(agent_id)
+        self.dashboard.status_monitor._stop_agent(agent_id)
 
-    async def _restart_agent(self, agent_id: str) -> None:
+    def _restart_agent(self, agent_id: str) -> None:
         """Restart an agent."""
-        await self.dashboard.status_monitor._restart_agent(agent_id)
+        self.dashboard.status_monitor._restart_agent(agent_id)
 
-    async def _perform_restart_all(self) -> None:
+    def _perform_restart_all(self) -> None:
         """Perform the actual restart of all agents."""
-        await self.dashboard.status_monitor._perform_restart_all()
+        self.dashboard.status_monitor._perform_restart_all()
 
-    async def _validate_config(self, agent_id: str) -> None:
+    def _validate_config(self, agent_id: str) -> None:
         """Validate agent configuration."""
-        await self.dashboard.config_manager._validate_config(agent_id)
+        self.dashboard.config_manager._validate_config(agent_id)
 
-    async def _apply_config(self, agent_id: str, dialog: Any) -> None:
+    def _apply_config(self, agent_id: str, dialog: Any) -> None:
         """Apply configuration changes."""
-        await self.dashboard.config_manager._apply_config(agent_id, dialog)
+        self.dashboard.config_manager._apply_config(agent_id, dialog)
 
-    async def _rollback_config(self, agent_id: str) -> None:
+    def _rollback_config(self, agent_id: str) -> None:
         """Rollback configuration to previous state."""
-        await self.dashboard.config_manager._rollback_config(agent_id)
+        self.dashboard.config_manager._rollback_config(agent_id)
 
-    async def _perform_rollback(self, agent_id: str) -> None:
+    def _perform_rollback(self, agent_id: str) -> None:
         """Perform the actual configuration rollback."""
-        await self.dashboard.config_manager._perform_rollback(agent_id)
+        self.dashboard.config_manager._perform_rollback(agent_id)
 
     def _show_agent_details(self, agent_id: str) -> None:
         """Show detailed information about an agent."""

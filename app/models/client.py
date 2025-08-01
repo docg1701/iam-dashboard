@@ -8,7 +8,7 @@ from sqlalchemy.orm import relationship
 from .base import TimestampedModel
 
 if TYPE_CHECKING:
-    from .agent import AgentExecution
+    pass
 
 
 class Client(TimestampedModel):
