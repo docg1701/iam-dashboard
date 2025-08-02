@@ -127,27 +127,31 @@ This is the **DEFINITIVE technology selection** for the entire project. This tab
 
 | Category | Technology | Version | Purpose | Rationale |
 |----------|------------|---------|---------|-----------|
-| Frontend Language | TypeScript | 5.6+ | Type-safe frontend development | Prevents runtime errors, enables better IDE support, aligns with enterprise development standards |
-| Frontend Framework | Next.js | 15.x | React-based fullstack framework | App Router for modern routing, React Server Components, built-in optimization, excellent shadcn/ui compatibility |
-| UI Component Library | shadcn/ui | Latest | Customizable component system | Perfect for brand customization via CSS variables, Tailwind integration, accessibility built-in |
-| State Management | TanStack Query + Zustand | 5.x + 5.x | Server and client state management | TanStack Query for server state caching, Zustand for lightweight client state, avoids Redux complexity |
-| Backend Language | Python | 3.12+ | Backend API development | Excellent FastAPI support, mature ecosystem, strong typing with Pydantic integration |
-| Backend Framework | FastAPI | 0.115+ | Modern Python web framework | Automatic OpenAPI generation, async support, Pydantic integration, excellent performance |
-| API Style | REST + OpenAPI 3.0 | 3.0.3 | API architecture and documentation | Standard REST for simplicity, OpenAPI for automatic documentation, easier than GraphQL for this use case |
-| Database | PostgreSQL | 16.x | Primary data storage with vector support | ACID compliance, excellent JSON support, pgvector extension for future AI features, mature ecosystem |
-| Cache | Redis | 7.x | Session storage and caching | FastAPI session management, agent task queuing, improves response times for frequent queries |
+| Frontend Language | TypeScript | >=5.9 | Type-safe frontend development | Prevents runtime errors, enables better IDE support, aligns with enterprise development standards |
+| Frontend Framework | Next.js | >=15.4.5 | React-based fullstack framework | App Router for modern routing, React Server Components, built-in optimization, excellent shadcn/ui compatibility |
+| UI Component Library | shadcn/ui | >=2.9.3 | Customizable component system | Perfect for brand customization via CSS variables, Tailwind integration, accessibility built-in |
+| State Management | TanStack Query + Zustand | >=5.84.0 + >=5.0.7 | Server and client state management | TanStack Query for server state caching, Zustand for lightweight client state, avoids Redux complexity |
+| Backend Language | Python | >=3.13.5 | Backend API development | Excellent FastAPI support, mature ecosystem, strong typing with Pydantic integration |
+| Backend Framework | FastAPI | >=0.116.1 | Modern Python web framework | Automatic OpenAPI generation, async support, Pydantic integration, excellent performance |
+| Backend Validation | Pydantic | >=2.11.7 | Data validation and settings management | Integrates seamlessly with FastAPI, uses Python type hints for robust validation |
+| Web Server | Gunicorn + Uvicorn | >=23.0.0 + >=0.35.0 | ASGI server and process manager | Gunicorn manages Uvicorn workers for production-grade performance and reliability |
+| API Style | REST + OpenAPI 3.0 | >=3.1.1 | API architecture and documentation | Standard REST for simplicity, OpenAPI for automatic documentation, easier than GraphQL for this use case |
+| Database | PostgreSQL | >=17.5 | Primary data storage with vector support | ACID compliance, excellent JSON support, pgvector extension for future AI features, mature ecosystem |
+| DB Migration | Alembic | >=1.16.4 | Database schema migrations | Industry standard for SQLAlchemy/SQLModel, enables version-controlled database changes |
+| Cache | Redis | >=8.0.3 | Session storage and caching | FastAPI session management, agent task queuing, improves response times for frequent queries |
+| Async Task Queue | Celery | >=5.5.0 | Asynchronous task processing | Handles long-running tasks without blocking API responses, ensures system scalability |
 | File Storage | Local FS + S3 Compatible | N/A | File uploads and static assets | Local storage for development, S3-compatible (DigitalOcean Spaces) for production backups |
 | Authentication | FastAPI Security + JWT | OAuth2 | Authentication and authorization | Industry standard OAuth2 + JWT, integrates with FastAPI security middleware, supports 2FA |
-| Frontend Testing | Vitest + Testing Library | 2.x + 16.x | Component and integration testing | Faster than Jest, excellent TypeScript support, React Testing Library for user-centric testing |
-| Backend Testing | pytest + pytest-asyncio | 8.x + 0.24+ | API and business logic testing | Python standard for testing, async support for FastAPI, excellent fixture system |
-| E2E Testing | Playwright | 1.48+ | End-to-end workflow testing | Best-in-class browser automation, excellent TypeScript support, reliable for CI/CD |
-| Build Tool | Vite (via Next.js) | 5.x | Frontend build and bundling | Built into Next.js 15, fastest build times, excellent HMR, optimal for development |
+| Frontend Testing | Vitest + Testing Library | >=3.2.4 + >=16.3.0 | Component and integration testing | Faster than Jest, excellent TypeScript support, React Testing Library for user-centric testing |
+| Backend Testing | pytest + pytest-asyncio | >=8.4.1 + >=1.1.0 | API and business logic testing | Python standard for testing, async support for FastAPI, excellent fixture system |
+| E2E Testing | Playwright | >=1.54 | End-to-end workflow testing | Best-in-class browser automation, excellent TypeScript support, reliable for CI/CD |
+| Build Tool | Vite (via Next.js) | >=7.0.6 | Frontend build and bundling | Built into Next.js 15, fastest build times, excellent HMR, optimal for development |
 | Bundler | Turbopack (Next.js 15) | Latest | Production optimization | Next.js 15 default bundler, faster than Webpack, optimized for React Server Components |
-| IaC Tool | Terraform | 1.9+ | Infrastructure provisioning | Industry standard for VPS provisioning, excellent provider ecosystem, declarative approach |
-| CI/CD | GitHub Actions | Latest | Automated testing and deployment | Integrated with GitHub, excellent ecosystem, supports parallel testing across services |
-| Monitoring | Grafana + Prometheus | 11.x + 2.54+ | Application and infrastructure monitoring | Open source monitoring stack, excellent alerting, cost-effective for multi-instance monitoring |
+| IaC Tool | Terraform | >=1.12.1 | Infrastructure provisioning | Industry standard for VPS provisioning, excellent provider ecosystem, declarative approach |
+| CI/CD | GitHub Actions | >=2.327.1 | Automated testing and deployment | Integrated with GitHub, excellent ecosystem, supports parallel testing across services |
+| Monitoring | Grafana + Prometheus | >=12.1.0 + >=3.5.0 | Application and infrastructure monitoring | Open source monitoring stack, excellent alerting, cost-effective for multi-instance monitoring |
 | Logging | Structured Logging (JSON) | N/A | Application logging and debugging | JSON format for log aggregation, compatible with standard log analysis tools |
-| CSS Framework | Tailwind CSS | 3.4+ | Utility-first styling with theming | Perfect shadcn/ui integration, CSS variables for brand customization, rapid development |
+| CSS Framework | Tailwind CSS | >=4.1.11 | Utility-first styling with theming | Perfect shadcn/ui integration, CSS variables for brand customization, rapid development |
 
 ---
 
@@ -393,6 +397,67 @@ paths:
               schema:
                 $ref: '#/components/schemas/Client'
 
+  /clients/{client_id}:
+    get:
+      tags: [Clients]
+      summary: Get a single client by ID
+      parameters:
+        - name: client_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Client details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '404':
+          description: Client not found
+    put:
+      tags: [Clients]
+      summary: Update an existing client
+      parameters:
+        - name: client_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientUpdate'
+      responses:
+        '200':
+          description: Client updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Client'
+        '404':
+          description: Client not found
+    delete:
+      tags: [Clients]
+      summary: Delete a client
+      parameters:
+        - name: client_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Client deleted successfully
+        '404':
+          description: Client not found
+
 components:
   securitySchemes:
     BearerAuth:
@@ -426,6 +491,26 @@ components:
           type: string
           format: date-time
 
+    ClientUpdate:
+      type: object
+      properties:
+        full_name:
+          type: string
+          minLength: 2
+          maxLength: 255
+        ssn:
+          type: string
+          pattern: '^\d{3}-\d{2}-\d{4}$'
+        birth_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [active, inactive, archived]
+        notes:
+          type: string
+          maxLength: 1000
+
     ClientCreate:
       type: object
       required: [full_name, ssn, birth_date]
@@ -452,6 +537,43 @@ components:
 Major logical components across the fullstack system with clear boundaries and interfaces:
 
 ### Frontend Components
+
+#### Component Interaction Diagram
+
+```mermaid
+graph TD
+    subgraph User Interface
+        Frontend[Next.js Frontend]
+    end
+
+    subgraph Backend Services
+        APIServer[FastAPI Server]
+        Agent1[Client Agent]
+        Agent2[PDF Agent]
+        Agent3[Report Agent]
+    end
+
+    subgraph Data Storage
+        Database[(PostgreSQL)]
+        Cache[(Redis)]
+    end
+
+    subgraph External Services
+        OpenAI[OpenAI Embeddings]
+    end
+
+    Frontend -->|REST API Calls| APIServer
+    APIServer -->|Database Queries| Database
+    APIServer -->|Cache Operations| Cache
+    APIServer -->|Triggers Agent| Agent1
+    APIServer -->|Triggers Agent| Agent2
+    APIServer -->|Triggers Agent| Agent3
+
+    Agent1 -->|CRUD Operations| Database
+    Agent2 -->|CRUD Operations| Database
+    Agent2 -->|API Call| OpenAI
+    Agent3 -->|Reads Data| Database
+```
 
 #### Authentication Component
 **Responsibility:** Handle user login, 2FA verification, and session management with secure token storage
@@ -961,7 +1083,7 @@ apps/backend/src/
 class ClientBase(SQLModel):
     """Base client fields for sharing between models"""
     full_name: str = Field(min_length=2, max_length=255)
-    ssn: str = Field(regex=r'^\d{3}-\d{2}-\d{4}$')
+    ssn: str = Field(regex=r'^\d{3}-\d{2}-\d{4}$'
     birth_date: date
     status: ClientStatus = ClientStatus.ACTIVE
     notes: Optional[str] = Field(default=None, max_length=1000)
@@ -1998,205 +2120,45 @@ The platform implements **comprehensive monitoring and observability** across al
 ### Key Metrics
 
 **Frontend Metrics:**
-- **Core Web Vitals:** Largest Contentful Paint (LCP), First Input Delay (FID), Cumulative Layout Shift (CLS)
-- **JavaScript Errors:** Error rate, error types, affected user sessions, custom branding rendering errors
-- **API Response Times:** Average response time per endpoint, P95/P99 latencies, agent-specific performance
-- **User Interactions:** Page views, form submissions, client management operations, search performance
-- **Custom Branding Performance:** Theme loading times, asset loading success rates, CSS variable application speed
+- **Web Vitals:** Largest Contentful Paint (LCP) < 2.5s, First Input Delay (FID) < 100ms, Cumulative Layout Shift (CLS) < 0.1
+- **Error Rate:** < 0.1% of sessions with unhandled exceptions
+- **API Success Rate:** > 99.5% of API calls successful
 
 **Backend Metrics:**
-- **Request Rate:** Requests per second across all agents, peak load handling, endpoint-specific throughput
-- **Error Rate:** 4xx/5xx error percentages, agent-specific error rates, database connection failures
-- **Response Time:** Average and percentile response times per agent, database query performance, external API latencies
-- **Database Query Performance:** Slow query detection, connection pool utilization, agent table access patterns
-- **Agent Performance:** Individual agent response times, inter-agent communication efficiency, processing success rates
-- **Resource Utilization:** CPU, memory, and disk usage per VPS instance, auto-scaling triggers
+- **API Response Time:** < 200ms on average for all endpoints
+- **Error Rate:** < 0.05% of requests resulting in 5xx errors
+- **Database Query Time:** < 50ms for 95th percentile of queries
 
-**Business Metrics:**
-- **Client Operations:** Client creation/update rates, search query performance, bulk operation success rates
-- **System Availability:** Per-client uptime tracking, service degradation detection, planned maintenance windows
-- **Custom Implementation Metrics:** Deployment success rates, branding validation completion, client onboarding time
+**Infrastructure Metrics:**
+- **CPU Utilization:** < 80% average across all client VPS instances
+- **Memory Usage:** < 85% average to prevent swapping
+- **Disk Space:** < 90% utilization with automated alerts
 
-### Monitoring Architecture
+### Logging and Tracing
 
-```mermaid
-graph TB
-    subgraph "Client VPS Instance"
-        A[Next.js Frontend] --> M1[Metrics Collector]
-        B[FastAPI Backend] --> M1
-        C[Agent 1] --> M1
-        D[Agent 2] --> M1
-        E[PostgreSQL] --> M1
-        F[Redis Cache] --> M1
-    end
-    
-    M1 --> G[Prometheus]
-    G --> H[Grafana Dashboard]
-    
-    subgraph "Centralized Monitoring"
-        H --> I[Alert Manager]
-        I --> J[PagerDuty/Email/SMS]
-        G --> K[Long-term Storage]
-        L[Log Aggregation] --> M[ELK Stack]
-    end
-    
-    subgraph "Service Provider Dashboard"
-        N[Multi-Client Overview]
-        O[SLA Tracking]
-        P[Implementation Pipeline]
-        Q[Client Health Status]
-    end
-    
-    H --> N
-    M --> N
-    I --> O
-```
-
-### Alerting Strategy
-
-**Critical Alerts (Immediate Response Required):**
-- System downtime > 30 seconds
-- Error rate > 5% for any agent
-- Database connection failures
-- Memory usage > 90%
-- SSL certificate expiration within 7 days
-
-**Warning Alerts (Response Within 1 Hour):**
-- Response time > 2 seconds (P95)
-- Disk usage > 80%
-- Error rate > 2% for any agent
-- Failed backup operations
-- Custom branding deployment failures
-
-**Informational Alerts (Daily Review):**
-- Performance degradation trends
-- Resource usage trending upward
-- Unusual user activity patterns
-- System update availability
-- Client usage statistics
-
-### Service Provider Monitoring Dashboard
-
-The centralized monitoring dashboard provides comprehensive oversight across all client implementations:
-
-**Multi-Client Health Overview:**
-- Real-time status grid showing all client instances
-- Color-coded health indicators (green/yellow/red)
-- SLA compliance tracking per client
-- Quick access to individual client dashboards
-
-**Implementation Pipeline Monitoring:**
-- Progress tracking for ongoing implementations
-- Resource allocation across concurrent projects
-- Quality gate status and completion metrics
-- Client communication and feedback tracking
-
-**Operational Metrics:**
-- Cross-client performance comparisons
-- Resource utilization optimization opportunities
-- Cost tracking and billing accuracy
-- Security incident correlation across instances
-
-### Logging Strategy
-
-**Structured Logging Format:**
+**Structured Logging:**
 ```json
 {
-  "timestamp": "2025-08-01T10:30:00.123Z",
+  "timestamp": "2025-08-01T12:00:00Z",
   "level": "INFO",
-  "service": "agent1",
-  "client_id": "client_abc123",
-  "request_id": "req_1234567890",
-  "user_id": "user_def456",
-  "action": "create_client",
   "message": "Client created successfully",
-  "duration_ms": 45,
-  "metadata": {
-    "client_name": "John Doe",
-    "validation_time_ms": 12,
-    "database_time_ms": 28
-  }
+  "service": "backend-api",
+  "request_id": "req_1234567890",
+  "agent": "agent1",
+  "client_id": "uuid-goes-here",
+  "user_id": "uuid-goes-here"
 }
 ```
 
-**Log Categories:**
-- **Audit Logs:** All client data modifications, user authentication, system configuration changes
-- **Performance Logs:** Request/response times, database queries, agent processing times
-- **Error Logs:** Application errors, validation failures, system exceptions with full context
-- **Security Logs:** Authentication attempts, authorization failures, suspicious activity detection
-- **Business Logs:** Client operations, report generation, bulk operations, custom branding deployments
+**Distributed Tracing:**
+- **Trace Propagation:** W3C Trace Context headers across all services
+- **Trace Visualization:** Jaeger or Grafana Tempo for end-to-end trace analysis
+- **Trace IDs:** Included in all logs for correlation between services and agents
 
-### Performance Monitoring Implementation
+---
 
-**Frontend Performance Tracking:**
-```typescript
-// Performance monitoring service
-class PerformanceMonitor {
-  static trackPageLoad(pageName: string) {
-    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-    
-    const metrics = {
-      page: pageName,
-      loadTime: navigation.loadEventEnd - navigation.loadEventStart,
-      domContentLoaded: navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart,
-      firstContentfulPaint: this.getFCP(),
-      largestContentfulPaint: this.getLCP(),
-      cumulativeLayoutShift: this.getCLS()
-    };
-    
-    this.sendMetrics('page_performance', metrics);
-  }
-  
-  static trackApiCall(endpoint: string, duration: number, success: boolean) {
-    this.sendMetrics('api_performance', {
-      endpoint,
-      duration,
-      success,
-      timestamp: Date.now()
-    });
-  }
-}
-```
+*This architecture document is the single source of truth for the Multi-Agent IAM Dashboard project. All development must adhere to the standards and decisions outlined herein.*
 
-**Backend Performance Monitoring:**
-```python
-import time
-from functools import wraps
-from prometheus_client import Counter, Histogram, Gauge
-
-# Metrics collectors
-REQUEST_COUNT = Counter('api_requests_total', 'Total API requests', ['method', 'endpoint', 'status', 'agent'])
-REQUEST_DURATION = Histogram('api_request_duration_seconds', 'API request duration', ['endpoint', 'agent'])
-ACTIVE_CONNECTIONS = Gauge('database_connections_active', 'Active database connections')
-
-def monitor_endpoint(agent_name: str):
-    def decorator(func):
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            start_time = time.time()
-            status = "success"
-            
-            try:
-                result = await func(*args, **kwargs)
-                return result
-            except Exception as e:
-                status = "error"
-                logger.error(f"Endpoint error in {agent_name}: {str(e)}")
-                raise
-            finally:
-                duration = time.time() - start_time
-                REQUEST_DURATION.labels(endpoint=func.__name__, agent=agent_name).observe(duration)
-                REQUEST_COUNT.labels(method="POST", endpoint=func.__name__, status=status, agent=agent_name).inc()
-        
-        return wrapper
-    return decorator
-
-# Usage in agents
-class ClientManagementAgent:
-    @monitor_endpoint("agent1")
-    async def create_client(self, client_data: ClientCreateRequest):
-        # Implementation with automatic monitoring
-        pass
 ```
 
 ---
