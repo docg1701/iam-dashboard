@@ -1,0 +1,47 @@
+# Caddyfile for Multi-Agent IAM Dashboard
+# Development reverse proxy configuration
+
+{
+    debug
+    admin localhost:2019
+}
+
+# Development domain
+localhost {
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+    
+    handle /docs* {
+        reverse_proxy backend:8000
+    }
+    
+    handle /openapi.json {
+        reverse_proxy backend:8000
+    }
+    
+    handle /health {
+        reverse_proxy backend:8000
+    }
+    
+    handle {
+        reverse_proxy frontend:3000
+    }
+    
+    # Enable logging
+    log {
+        output stdout
+        format console
+    }
+}
+
+# Alternative for direct access during development
+:8080 {
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+    
+    handle {
+        reverse_proxy frontend:3000
+    }
+}

@@ -4,6 +4,7 @@ Tests for database module.
 This module tests database configuration, session management, and utilities.
 """
 
+from contextlib import suppress
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -61,19 +62,16 @@ def test_get_session_success(test_session):
         assert session == mock_session
 
         # Test cleanup
-        try:
+        with suppress(StopIteration):
             next(session_gen)
-        except StopIteration:
-            pass
 
         mock_session.close.assert_called_once()
 
 
 def test_create_test_session_no_session_local():
     """Test create_test_session when SessionLocal is None."""
-    with patch("src.core.database.SessionLocal", None):
-        with pytest.raises(Exception, match="Database not available"):
-            create_test_session()
+    with patch("src.core.database.SessionLocal", None), pytest.raises(Exception, match="Database not available"):
+        create_test_session()
 
 
 def test_create_test_session_success():
@@ -174,6 +172,5 @@ async def test_init_db_failure():
     mock_engine = MagicMock()
     mock_engine.connect.side_effect = Exception("Connection failed")
 
-    with patch("src.core.database.engine", mock_engine):
-        with pytest.raises(Exception, match="Connection failed"):
-            await init_db()
+    with patch("src.core.database.engine", mock_engine), pytest.raises(Exception, match="Connection failed"):
+        await init_db()

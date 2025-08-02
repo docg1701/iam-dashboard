@@ -7,15 +7,17 @@ All code and technical content must be in English as per CLAUDE.md requirements.
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 import uvicorn
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .api.v1 import api_router
 from .core.config import settings
 from .core.database import init_db
+from .core.middleware import setup_middleware
+from .schemas.common import HealthCheckResponse
 
 
 @asynccontextmanager
@@ -39,30 +41,27 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Setup all middleware (includes CORS)
+setup_middleware(app)
 
 # Include API routes
 app.include_router(api_router, prefix="/api/v1")
 
 
-@app.get("/health", tags=["health"])
-async def health_check() -> JSONResponse:
+@app.get("/health", response_model=HealthCheckResponse, tags=["health"])
+async def health_check() -> HealthCheckResponse:
     """Health check endpoint for monitoring and load balancers."""
-    return JSONResponse(
-        status_code=200,
-        content={
-            "status": "healthy",
-            "service": settings.PROJECT_NAME,
-            "version": settings.PROJECT_VERSION,
-            "environment": settings.ENVIRONMENT,
-        },
+    return HealthCheckResponse(
+        status="healthy",
+        service=settings.PROJECT_NAME,
+        version=settings.PROJECT_VERSION,
+        environment=settings.ENVIRONMENT,
+        timestamp=datetime.utcnow().isoformat(),
+        components={
+            "database": "healthy",
+            "redis": "healthy",
+            "api": "healthy"
+        }
     )
 
 

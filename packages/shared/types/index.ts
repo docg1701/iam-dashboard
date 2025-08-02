@@ -1,0 +1,124 @@
+/**
+ * Shared type definitions for Multi-Agent IAM Dashboard
+ * 
+ * This module exports common types used across frontend and backend.
+ * All types follow TypeScript best practices and include JSDoc documentation.
+ */
+
+import { z } from 'zod'
+
+// User and Authentication Types
+export const UserRoleSchema = z.enum(['sysadmin', 'admin', 'user'])
+export type UserRole = z.infer<typeof UserRoleSchema>
+
+export const UserStatusSchema = z.enum(['active', 'inactive', 'suspended'])
+export type UserStatus = z.infer<typeof UserStatusSchema>
+
+export interface User {
+  user_id: string
+  email: string
+  full_name: string
+  role: UserRole
+  status: UserStatus
+  created_at: string
+  updated_at: string
+  last_login_at?: string
+  is_verified: boolean
+}
+
+// Client Management Types
+export const ClientStatusSchema = z.enum(['active', 'inactive', 'archived'])
+export type ClientStatus = z.infer<typeof ClientStatusSchema>
+
+export interface Client {
+  client_id: string
+  full_name: string
+  ssn: string
+  birth_date: string
+  status: ClientStatus
+  created_at: string
+  updated_at: string
+  created_by: string
+}
+
+// API Response Types
+export interface ApiResponse<T = unknown> {
+  success: boolean
+  data?: T
+  message?: string
+  error_code?: string
+  details?: Record<string, unknown>
+}
+
+export interface PaginatedResponse<T = unknown> {
+  success: boolean
+  data: T[]
+  pagination: {
+    page: number
+    per_page: number
+    total: number
+    total_pages: number
+  }
+}
+
+// Error Types
+export interface ApiError {
+  message: string
+  error_code?: string
+  details?: Record<string, unknown>
+  timestamp: string
+}
+
+// Agent Types
+export const AgentTypeSchema = z.enum([
+  'client_management',
+  'pdf_processing', 
+  'reports_analysis',
+  'audio_recording'
+])
+export type AgentType = z.infer<typeof AgentTypeSchema>
+
+export interface AgentStatus {
+  agent_id: string
+  type: AgentType
+  name: string
+  status: 'online' | 'offline' | 'error'
+  last_activity: string
+  version: string
+}
+
+// Configuration Types
+export interface BrandingConfig {
+  primary_color: string
+  secondary_color: string
+  logo_url?: string
+  favicon_url?: string
+  company_name: string
+  font_family: string
+  border_radius: string
+}
+
+// Validation Schemas
+export const ClientCreateSchema = z.object({
+  full_name: z.string().min(2).max(255),
+  ssn: z.string().regex(/^\d{3}-\d{2}-\d{4}$/, 'SSN must be in format XXX-XX-XXXX'),
+  birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  status: ClientStatusSchema.default('active')
+})
+
+export const UserCreateSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  full_name: z.string().min(2).max(255),
+  role: UserRoleSchema,
+  password: z.string().min(8).max(128)
+})
+
+// Export schemas for runtime validation
+export {
+  UserRoleSchema,
+  UserStatusSchema,
+  ClientStatusSchema,
+  AgentTypeSchema,
+  ClientCreateSchema,
+  UserCreateSchema
+}

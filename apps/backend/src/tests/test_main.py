@@ -8,6 +8,8 @@ health checks and basic endpoints.
 import pytest
 from fastapi.testclient import TestClient
 
+from src.main import app
+
 
 def test_health_endpoint(client: TestClient):
     """Test the health check endpoint."""
@@ -55,6 +57,5 @@ def test_not_found_endpoint(client: TestClient):
 async def test_application_startup():
     """Test that the application starts up correctly."""
     # This test ensures the application can be imported and initialized
-    from src.main import app
     assert app is not None
     assert app.title == "Multi-Agent IAM Dashboard"

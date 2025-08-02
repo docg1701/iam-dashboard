@@ -87,41 +87,32 @@ def dashboard_exception_to_http(exc: DashboardException) -> HTTPException:
     Returns:
         HTTPException: Corresponding HTTP exception
     """
-    if isinstance(exc, ValidationError):
-        return HTTPException(
-            status_code=400,
-            detail={"message": exc.message, "error_code": exc.error_code, "details": exc.details},
-        )
+    # Mapping of exception types to their HTTP status codes and details
+    exception_mappings = {
+        ValidationError: (400, True),  # (status_code, include_details)
+        AuthenticationError: (401, False),
+        AuthorizationError: (403, False),
+        NotFoundError: (404, False),
+        ConflictError: (409, True),
+    }
 
-    elif isinstance(exc, AuthenticationError):
-        return HTTPException(
-            status_code=401, detail={"message": exc.message, "error_code": exc.error_code}
-        )
+    # Check if it's a specific exception type
+    for exc_type, (status_code, include_details) in exception_mappings.items():
+        if isinstance(exc, exc_type):
+            detail = {"message": exc.message, "error_code": exc.error_code}
+            if include_details:
+                detail["details"] = exc.details
+            return HTTPException(status_code=status_code, detail=detail)
 
-    elif isinstance(exc, AuthorizationError):
-        return HTTPException(
-            status_code=403, detail={"message": exc.message, "error_code": exc.error_code}
-        )
-
-    elif isinstance(exc, NotFoundError):
-        return HTTPException(
-            status_code=404, detail={"message": exc.message, "error_code": exc.error_code}
-        )
-
-    elif isinstance(exc, ConflictError):
-        return HTTPException(
-            status_code=409,
-            detail={"message": exc.message, "error_code": exc.error_code, "details": exc.details},
-        )
-
-    elif isinstance(exc, DatabaseError | FileProcessingError | ExternalServiceError):
+    # Handle server error exceptions
+    if isinstance(exc, DatabaseError | FileProcessingError | ExternalServiceError):
         return HTTPException(
             status_code=500,
             detail={"message": "Internal server error", "error_code": exc.error_code},
         )
 
-    else:
-        return HTTPException(
-            status_code=500,
-            detail={"message": "An unexpected error occurred", "error_code": "INTERNAL_ERROR"},
-        )
+    # Default fallback
+    return HTTPException(
+        status_code=500,
+        detail={"message": "An unexpected error occurred", "error_code": "INTERNAL_ERROR"},
+    )

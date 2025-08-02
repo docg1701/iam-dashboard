@@ -38,10 +38,9 @@ config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 target_metadata = SQLModel.metadata
 
 # Import all models here to ensure they are registered with SQLModel
-# This is where you would import all your model files:
-# from models.user import User
-# from models.client import Client
-# etc.
+from models.audit import AuditLog  # noqa: F401
+from models.client import Client  # noqa: F401
+from models.user import User  # noqa: F401
 
 
 def run_migrations_offline() -> None:
@@ -85,7 +84,7 @@ def run_migrations_online() -> None:
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=target_metadata
+            target_metadata=target_metadata,
         )
 
         with context.begin_transaction():

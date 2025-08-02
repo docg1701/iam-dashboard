@@ -107,7 +107,7 @@ describe('ApiClient', () => {
       apiClient.setAuthToken(token)
 
       // Access private property for testing
-      const headers = (apiClient as { defaultHeaders: Record<string, string> }).defaultHeaders
+      const headers = (apiClient as unknown as { defaultHeaders: Record<string, string> }).defaultHeaders
       expect(headers['Authorization']).toBe(`Bearer ${token}`)
     })
 
@@ -115,7 +115,7 @@ describe('ApiClient', () => {
       apiClient.setAuthToken('test-token')
       apiClient.removeAuthToken()
 
-      const headers = (apiClient as { defaultHeaders: Record<string, string> }).defaultHeaders
+      const headers = (apiClient as unknown as { defaultHeaders: Record<string, string> }).defaultHeaders
       expect(headers['Authorization']).toBeUndefined()
     })
 
