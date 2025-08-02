@@ -248,75 +248,81 @@ This is a **Custom Implementation Service** where each client receives a dedicat
 
 ## 📂 Project Structure
 
+### Monorepo Workspace Structure
+The project uses a **monorepo architecture** with npm workspaces for better organization and dependency management:
+
 ```
 /
-├── frontend/                 # Next.js 15 application
-│   ├── src/
-│   │   ├── app/             # App Router (Next.js 15)
-│   │   │   ├── (auth)/      # Authentication route group
-│   │   │   ├── (dashboard)/ # Main dashboard routes
-│   │   │   ├── admin/       # Admin interface routes
-│   │   │   ├── agents/      # Agent-specific pages
-│   │   │   ├── globals.css  # Global styles
-│   │   │   ├── layout.tsx   # Root layout
-│   │   │   └── page.tsx     # Home page
-│   │   ├── components/      # Shared UI components
-│   │   │   ├── ui/          # shadcn/ui base components
-│   │   │   ├── common/      # App-specific shared components
-│   │   │   └── forms/       # Reusable form components
-│   │   ├── features/        # Feature-based modules
-│   │   │   ├── auth/        # Authentication features
-│   │   │   ├── dashboard/   # Dashboard features
-│   │   │   ├── agents/      # Agent-specific features
-│   │   │   └── themes/      # White-label theming
-│   │   ├── lib/             # Utilities & configurations
-│   │   │   ├── utils.ts     # Utility functions
-│   │   │   ├── auth.ts      # Authentication config
-│   │   │   ├── api.ts       # API client configuration
-│   │   │   └── env.ts       # Environment validation
-│   │   ├── hooks/           # Shared custom hooks
-│   │   ├── styles/          # Additional styling files
-│   │   └── types/           # TypeScript type definitions
-│   ├── package.json
-│   ├── next.config.js
-│   ├── tailwind.config.js
-│   └── tsconfig.json
-├── backend/                 # FastAPI application
-│   ├── src/
-│   │   ├── core/           # Core system modules
-│   │   │   ├── database.py  # Database connection
-│   │   │   ├── auth.py      # Authentication logic
-│   │   │   ├── config.py    # Application configuration
-│   │   │   └── exceptions.py # Custom exceptions
-│   │   ├── agents/         # Agent implementations
-│   │   │   ├── agent1/     # Client management
-│   │   │   │   ├── models.py # SQLModel definitions
-│   │   │   │   ├── routes.py # FastAPI routes
-│   │   │   │   ├── services.py # Business logic
-│   │   │   │   └── schemas.py # Pydantic schemas
-│   │   │   ├── agent2/     # PDF processing (RAG)
-│   │   │   ├── agent3/     # Reports & analysis
-│   │   │   └── agent4/     # Audio recording
-│   │   ├── shared/         # Shared utilities
-│   │   │   ├── models.py   # Base models
-│   │   │   ├── utils.py    # Utility functions
-│   │   │   └── validators.py # Input validators
-│   │   ├── api/            # API route aggregation
-│   │   │   └── v1/         # API version 1
-│   │   ├── tests/          # Test files
-│   │   └── main.py         # FastAPI application entry
-│   ├── pyproject.toml      # UV dependency management
-│   ├── alembic/            # Database migrations
-│   │   ├── versions/       # Migration files
-│   │   ├── env.py         # Alembic configuration
-│   │   └── alembic.ini    # Alembic settings
-│   └── Dockerfile         # Backend container
-├── docker-compose.yml      # Container orchestration
-├── Caddyfile              # Reverse proxy configuration
-├── .env.example           # Environment variables template
-├── .gitignore             # Git ignore patterns
-├── README.md              # Project documentation
-└── CLAUDE.md              # This file
+├── package.json             # Root package.json with workspace configuration
+├── package-lock.json        # Root lockfile
+├── node_modules/            # Shared node_modules
+├── apps/                    # Application workspace
+│   ├── frontend/           # Next.js 15 application
+│   │   ├── src/
+│   │   │   ├── app/         # App Router (Next.js 15)
+│   │   │   │   ├── (auth)/  # Authentication route group
+│   │   │   │   ├── (dashboard)/ # Main dashboard routes
+│   │   │   │   ├── admin/   # Admin interface routes
+│   │   │   │   ├── agents/  # Agent-specific pages
+│   │   │   │   ├── globals.css # Global styles
+│   │   │   │   ├── layout.tsx # Root layout
+│   │   │   │   └── page.tsx # Home page
+│   │   │   ├── components/  # Shared UI components
+│   │   │   │   ├── ui/      # shadcn/ui base components
+│   │   │   │   ├── common/  # App-specific shared components
+│   │   │   │   └── forms/   # Reusable form components
+│   │   │   ├── features/    # Feature-based modules
+│   │   │   │   ├── auth/    # Authentication features
+│   │   │   │   ├── dashboard/ # Dashboard features
+│   │   │   │   ├── agents/  # Agent-specific features
+│   │   │   │   └── themes/  # White-label theming
+│   │   │   ├── lib/         # Utilities & configurations
+│   │   │   │   ├── utils.ts # Utility functions
+│   │   │   │   ├── auth.ts  # Authentication config
+│   │   │   │   ├── api.ts   # API client configuration
+│   │   │   │   └── env.ts   # Environment validation
+│   │   │   ├── hooks/       # Shared custom hooks
+│   │   │   ├── styles/      # Additional styling files
+│   │   │   ├── test/        # Test setup and utilities
+│   │   │   └── types/       # TypeScript type definitions
+│   │   ├── package.json     # Frontend dependencies
+│   │   ├── next.config.ts   # Next.js configuration
+│   │   ├── tailwind.config.js # Tailwind CSS config
+│   │   ├── vitest.config.ts # Vitest test configuration
+│   │   └── tsconfig.json    # TypeScript configuration
+│   └── backend/            # FastAPI application
+│       ├── src/
+│       │   ├── core/       # Core system modules
+│       │   │   ├── database.py # Database connection
+│       │   │   ├── config.py # Application configuration
+│       │   │   └── exceptions.py # Custom exceptions
+│       │   ├── api/        # API route aggregation
+│       │   │   └── v1/     # API version 1
+│       │   ├── tests/      # Test files
+│       │   └── main.py     # FastAPI application entry
+│       ├── pyproject.toml  # UV dependency management
+│       ├── uv.lock         # UV lock file
+│       ├── alembic/        # Database migrations
+│       │   ├── versions/   # Migration files
+│       │   ├── env.py     # Alembic configuration
+│       │   └── alembic.ini # Alembic settings
+│       └── htmlcov/        # Coverage reports
+├── infrastructure/         # Infrastructure as code
+│   └── docker/            # Docker configurations
+│       ├── backend/       # Backend Dockerfile
+│       ├── frontend/      # Frontend Dockerfile
+│       └── postgres/      # PostgreSQL initialization
+├── docs/                  # Project documentation
+│   ├── architecture.md   # Architecture documentation
+│   ├── prd.md            # Product requirements
+│   └── stories/          # User stories
+├── docker-compose.yml     # Container orchestration
+├── Caddyfile             # Reverse proxy configuration
+├── Makefile              # Development shortcuts
+├── .env.example          # Environment variables template
+├── .gitignore            # Git ignore patterns
+├── README.md             # Project documentation
+└── CLAUDE.md             # This file
 ```
 
 ## 🛠️ Technology Stack
@@ -531,10 +537,57 @@ async def get_client_for_pdf_processing(client_id: UUID):
 
 ## 💻 Development Commands
 
-### Backend Development (UV Package Manager)
+### Monorepo Development Commands
+
+#### Root Level Commands (Recommended)
+```bash
+# Setup entire project
+npm run setup
+
+# Development (run both frontend and backend)
+npm run dev
+
+# Run individual services
+npm run dev:frontend  # Frontend only
+npm run dev:backend   # Backend only
+
+# Testing
+npm run test          # All workspaces
+npm run test:frontend # Frontend tests
+npm run test:backend  # Backend tests
+npm run test:e2e      # End-to-end tests
+
+# Code quality
+npm run lint          # All workspaces
+npm run lint:frontend # Frontend linting
+npm run lint:backend  # Backend linting
+
+npm run format        # All workspaces
+npm run format:frontend # Frontend formatting
+npm run format:backend  # Backend formatting
+
+npm run type-check    # All workspaces
+npm run type-check:frontend # Frontend type checking
+
+# Build
+npm run build         # All workspaces
+npm run build:frontend # Frontend build
+npm run build:backend  # Backend build
+
+# Database operations
+npm run db:migrate    # Run migrations
+npm run db:migration  # Create new migration
+
+# Docker operations
+npm run docker:up     # Start all services
+npm run docker:down   # Stop all services
+npm run docker:logs   # View logs
+```
+
+#### Backend Development (UV Package Manager)
 ```bash
 # Setup UV environment
-cd backend
+cd apps/backend
 uv venv
 source .venv/bin/activate  # Linux/Mac
 uv sync
@@ -560,10 +613,10 @@ uv run pytest
 uv run pytest --cov=src --cov-report=html
 ```
 
-### Frontend Development
+#### Frontend Development
 ```bash
 # Dependencies
-cd frontend
+cd apps/frontend
 npm install
 
 # Development server
@@ -575,6 +628,8 @@ npm run type-check
 # Testing
 npm run test
 npm run test:coverage
+npm run test:ui       # Vitest UI
+npm run test:e2e      # Playwright E2E tests
 
 # Build
 npm run build
