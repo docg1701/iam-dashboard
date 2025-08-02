@@ -156,3 +156,12 @@ out/
 # Build outputs
 dist/
 build/
+
+# GitHub Actions and CI/CD workflows (prevent accidental addition)
+.github/workflows/
+.github/actions/
+*.yml.bak
+*.yaml.bak
+
+# Docker packages and containers (prevent pushing to registry)
+docker-compose.override.yml
