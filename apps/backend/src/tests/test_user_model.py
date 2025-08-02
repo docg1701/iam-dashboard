@@ -55,7 +55,7 @@ class TestUserBase:
             role=UserRole.ADMIN,
             is_active=False,
             totp_enabled=True,
-            last_login=last_login
+            last_login=last_login,
         )
 
         assert user_base.email == "admin@example.com"
@@ -77,8 +77,9 @@ class TestUserBase:
             UserBase(email="user@example.com", role="invalid_role")
 
         # Check for either Pydantic v1 or v2 message format
-        assert ("value is not a valid enumeration member" in str(exc_info.value) or
-                "Input should be" in str(exc_info.value))
+        assert "value is not a valid enumeration member" in str(
+            exc_info.value
+        ) or "Input should be" in str(exc_info.value)
 
 
 class TestUser:
@@ -88,7 +89,7 @@ class TestUser:
         """Test User creation with minimal required fields."""
         user = User(
             email="user@example.com",
-            password_hash="$2b$12$abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqr"
+            password_hash="$2b$12$abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqr",
         )
 
         assert user.email == "user@example.com"
@@ -116,7 +117,7 @@ class TestUser:
             last_login=last_login,
             created_at=created_at,
             password_hash="$2b$12$abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqr",
-            totp_secret="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+            totp_secret="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",
         )
 
         assert user.user_id == user_id
@@ -132,14 +133,11 @@ class TestUser:
         valid_hashes = [
             "$2b$12$abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqr",
             "$2b$10$1234567890abcdefghijklmnopqrstuvwxyz1234567890abcdefg",
-            "$2b$04$shorterhashfortest1234567890abcdefghijklmnopqrstuvwxy"
+            "$2b$04$shorterhashfortest1234567890abcdefghijklmnopqrstuvwxy",
         ]
 
         for hash_value in valid_hashes:
-            user = User(
-                email="user@example.com",
-                password_hash=hash_value
-            )
+            user = User(email="user@example.com", password_hash=hash_value)
             assert user.password_hash == hash_value
 
     def test_user_password_hash_validation_invalid(self):
@@ -155,18 +153,12 @@ class TestUser:
 
         for invalid_hash in invalid_hashes:
             # Currently these will NOT raise ValidationError due to SQLModel limitations
-            user = User(
-                email="user@example.com",
-                password_hash=invalid_hash
-            )
+            user = User(email="user@example.com", password_hash=invalid_hash)
             assert user.password_hash == invalid_hash
 
         # Test empty string separately (SQLModel limitations still apply)
         # Currently empty string validation also doesn't work due to SQLModel limitations
-        user = User(
-            email="user@example.com",
-            password_hash=""
-        )
+        user = User(email="user@example.com", password_hash="")
         assert user.password_hash == ""
 
     def test_user_totp_secret_validation_valid(self):
@@ -181,7 +173,7 @@ class TestUser:
             user = User(
                 email="user@example.com",
                 password_hash="$2b$12$abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqr",
-                totp_secret=secret
+                totp_secret=secret,
             )
             assert user.totp_secret == secret
 
@@ -201,14 +193,14 @@ class TestUser:
             user = User(
                 email="user@example.com",
                 password_hash="$2b$12$abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqr",
-                totp_secret=invalid_secret
+                totp_secret=invalid_secret,
             )
             assert user.totp_secret == invalid_secret
 
         # Test length validation separately
         invalid_lengths = [
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ23456",   # Too short (31 chars)
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ2345678", # Too long (33 chars)
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ23456",  # Too short (31 chars)
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ2345678",  # Too long (33 chars)
         ]
 
         for invalid_secret in invalid_lengths:
@@ -216,7 +208,7 @@ class TestUser:
             user = User(
                 email="user@example.com",
                 password_hash="$2b$12$abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqr",
-                totp_secret=invalid_secret
+                totp_secret=invalid_secret,
             )
             assert user.totp_secret == invalid_secret
 
@@ -225,7 +217,7 @@ class TestUser:
         user = User(
             email="user@example.com",
             password_hash="$2b$12$abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqr",
-            totp_secret=None
+            totp_secret=None,
         )
         assert user.totp_secret is None
 
@@ -235,10 +227,7 @@ class TestUserCreate:
 
     def test_user_create_minimal(self):
         """Test UserCreate with minimal valid data."""
-        user_create = UserCreate(
-            email="user@example.com",
-            password="SecurePass123!"
-        )
+        user_create = UserCreate(email="user@example.com", password="SecurePass123!")
 
         assert user_create.email == "user@example.com"
         assert user_create.password == "SecurePass123!"
@@ -252,7 +241,7 @@ class TestUserCreate:
             password="AdminPass123!",
             role=UserRole.ADMIN,
             is_active=False,
-            totp_enabled=True
+            totp_enabled=True,
         )
 
         assert user_create.email == "admin@example.com"
@@ -271,10 +260,7 @@ class TestUserCreate:
         ]
 
         for password in valid_passwords:
-            user_create = UserCreate(
-                email="user@example.com",
-                password=password
-            )
+            user_create = UserCreate(email="user@example.com", password=password)
             assert user_create.password == password
 
     def test_user_create_password_validation_too_short(self):
@@ -282,46 +268,35 @@ class TestUserCreate:
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
                 email="user@example.com",
-                password="Short1!"  # Only 7 characters
+                password="Short1!",  # Only 7 characters
             )
         # Could be caught by Field min_length or custom validator
-        assert ("Password must be at least 8 characters long" in str(exc_info.value) or
-                "String should have at least 8 characters" in str(exc_info.value))
+        assert "Password must be at least 8 characters long" in str(
+            exc_info.value
+        ) or "String should have at least 8 characters" in str(exc_info.value)
 
     def test_user_create_password_validation_no_uppercase(self):
         """Test UserCreate password validation without uppercase."""
         with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                email="user@example.com",
-                password="lowercase123!"
-            )
+            UserCreate(email="user@example.com", password="lowercase123!")
         assert "Password must contain at least one uppercase letter" in str(exc_info.value)
 
     def test_user_create_password_validation_no_lowercase(self):
         """Test UserCreate password validation without lowercase."""
         with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                email="user@example.com",
-                password="UPPERCASE123!"
-            )
+            UserCreate(email="user@example.com", password="UPPERCASE123!")
         assert "Password must contain at least one lowercase letter" in str(exc_info.value)
 
     def test_user_create_password_validation_no_digit(self):
         """Test UserCreate password validation without digit."""
         with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                email="user@example.com",
-                password="NoNumbers!"
-            )
+            UserCreate(email="user@example.com", password="NoNumbers!")
         assert "Password must contain at least one digit" in str(exc_info.value)
 
     def test_user_create_password_validation_no_special(self):
         """Test UserCreate password validation without special character."""
         with pytest.raises(ValidationError) as exc_info:
-            UserCreate(
-                email="user@example.com",
-                password="NoSpecial123"
-            )
+            UserCreate(email="user@example.com", password="NoSpecial123")
         assert "Password must contain at least one special character" in str(exc_info.value)
 
     def test_user_create_password_validation_multiple_errors(self):
@@ -329,13 +304,15 @@ class TestUserCreate:
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
                 email="user@example.com",
-                password="weak"  # Too short, no uppercase, no digit, no special
+                password="weak",  # Too short, no uppercase, no digit, no special
             )
 
         error_str = str(exc_info.value)
         # Could be caught by Field min_length or custom validator
-        assert ("Password must be at least 8 characters long" in error_str or
-                "String should have at least 8 characters" in error_str)
+        assert (
+            "Password must be at least 8 characters long" in error_str
+            or "String should have at least 8 characters" in error_str
+        )
 
 
 class TestUserUpdate:
@@ -354,9 +331,7 @@ class TestUserUpdate:
     def test_user_update_partial(self):
         """Test UserUpdate with some fields."""
         user_update = UserUpdate(
-            email="new@example.com",
-            role=UserRole.ADMIN,
-            password="NewPassword123!"
+            email="new@example.com", role=UserRole.ADMIN, password="NewPassword123!"
         )
 
         assert user_update.email == "new@example.com"
@@ -374,15 +349,13 @@ class TestUserUpdate:
         # Invalid password should fail
         with pytest.raises(ValidationError) as exc_info:
             UserUpdate(password="weak")
-        assert ("Password must be at least 8 characters long" in str(exc_info.value) or
-                "String should have at least 8 characters" in str(exc_info.value))
+        assert "Password must be at least 8 characters long" in str(
+            exc_info.value
+        ) or "String should have at least 8 characters" in str(exc_info.value)
 
     def test_user_update_password_none_allowed(self):
         """Test UserUpdate allows None password."""
-        user_update = UserUpdate(
-            email="user@example.com",
-            password=None
-        )
+        user_update = UserUpdate(email="user@example.com", password=None)
         assert user_update.password is None
 
 
@@ -404,7 +377,7 @@ class TestUserRead:
             totp_enabled=False,
             last_login=last_login,
             created_at=created_at,
-            updated_at=updated_at
+            updated_at=updated_at,
         )
 
         assert user_read.user_id == user_id
@@ -425,7 +398,7 @@ class TestUserRead:
             user_id=user_id,
             email="user@example.com",
             created_at=created_at,
-            updated_at=None  # Explicitly provide None
+            updated_at=None,  # Explicitly provide None
         )
 
         assert user_read.user_id == user_id

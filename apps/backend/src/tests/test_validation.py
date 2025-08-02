@@ -268,8 +268,8 @@ class TestValidatePasswordStrength:
         """Test detection of weak password patterns."""
         weak_passwords = [
             "Password1111!",  # Repeated characters
-            "Abc123456!",     # Sequential patterns
-            "password123!",   # Common password (case insensitive)
+            "Abc123456!",  # Sequential patterns
+            "password123!",  # Common password (case insensitive)
         ]
 
         for password in weak_passwords:

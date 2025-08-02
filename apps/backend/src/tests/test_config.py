@@ -4,7 +4,6 @@ Tests for configuration module.
 This module tests the application configuration and settings validation.
 """
 
-
 from src.core.config import Settings
 
 

@@ -26,7 +26,7 @@ async def list_clients(
     params: ClientSearchParams = Depends(),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
-    token_data: TokenData = Depends(get_current_user_token)
+    token_data: TokenData = Depends(get_current_user_token),
 ):
     """
     List clients with optional search and pagination.
@@ -43,14 +43,13 @@ async def list_clients(
     # TODO: Implement client listing with search and pagination
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Client listing endpoint not yet implemented"
+        detail="Client listing endpoint not yet implemented",
     )
 
 
 @router.post("", response_model=ClientResponse, status_code=status.HTTP_201_CREATED)
 async def create_client(
-    client_data: ClientCreate,
-    token_data: TokenData = Depends(require_any_role(["admin", "user"]))
+    client_data: ClientCreate, token_data: TokenData = Depends(require_any_role(["admin", "user"]))
 ):
     """
     Create a new client.
@@ -68,15 +67,12 @@ async def create_client(
     # TODO: Implement client creation logic
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Client creation endpoint not yet implemented"
+        detail="Client creation endpoint not yet implemented",
     )
 
 
 @router.get("/{client_id}", response_model=ClientResponse)
-async def get_client(
-    client_id: UUID,
-    token_data: TokenData = Depends(get_current_user_token)
-):
+async def get_client(client_id: UUID, token_data: TokenData = Depends(get_current_user_token)):
     """
     Get client by ID.
 
@@ -93,7 +89,7 @@ async def get_client(
     # TODO: Implement client retrieval logic
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Client retrieval endpoint not yet implemented"
+        detail="Client retrieval endpoint not yet implemented",
     )
 
 
@@ -101,7 +97,7 @@ async def get_client(
 async def update_client(
     client_id: UUID,
     client_data: ClientUpdate,
-    token_data: TokenData = Depends(require_any_role(["admin", "user"]))
+    token_data: TokenData = Depends(require_any_role(["admin", "user"])),
 ):
     """
     Update client information.
@@ -120,14 +116,13 @@ async def update_client(
     # TODO: Implement client update logic
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Client update endpoint not yet implemented"
+        detail="Client update endpoint not yet implemented",
     )
 
 
 @router.delete("/{client_id}", response_model=SuccessResponse)
 async def delete_client(
-    client_id: UUID,
-    token_data: TokenData = Depends(require_any_role(["admin"]))
+    client_id: UUID, token_data: TokenData = Depends(require_any_role(["admin"]))
 ):
     """
     Delete client (soft delete).
@@ -145,5 +140,5 @@ async def delete_client(
     # TODO: Implement client deletion logic (soft delete)
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Client deletion endpoint not yet implemented"
+        detail="Client deletion endpoint not yet implemented",
     )

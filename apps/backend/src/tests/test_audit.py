@@ -25,7 +25,7 @@ class TestExtractRequestInfo:
         mock_request = Mock(spec=Request)
         mock_request.headers = {
             "X-Forwarded-For": "192.168.1.100, 10.0.0.1",
-            "User-Agent": "Mozilla/5.0 Test Browser"
+            "User-Agent": "Mozilla/5.0 Test Browser",
         }
         mock_request.client = Mock()
         mock_request.client.host = "127.0.0.1"
@@ -38,10 +38,7 @@ class TestExtractRequestInfo:
     def test_extract_with_real_ip(self):
         """Test extraction with X-Real-IP header."""
         mock_request = Mock(spec=Request)
-        mock_request.headers = {
-            "X-Real-IP": "203.0.113.1",
-            "User-Agent": "Test Agent"
-        }
+        mock_request.headers = {"X-Real-IP": "203.0.113.1", "User-Agent": "Test Agent"}
         mock_request.client = Mock()
         mock_request.client.host = "127.0.0.1"
 
@@ -53,9 +50,7 @@ class TestExtractRequestInfo:
     def test_extract_fallback_to_client_host(self):
         """Test fallback to client host when no proxy headers."""
         mock_request = Mock(spec=Request)
-        mock_request.headers = {
-            "User-Agent": "Test Agent"
-        }
+        mock_request.headers = {"User-Agent": "Test Agent"}
         mock_request.client = Mock()
         mock_request.client.host = "192.168.1.50"
 
@@ -67,9 +62,7 @@ class TestExtractRequestInfo:
     def test_extract_no_client(self):
         """Test extraction when no client info available."""
         mock_request = Mock(spec=Request)
-        mock_request.headers = {
-            "User-Agent": "Test Agent"
-        }
+        mock_request.headers = {"User-Agent": "Test Agent"}
         mock_request.client = None
 
         ip, user_agent = extract_request_info(mock_request)
@@ -93,9 +86,7 @@ class TestExtractRequestInfo:
         """Test user agent truncation."""
         mock_request = Mock(spec=Request)
         long_user_agent = "A" * 600  # Longer than 500 chars
-        mock_request.headers = {
-            "User-Agent": long_user_agent
-        }
+        mock_request.headers = {"User-Agent": long_user_agent}
         mock_request.client = Mock()
         mock_request.client.host = "127.0.0.1"
 
@@ -121,10 +112,7 @@ class TestCreateAuditLog:
     def mock_request(self):
         """Create a mock request."""
         request = Mock(spec=Request)
-        request.headers = {
-            "X-Forwarded-For": "192.168.1.100",
-            "User-Agent": "Test Browser"
-        }
+        request.headers = {"X-Forwarded-For": "192.168.1.100", "User-Agent": "Test Browser"}
         request.client = Mock()
         request.client.host = "127.0.0.1"
         return request
@@ -151,7 +139,7 @@ class TestCreateAuditLog:
                     user_id=user_id,
                     request=mock_request,
                     old_values=None,
-                    new_values={"name": "John Doe"}
+                    new_values={"name": "John Doe"},
                 )
 
                 # Verify session operations
@@ -185,7 +173,7 @@ class TestCreateAuditLog:
                     user_id=user_id,
                     request=mock_request,
                     old_values=old_values,
-                    new_values=new_values
+                    new_values=new_values,
                 )
 
                 # Verify the audit log creation data was properly set
@@ -231,7 +219,7 @@ class TestLogDatabaseAction:
                 user_id=user_id,
                 request=mock_request,
                 old_data=None,
-                new_data={"name": "Client Name"}
+                new_data={"name": "Client Name"},
             )
 
             mock_create.assert_called_once_with(
@@ -242,7 +230,7 @@ class TestLogDatabaseAction:
                 user_id=user_id,
                 request=mock_request,
                 old_values=None,
-                new_values={"name": "Client Name"}
+                new_values={"name": "Client Name"},
             )
 
     # Note: Exception handling test removed due to async function call issues in log_database_action
@@ -260,7 +248,7 @@ class TestPrepareAuditData:
             "password": "secret123",
             "totp_secret": "base32secret",
             "created_at": datetime(2023, 1, 1, 12, 0, 0),
-            "user_id": UUID("12345678-1234-5678-1234-567812345678")
+            "user_id": UUID("12345678-1234-5678-1234-567812345678"),
         }
 
         result = prepare_audit_data(mock_instance)
@@ -311,13 +299,19 @@ class TestPrepareAuditData:
             "totp_secret": "base32",
             "access_token": "token123",
             "refresh_token": "refresh123",
-            "normal_field": "normal_value"
+            "normal_field": "normal_value",
         }
 
         result = prepare_audit_data(mock_instance)
 
         # All sensitive fields should be redacted
-        sensitive_fields = ["password", "password_hash", "totp_secret", "access_token", "refresh_token"]
+        sensitive_fields = [
+            "password",
+            "password_hash",
+            "totp_secret",
+            "access_token",
+            "refresh_token",
+        ]
         for field in sensitive_fields:
             assert result[field] == "[REDACTED]"
 

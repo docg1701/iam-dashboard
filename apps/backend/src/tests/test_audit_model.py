@@ -47,7 +47,7 @@ class TestAuditLog:
             action=AuditAction.CREATE,
             user_id=user_id,
             ip_address="192.168.1.1",
-            user_agent="Test Browser"
+            user_agent="Test Browser",
         )
 
         assert audit_log.table_name == "users"
@@ -83,7 +83,7 @@ class TestAuditLog:
             ip_address="10.0.0.1",
             user_agent="Test Agent",
             created_at=created_at,
-            timestamp=timestamp
+            timestamp=timestamp,
         )
 
         assert audit_log.audit_id == audit_id
@@ -119,7 +119,7 @@ class TestAuditLog:
                 action=AuditAction.CREATE,
                 user_id=user_id,
                 ip_address="127.0.0.1",
-                user_agent="Test"
+                user_agent="Test",
             )
             assert audit_log.table_name == table_name
 
@@ -129,13 +129,13 @@ class TestAuditLog:
         # This test verifies that invalid table names are accepted (current behavior)
         # until SQLModel is updated to support Pydantic v2 validators
         invalid_table_names = [
-            "Users",           # Uppercase
-            "user-sessions",   # Hyphens not allowed
-            "user sessions",   # Spaces not allowed
-            "123table",        # Cannot start with number
-            "_table",          # Cannot start with underscore
-            "table.name",      # Dots not allowed
-            "table@name",      # Special chars not allowed
+            "Users",  # Uppercase
+            "user-sessions",  # Hyphens not allowed
+            "user sessions",  # Spaces not allowed
+            "123table",  # Cannot start with number
+            "_table",  # Cannot start with underscore
+            "table.name",  # Dots not allowed
+            "table@name",  # Special chars not allowed
         ]
 
         user_id = uuid4()
@@ -147,20 +147,20 @@ class TestAuditLog:
                 action=AuditAction.CREATE,
                 user_id=user_id,
                 ip_address="127.0.0.1",
-                user_agent="Test"
+                user_agent="Test",
             )
             assert audit_log.table_name == table_name
 
     def test_audit_log_ip_address_validation_valid(self):
         """Test AuditLog IP address validation with valid IPs."""
         valid_ips = [
-            "127.0.0.1",                                    # IPv4 localhost
-            "192.168.1.1",                                  # IPv4 private
-            "8.8.8.8",                                      # IPv4 public
-            "::1",                                          # IPv6 localhost
-            "2001:db8::1",                                  # IPv6 public
-            "fe80::1",                                      # IPv6 link-local
-            "2001:0db8:85a3:0000:0000:8a2e:0370:7334",    # Full IPv6
+            "127.0.0.1",  # IPv4 localhost
+            "192.168.1.1",  # IPv4 private
+            "8.8.8.8",  # IPv4 public
+            "::1",  # IPv6 localhost
+            "2001:db8::1",  # IPv6 public
+            "fe80::1",  # IPv6 link-local
+            "2001:0db8:85a3:0000:0000:8a2e:0370:7334",  # Full IPv6
         ]
 
         user_id = uuid4()
@@ -171,7 +171,7 @@ class TestAuditLog:
                 action=AuditAction.CREATE,
                 user_id=user_id,
                 ip_address=ip,
-                user_agent="Test"
+                user_agent="Test",
             )
             assert audit_log.ip_address == ip
 
@@ -180,12 +180,12 @@ class TestAuditLog:
         # NOTE: SQLModel 0.0.24 doesn't support Pydantic v2 field validators
         # This test verifies that invalid IP addresses are accepted (current behavior)
         invalid_ips = [
-            "192.168.1.256",    # IPv4 out of range
+            "192.168.1.256",  # IPv4 out of range
             "256.256.256.256",  # IPv4 all out of range
-            "not-an-ip",        # Text
-            "192.168.1",        # Incomplete IPv4
-            ":::",              # Invalid IPv6
-            "192.168.1.1.1",    # Too many octets
+            "not-an-ip",  # Text
+            "192.168.1",  # Incomplete IPv4
+            ":::",  # Invalid IPv6
+            "192.168.1.1.1",  # Too many octets
         ]
 
         user_id = uuid4()
@@ -197,7 +197,7 @@ class TestAuditLog:
                 action=AuditAction.CREATE,
                 user_id=user_id,
                 ip_address=ip,
-                user_agent="Test"
+                user_agent="Test",
             )
             assert audit_log.ip_address == ip
 
@@ -222,13 +222,14 @@ class TestAuditLog:
                 new_values=data,
                 user_id=user_id,
                 ip_address="127.0.0.1",
-                user_agent="Test"
+                user_agent="Test",
             )
             assert audit_log.old_values == data
             assert audit_log.new_values == data
 
     def test_audit_log_json_values_validation_invalid(self):
         """Test AuditLog JSON values validation with non-serializable data."""
+
         # NOTE: SQLModel 0.0.24 doesn't support Pydantic v2 field validators
         # This test verifies that non-serializable JSON data is accepted (current behavior)
         class NonSerializable:
@@ -250,7 +251,7 @@ class TestAuditLog:
                 old_values=data,
                 user_id=user_id,
                 ip_address="127.0.0.1",
-                user_agent="Test"
+                user_agent="Test",
             )
             assert audit_log.old_values == data
 
@@ -271,7 +272,7 @@ class TestAuditLogCreate:
             action=AuditAction.CREATE,
             user_id=user_id,
             ip_address="127.0.0.1",
-            user_agent="Test Browser"
+            user_agent="Test Browser",
         )
 
         assert audit_create.table_name == "users"
@@ -297,7 +298,7 @@ class TestAuditLogCreate:
             new_values=new_values,
             user_id=user_id,
             ip_address="192.168.1.100",
-            user_agent="Chrome/91.0"
+            user_agent="Chrome/91.0",
         )
 
         assert audit_create.table_name == "clients"
@@ -320,7 +321,7 @@ class TestAuditLogCreate:
                 action=action,
                 user_id=user_id,
                 ip_address="127.0.0.1",
-                user_agent="Test"
+                user_agent="Test",
             )
             assert audit_create.action == action
 
@@ -346,7 +347,7 @@ class TestAuditLogRead:
             user_id=user_id,
             ip_address="10.0.0.1",
             user_agent="Mozilla/5.0",
-            timestamp=timestamp
+            timestamp=timestamp,
         )
 
         assert audit_read.audit_id == audit_id
@@ -374,7 +375,7 @@ class TestAuditLogRead:
             user_id=user_id,
             ip_address="192.168.1.1",
             user_agent="Safari/14.0",
-            timestamp=timestamp
+            timestamp=timestamp,
         )
 
         assert audit_read.audit_id == audit_id
@@ -407,16 +408,13 @@ class TestAuditLogSearch:
         assert search.start_date is None
         assert search.end_date is None
         assert search.limit == 100  # Default
-        assert search.offset == 0   # Default
+        assert search.offset == 0  # Default
 
     def test_audit_log_search_partial(self):
         """Test AuditLogSearch with some filters."""
         user_id = uuid4()
         search = AuditLogSearch(
-            table_name="users",
-            action=AuditAction.CREATE,
-            user_id=user_id,
-            limit=50
+            table_name="users", action=AuditAction.CREATE, user_id=user_id, limit=50
         )
 
         assert search.table_name == "users"
@@ -442,7 +440,7 @@ class TestAuditLogSearch:
             start_date=start_date,
             end_date=end_date,
             limit=25,
-            offset=10
+            offset=10,
         )
 
         assert search.table_name == "clients"
@@ -467,8 +465,9 @@ class TestAuditLogSearch:
         for limit in invalid_limits:
             with pytest.raises(ValidationError) as exc_info:
                 AuditLogSearch(limit=limit)
-            assert ("greater than or equal to 1" in str(exc_info.value) or
-                    "less than or equal to 1000" in str(exc_info.value))
+            assert "greater than or equal to 1" in str(
+                exc_info.value
+            ) or "less than or equal to 1000" in str(exc_info.value)
 
     def test_audit_log_search_offset_validation(self):
         """Test AuditLogSearch offset validation."""
@@ -490,10 +489,7 @@ class TestAuditLogSearch:
         start = datetime(2023, 1, 1, 0, 0, 0)
         end = datetime(2023, 12, 31, 23, 59, 59)
 
-        search = AuditLogSearch(
-            start_date=start,
-            end_date=end
-        )
+        search = AuditLogSearch(start_date=start, end_date=end)
 
         assert search.start_date == start
         assert search.end_date == end

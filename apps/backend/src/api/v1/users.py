@@ -21,7 +21,7 @@ async def list_users(
     params: UserSearchParams = Depends(),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
-    token_data: TokenData = Depends(require_role("admin"))
+    token_data: TokenData = Depends(require_role("admin")),
 ):
     """
     List users with optional search and pagination.
@@ -38,14 +38,13 @@ async def list_users(
     # TODO: Implement user listing with search and pagination
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="User listing endpoint not yet implemented"
+        detail="User listing endpoint not yet implemented",
     )
 
 
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
-    user_data: UserCreate,
-    token_data: TokenData = Depends(require_role("admin"))
+    user_data: UserCreate, token_data: TokenData = Depends(require_role("admin"))
 ):
     """
     Create a new user.
@@ -63,15 +62,12 @@ async def create_user(
     # TODO: Implement user creation logic
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="User creation endpoint not yet implemented"
+        detail="User creation endpoint not yet implemented",
     )
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user(
-    user_id: UUID,
-    token_data: TokenData = Depends(require_role("admin"))
-):
+async def get_user(user_id: UUID, token_data: TokenData = Depends(require_role("admin"))):
     """
     Get user by ID.
 
@@ -88,15 +84,13 @@ async def get_user(
     # TODO: Implement user retrieval logic
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="User retrieval endpoint not yet implemented"
+        detail="User retrieval endpoint not yet implemented",
     )
 
 
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user(
-    user_id: UUID,
-    user_data: UserUpdate,
-    token_data: TokenData = Depends(require_role("admin"))
+    user_id: UUID, user_data: UserUpdate, token_data: TokenData = Depends(require_role("admin"))
 ):
     """
     Update user information.
@@ -115,15 +109,12 @@ async def update_user(
     # TODO: Implement user update logic
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="User update endpoint not yet implemented"
+        detail="User update endpoint not yet implemented",
     )
 
 
 @router.delete("/{user_id}", response_model=SuccessResponse)
-async def delete_user(
-    user_id: UUID,
-    token_data: TokenData = Depends(require_role("admin"))
-):
+async def delete_user(user_id: UUID, token_data: TokenData = Depends(require_role("admin"))):
     """
     Delete user (soft delete).
 
@@ -140,5 +131,5 @@ async def delete_user(
     # TODO: Implement user deletion logic (soft delete)
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="User deletion endpoint not yet implemented"
+        detail="User deletion endpoint not yet implemented",
     )

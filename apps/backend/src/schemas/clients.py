@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class ClientSearchParams(BaseModel):
     """Client search and filter parameters."""
+
     name: str | None = Field(None, description="Search by client name")
     ssn: str | None = Field(None, description="Search by SSN")
     status: str | None = Field(None, description="Filter by status")
@@ -23,6 +24,7 @@ class ClientSearchParams(BaseModel):
 
 class ClientCreate(BaseModel):
     """Client creation schema."""
+
     full_name: str = Field(..., min_length=2, max_length=255, description="Client full name")
     ssn: str = Field(..., description="Social Security Number (XXX-XX-XXXX format)")
     birth_date: date = Field(..., description="Client birth date")
@@ -47,7 +49,10 @@ class ClientCreate(BaseModel):
 
 class ClientUpdate(BaseModel):
     """Client update schema."""
-    full_name: str | None = Field(None, min_length=2, max_length=255, description="Client full name")
+
+    full_name: str | None = Field(
+        None, min_length=2, max_length=255, description="Client full name"
+    )
     ssn: str | None = Field(None, description="Social Security Number (XXX-XX-XXXX format)")
     birth_date: date | None = Field(None, description="Client birth date")
     status: str | None = Field(None, description="Client status")
@@ -72,6 +77,7 @@ class ClientUpdate(BaseModel):
 
 class ClientResponse(BaseModel):
     """Client response schema."""
+
     client_id: UUID = Field(..., description="Client unique identifier")
     full_name: str = Field(..., description="Client full name")
     ssn: str = Field(..., description="Social Security Number (masked)")
@@ -93,6 +99,7 @@ class ClientResponse(BaseModel):
 
 class ClientList(BaseModel):
     """Client list item schema (summary view)."""
+
     client_id: UUID = Field(..., description="Client unique identifier")
     full_name: str = Field(..., description="Client full name")
     ssn_masked: str = Field(..., description="Masked SSN")

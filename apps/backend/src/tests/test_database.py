@@ -70,7 +70,10 @@ def test_get_session_success(test_session):
 
 def test_create_test_session_no_session_local():
     """Test create_test_session when SessionLocal is None."""
-    with patch("src.core.database.SessionLocal", None), pytest.raises(Exception, match="Database not available"):
+    with (
+        patch("src.core.database.SessionLocal", None),
+        pytest.raises(Exception, match="Database not available"),
+    ):
         create_test_session()
 
 
@@ -156,9 +159,10 @@ async def test_init_db_success():
     mock_connection.execute.return_value = mock_result
     mock_engine.connect.return_value.__enter__.return_value = mock_connection
 
-    with patch("src.core.database.engine", mock_engine), \
-         patch("src.core.database.SQLModel") as mock_sqlmodel:
-
+    with (
+        patch("src.core.database.engine", mock_engine),
+        patch("src.core.database.SQLModel") as mock_sqlmodel,
+    ):
         await init_db()
 
         # Check pgvector extension query
@@ -172,5 +176,8 @@ async def test_init_db_failure():
     mock_engine = MagicMock()
     mock_engine.connect.side_effect = Exception("Connection failed")
 
-    with patch("src.core.database.engine", mock_engine), pytest.raises(Exception, match="Connection failed"):
+    with (
+        patch("src.core.database.engine", mock_engine),
+        pytest.raises(Exception, match="Connection failed"),
+    ):
         await init_db()

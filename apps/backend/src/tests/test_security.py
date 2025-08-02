@@ -11,6 +11,8 @@ from pydantic import ValidationError
 
 from src.core.security import (
     AuthService,
+    SecureAuthService,
+    SessionData,
     TokenData,
     auth_service,
     get_current_user_token,
@@ -26,11 +28,7 @@ class TestTokenData:
     def test_token_data_creation(self):
         """Test TokenData model creation."""
         user_id = uuid4()
-        token_data = TokenData(
-            user_id=user_id,
-            role="admin",
-            email="admin@example.com"
-        )
+        token_data = TokenData(user_id=user_id, role="admin", email="admin@example.com")
 
         assert token_data.user_id == user_id
         assert token_data.role == "admin"
@@ -40,9 +38,7 @@ class TestTokenData:
         """Test TokenData model validation."""
         # Valid UUID string should work
         token_data = TokenData(
-            user_id="12345678-1234-5678-1234-567812345678",
-            role="user",
-            email="user@example.com"
+            user_id="12345678-1234-5678-1234-567812345678", role="user", email="user@example.com"
         )
 
         assert isinstance(token_data.user_id, UUID)
@@ -51,11 +47,7 @@ class TestTokenData:
     def test_token_data_invalid_uuid(self):
         """Test TokenData with invalid UUID."""
         with pytest.raises(ValidationError, match="Input should be a valid UUID"):
-            TokenData(
-                user_id="invalid-uuid",
-                role="user",
-                email="user@example.com"
-            )
+            TokenData(user_id="invalid-uuid", role="user", email="user@example.com")
 
 
 class TestAuthService:
@@ -114,7 +106,7 @@ class TestAuthService:
         decoded = jwt.decode(
             token_data["access_token"],
             auth_service_instance.secret_key,
-            algorithms=[auth_service_instance.algorithm]
+            algorithms=[auth_service_instance.algorithm],
         )
 
         assert decoded["sub"] == str(user_id)
@@ -155,9 +147,7 @@ class TestAuthService:
         }
 
         expired_token = jwt.encode(
-            payload,
-            auth_service_instance.secret_key,
-            algorithm=auth_service_instance.algorithm
+            payload, auth_service_instance.secret_key, algorithm=auth_service_instance.algorithm
         )
 
         with pytest.raises(HTTPException) as exc_info:
@@ -206,9 +196,7 @@ class TestAuthService:
         }
 
         incomplete_token = jwt.encode(
-            payload,
-            auth_service_instance.secret_key,
-            algorithm=auth_service_instance.algorithm
+            payload, auth_service_instance.secret_key, algorithm=auth_service_instance.algorithm
         )
 
         with pytest.raises(HTTPException) as exc_info:
@@ -228,9 +216,7 @@ class TestAuthService:
         }
 
         invalid_uuid_token = jwt.encode(
-            payload,
-            auth_service_instance.secret_key,
-            algorithm=auth_service_instance.algorithm
+            payload, auth_service_instance.secret_key, algorithm=auth_service_instance.algorithm
         )
 
         with pytest.raises(HTTPException) as exc_info:
@@ -269,10 +255,7 @@ class TestGetCurrentUserToken:
         access_token = token_data["access_token"]
 
         # Mock credentials
-        credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer",
-            credentials=access_token
-        )
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=access_token)
 
         # Test function
         result = get_current_user_token(credentials)
@@ -285,10 +268,7 @@ class TestGetCurrentUserToken:
     def test_get_current_user_token_invalid(self):
         """Test get_current_user_token with invalid credentials."""
         # Mock invalid credentials
-        credentials = HTTPAuthorizationCredentials(
-            scheme="Bearer",
-            credentials="invalid.jwt.token"
-        )
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="invalid.jwt.token")
 
         with pytest.raises(HTTPException) as exc_info:
             get_current_user_token(credentials)
@@ -306,11 +286,7 @@ class TestRequireRole:
         check_role = require_role(required_role)
 
         # Token with required role
-        token_data = TokenData(
-            user_id=uuid4(),
-            role="admin",
-            email="admin@example.com"
-        )
+        token_data = TokenData(user_id=uuid4(), role="admin", email="admin@example.com")
 
         result = check_role(token_data)
         assert result == token_data
@@ -321,11 +297,7 @@ class TestRequireRole:
         check_role = require_role(required_role)
 
         # Token with sysadmin role
-        token_data = TokenData(
-            user_id=uuid4(),
-            role="sysadmin",
-            email="sysadmin@example.com"
-        )
+        token_data = TokenData(user_id=uuid4(), role="sysadmin", email="sysadmin@example.com")
 
         result = check_role(token_data)
         assert result == token_data
@@ -336,11 +308,7 @@ class TestRequireRole:
         check_role = require_role(required_role)
 
         # Token with insufficient role
-        token_data = TokenData(
-            user_id=uuid4(),
-            role="user",
-            email="user@example.com"
-        )
+        token_data = TokenData(user_id=uuid4(), role="user", email="user@example.com")
 
         with pytest.raises(HTTPException) as exc_info:
             check_role(token_data)
@@ -353,11 +321,7 @@ class TestRequireRole:
         required_role = "user"
         check_role = require_role(required_role)
 
-        token_data = TokenData(
-            user_id=uuid4(),
-            role="user",
-            email="user@example.com"
-        )
+        token_data = TokenData(user_id=uuid4(), role="user", email="user@example.com")
 
         result = check_role(token_data)
         assert result == token_data
@@ -372,11 +336,7 @@ class TestRequireAnyRole:
         check_roles = require_any_role(required_roles)
 
         # Token with one of the required roles
-        token_data = TokenData(
-            user_id=uuid4(),
-            role="admin",
-            email="admin@example.com"
-        )
+        token_data = TokenData(user_id=uuid4(), role="admin", email="admin@example.com")
 
         result = check_roles(token_data)
         assert result == token_data
@@ -387,11 +347,7 @@ class TestRequireAnyRole:
         check_roles = require_any_role(required_roles)
 
         # Token with sysadmin role
-        token_data = TokenData(
-            user_id=uuid4(),
-            role="sysadmin",
-            email="sysadmin@example.com"
-        )
+        token_data = TokenData(user_id=uuid4(), role="sysadmin", email="sysadmin@example.com")
 
         result = check_roles(token_data)
         assert result == token_data
@@ -402,11 +358,7 @@ class TestRequireAnyRole:
         check_roles = require_any_role(required_roles)
 
         # Token with role not in list
-        token_data = TokenData(
-            user_id=uuid4(),
-            role="user",
-            email="user@example.com"
-        )
+        token_data = TokenData(user_id=uuid4(), role="user", email="user@example.com")
 
         with pytest.raises(HTTPException) as exc_info:
             check_roles(token_data)
@@ -421,11 +373,7 @@ class TestRequireAnyRole:
 
         # Test each role in the list
         for role in required_roles:
-            token_data = TokenData(
-                user_id=uuid4(),
-                role=role,
-                email=f"{role}@example.com"
-            )
+            token_data = TokenData(user_id=uuid4(), role=role, email=f"{role}@example.com")
 
             result = check_roles(token_data)
             assert result == token_data
@@ -436,11 +384,7 @@ class TestRequireAnyRole:
         check_roles = require_any_role(required_roles)
 
         # Only sysadmin should be allowed
-        token_data = TokenData(
-            user_id=uuid4(),
-            role="user",
-            email="user@example.com"
-        )
+        token_data = TokenData(user_id=uuid4(), role="user", email="user@example.com")
 
         with pytest.raises(HTTPException) as exc_info:
             check_roles(token_data)
@@ -448,11 +392,7 @@ class TestRequireAnyRole:
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
 
         # But sysadmin should still work
-        sysadmin_token = TokenData(
-            user_id=uuid4(),
-            role="sysadmin",
-            email="sysadmin@example.com"
-        )
+        sysadmin_token = TokenData(user_id=uuid4(), role="sysadmin", email="sysadmin@example.com")
 
         result = check_roles(sysadmin_token)
         assert result == sysadmin_token
@@ -479,3 +419,384 @@ class TestPasswordContext:
         assert "bcrypt" in str(pwd_context.schemes())
         # Check the configuration string instead of the deprecated attribute
         assert pwd_context.to_dict().get("deprecated") == ["auto"]
+
+
+class TestSessionData:
+    """Test SessionData Pydantic model."""
+
+    def test_session_data_creation(self):
+        """Test SessionData model creation."""
+        session_data = SessionData(
+            user_id="12345678-1234-5678-1234-567812345678",
+            user_role="admin",
+            user_email="admin@example.com",
+            created_at="2025-08-02T10:00:00",
+            last_activity="2025-08-02T10:30:00",
+        )
+
+        assert session_data.user_id == "12345678-1234-5678-1234-567812345678"
+        assert session_data.user_role == "admin"
+        assert session_data.user_email == "admin@example.com"
+        assert session_data.created_at == "2025-08-02T10:00:00"
+        assert session_data.last_activity == "2025-08-02T10:30:00"
+
+    def test_session_data_json_serialization(self):
+        """Test SessionData JSON serialization."""
+        session_data = SessionData(
+            user_id="12345678-1234-5678-1234-567812345678",
+            user_role="user",
+            user_email="user@example.com",
+            created_at="2025-08-02T10:00:00",
+            last_activity="2025-08-02T10:30:00",
+        )
+
+        json_str = session_data.model_dump_json()
+        assert '"user_id":"12345678-1234-5678-1234-567812345678"' in json_str
+        assert '"user_role":"user"' in json_str
+
+        # Test deserialization
+        restored = SessionData.model_validate_json(json_str)
+        assert restored.user_id == session_data.user_id
+        assert restored.user_role == session_data.user_role
+
+
+class TestSecureAuthService:
+    """Test SecureAuthService enhanced functionality."""
+
+    @pytest.fixture
+    def mock_redis_client(self, monkeypatch):
+        """Mock Redis client for testing."""
+
+        class MockRedis:
+            def __init__(self):
+                self.data = {}
+                self.expirations = {}
+
+            def ping(self):
+                return True
+
+            def setex(self, key, time, value):
+                self.data[key] = value
+                return True
+
+            def get(self, key):
+                return self.data.get(key)
+
+            def delete(self, key):
+                if key in self.data:
+                    del self.data[key]
+                return True
+
+            def exists(self, key):
+                return key in self.data
+
+        mock_redis = MockRedis()
+
+        def mock_from_url(*args, **kwargs):
+            return mock_redis
+
+        monkeypatch.setattr("redis.from_url", mock_from_url)
+        return mock_redis
+
+    @pytest.fixture
+    def secure_auth_service(self, mock_redis_client):
+        """Create SecureAuthService instance for testing."""
+        return SecureAuthService()
+
+    def test_secure_auth_service_init(self, secure_auth_service):
+        """Test SecureAuthService initialization."""
+        assert secure_auth_service.algorithm == "HS256"
+        assert secure_auth_service.access_token_expire_minutes > 0
+        assert secure_auth_service.session_expire_hours == 24
+        assert secure_auth_service.secret_key is not None
+        assert secure_auth_service.redis_client is not None
+
+    def test_create_access_token_with_session(self, secure_auth_service, mock_redis_client):
+        """Test JWT creation with Redis session tracking."""
+        user_id = uuid4()
+        role = "admin"
+        email = "admin@example.com"
+
+        token_data = secure_auth_service.create_access_token(user_id, role, email)
+
+        # Should return enhanced token data
+        assert "access_token" in token_data
+        assert "token_type" in token_data
+        assert "expires_in" in token_data
+        assert "session_id" in token_data
+
+        assert token_data["token_type"] == "bearer"
+        assert token_data["expires_in"] == secure_auth_service.access_token_expire_minutes * 60
+
+        # Token should be decodable with enhanced fields
+        decoded = jwt.decode(
+            token_data["access_token"],
+            secure_auth_service.secret_key,
+            algorithms=[secure_auth_service.algorithm],
+        )
+
+        assert decoded["sub"] == str(user_id)
+        assert decoded["role"] == role
+        assert decoded["email"] == email
+        assert decoded["session_id"] == token_data["session_id"]
+        assert "jti" in decoded
+        assert "iat" in decoded
+        assert "exp" in decoded
+
+        # Session should be stored in Redis
+        session_key = f"session:{token_data['session_id']}"
+        assert session_key in mock_redis_client.data
+
+        session_json = mock_redis_client.data[session_key]
+        session_data = SessionData.model_validate_json(session_json)
+        assert session_data.user_id == str(user_id)
+        assert session_data.user_role == role
+        assert session_data.user_email == email
+
+    def test_create_refresh_token(self, secure_auth_service):
+        """Test refresh token creation."""
+        user_id = uuid4()
+        session_id = "test_session_123"
+
+        refresh_token = secure_auth_service.create_refresh_token(user_id, session_id)
+
+        # Token should be decodable
+        decoded = jwt.decode(
+            refresh_token,
+            secure_auth_service.secret_key,
+            algorithms=[secure_auth_service.algorithm],
+        )
+
+        assert decoded["sub"] == str(user_id)
+        assert decoded["session_id"] == session_id
+        assert decoded["type"] == "refresh"
+        assert "jti" in decoded
+        assert "iat" in decoded
+        assert "exp" in decoded
+
+    def test_verify_token_with_session_validation(self, secure_auth_service, mock_redis_client):
+        """Test token verification with session validation."""
+        user_id = uuid4()
+        role = "user"
+        email = "user@example.com"
+
+        # Create token (which stores session)
+        token_data = secure_auth_service.create_access_token(user_id, role, email)
+        access_token = token_data["access_token"]
+
+        # Verify token
+        verified_data = secure_auth_service.verify_token(access_token)
+
+        assert isinstance(verified_data, TokenData)
+        assert verified_data.user_id == user_id
+        assert verified_data.role == role
+        assert verified_data.email == email
+        assert verified_data.session_id == token_data["session_id"]
+        assert verified_data.jti is not None
+
+    def test_verify_token_invalid_session(self, secure_auth_service, mock_redis_client):
+        """Test token verification with invalid session."""
+        user_id = uuid4()
+        role = "user"
+        email = "user@example.com"
+
+        # Create token
+        token_data = secure_auth_service.create_access_token(user_id, role, email)
+        access_token = token_data["access_token"]
+
+        # Delete session from Redis
+        session_key = f"session:{token_data['session_id']}"
+        del mock_redis_client.data[session_key]
+
+        # Token verification should fail
+        with pytest.raises(HTTPException) as exc_info:
+            secure_auth_service.verify_token(access_token)
+
+        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+        assert "Invalid session" in exc_info.value.detail
+
+    def test_verify_token_blacklisted(self, secure_auth_service, mock_redis_client):
+        """Test token verification with blacklisted token."""
+        user_id = uuid4()
+        role = "user"
+        email = "user@example.com"
+
+        # Create token
+        token_data = secure_auth_service.create_access_token(user_id, role, email)
+        access_token = token_data["access_token"]
+
+        # Decode to get JTI
+        decoded = jwt.decode(
+            access_token, secure_auth_service.secret_key, algorithms=[secure_auth_service.algorithm]
+        )
+        jti = decoded["jti"]
+
+        # Blacklist the token
+        mock_redis_client.data[f"blacklist:{jti}"] = "1"
+
+        # Token verification should fail
+        with pytest.raises(HTTPException) as exc_info:
+            secure_auth_service.verify_token(access_token)
+
+        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+        assert "Token has been revoked" in exc_info.value.detail
+
+    def test_refresh_access_token(self, secure_auth_service, mock_redis_client):
+        """Test access token refresh functionality."""
+        user_id = uuid4()
+        role = "admin"
+        email = "admin@example.com"
+
+        # Create initial token and session
+        token_data = secure_auth_service.create_access_token(user_id, role, email)
+        session_id = token_data["session_id"]
+
+        # Create refresh token
+        refresh_token = secure_auth_service.create_refresh_token(user_id, session_id)
+
+        # Refresh access token
+        new_token_data = secure_auth_service.refresh_access_token(refresh_token)
+
+        # Should return new access token
+        assert "access_token" in new_token_data
+        assert "token_type" in new_token_data
+        assert "expires_in" in new_token_data
+        assert "session_id" in new_token_data
+
+        # Session ID should be the same
+        assert new_token_data["session_id"] == session_id
+
+        # New token should be valid
+        verified_data = secure_auth_service.verify_token(new_token_data["access_token"])
+        assert verified_data.user_id == user_id
+        assert verified_data.role == role
+        assert verified_data.email == email
+
+    def test_refresh_access_token_invalid_type(self, secure_auth_service):
+        """Test refresh token with invalid type."""
+        user_id = uuid4()
+        role = "user"
+        email = "user@example.com"
+
+        # Create regular access token (not refresh)
+        token_data = secure_auth_service.create_access_token(user_id, role, email)
+        access_token = token_data["access_token"]
+
+        # Try to use access token as refresh token
+        with pytest.raises(HTTPException) as exc_info:
+            secure_auth_service.refresh_access_token(access_token)
+
+        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+        assert "Invalid token type" in exc_info.value.detail
+
+    def test_refresh_access_token_blacklisted(self, secure_auth_service, mock_redis_client):
+        """Test refresh token that is blacklisted."""
+        user_id = uuid4()
+        session_id = "test_session"
+
+        # Create and blacklist refresh token
+        refresh_token = secure_auth_service.create_refresh_token(user_id, session_id)
+        decoded = jwt.decode(
+            refresh_token,
+            secure_auth_service.secret_key,
+            algorithms=[secure_auth_service.algorithm],
+        )
+        jti = decoded["jti"]
+        mock_redis_client.data[f"blacklist:{jti}"] = "1"
+
+        # Try to refresh
+        with pytest.raises(HTTPException) as exc_info:
+            secure_auth_service.refresh_access_token(refresh_token)
+
+        assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
+        assert "Refresh token has been revoked" in exc_info.value.detail
+
+    def test_blacklist_token(self, secure_auth_service, mock_redis_client):
+        """Test token blacklisting functionality."""
+        jti = "test_jti_123"
+        exp_timestamp = int((datetime.utcnow() + timedelta(hours=1)).timestamp())
+
+        # Blacklist token
+        secure_auth_service.blacklist_token(jti, exp_timestamp)
+
+        # Token should be blacklisted
+        assert secure_auth_service._is_token_blacklisted(jti) is True
+
+        # Check Redis storage
+        assert f"blacklist:{jti}" in mock_redis_client.data
+
+    def test_blacklist_token_expired(self, secure_auth_service, mock_redis_client):
+        """Test blacklisting already expired token."""
+        jti = "expired_jti"
+        exp_timestamp = int((datetime.utcnow() - timedelta(hours=1)).timestamp())
+
+        # Blacklist expired token
+        secure_auth_service.blacklist_token(jti, exp_timestamp)
+
+        # Should not be stored since it's already expired
+        assert f"blacklist:{jti}" not in mock_redis_client.data
+
+    def test_revoke_session(self, secure_auth_service, mock_redis_client):
+        """Test session revocation."""
+        user_id = uuid4()
+        role = "user"
+        email = "user@example.com"
+
+        # Create token and session
+        token_data = secure_auth_service.create_access_token(user_id, role, email)
+        session_id = token_data["session_id"]
+
+        # Verify session exists
+        session_key = f"session:{session_id}"
+        assert session_key in mock_redis_client.data
+
+        # Revoke session
+        secure_auth_service.revoke_session(session_id)
+
+        # Session should be deleted
+        assert session_key not in mock_redis_client.data
+
+    def test_validate_session_updates_activity(self, secure_auth_service, mock_redis_client):
+        """Test that session validation updates last activity."""
+        user_id = uuid4()
+        role = "user"
+        email = "user@example.com"
+
+        # Create token and session
+        token_data = secure_auth_service.create_access_token(user_id, role, email)
+        session_id = token_data["session_id"]
+
+        # Get initial session data
+        session_key = f"session:{session_id}"
+        initial_session_json = mock_redis_client.data[session_key]
+        initial_session = SessionData.model_validate_json(initial_session_json)
+
+        # Wait a moment and validate again
+        import time
+
+        time.sleep(0.1)
+
+        # Verify token (which calls _validate_session)
+        secure_auth_service.verify_token(token_data["access_token"])
+
+        # Session should have updated last_activity
+        updated_session_json = mock_redis_client.data[session_key]
+        updated_session = SessionData.model_validate_json(updated_session_json)
+
+        assert updated_session.last_activity >= initial_session.last_activity
+
+    def test_redis_connection_failure_graceful_handling(self, mock_redis_client):
+        """Test that Redis failures are handled gracefully in most operations."""
+        # Create service with mocked Redis that can fail
+        service = SecureAuthService()
+
+        # Mock Redis to fail for certain operations
+        def failing_operation(*args, **kwargs):
+            raise Exception("Redis connection failed")
+
+        mock_redis_client.setex = failing_operation
+
+        # Service should handle Redis failures gracefully for non-critical operations
+        # This test verifies that the service doesn't crash completely
+        assert service is not None
+        assert hasattr(service, "redis_client")

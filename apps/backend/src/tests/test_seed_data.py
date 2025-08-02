@@ -54,7 +54,7 @@ class TestSeedDatabase:
         mock_create_users,
         _mock_engine,
         mock_session_class,
-        mock_session
+        mock_session,
     ):
         """Test successful database seeding."""
         mock_session_class.return_value.__enter__.return_value = mock_session
@@ -105,11 +105,7 @@ class TestSeedDatabase:
     @patch("builtins.print")
     @pytest.mark.asyncio
     async def test_seed_database_already_seeded(
-        self,
-        mock_print,
-        _mock_engine,
-        mock_session_class,
-        mock_session
+        self, mock_print, _mock_engine, mock_session_class, mock_session
     ):
         """Test seeding when database already has users."""
         mock_session_class.return_value.__enter__.return_value = mock_session
@@ -135,12 +131,7 @@ class TestSeedDatabase:
     @patch("builtins.print")
     @pytest.mark.asyncio
     async def test_seed_database_exception_handling(
-        self,
-        mock_print,
-        mock_create_users,
-        _mock_engine,
-        mock_session_class,
-        mock_session
+        self, mock_print, mock_create_users, _mock_engine, mock_session_class, mock_session
     ):
         """Test exception handling during seeding."""
         mock_session_class.return_value.__enter__.return_value = mock_session
@@ -195,13 +186,7 @@ class TestPrintSeedSummary:
         ]
 
     @patch("builtins.print")
-    def test_print_seed_summary(
-        self,
-        mock_print,
-        mock_users,
-        mock_clients,
-        mock_audit_logs
-    ):
+    def test_print_seed_summary(self, mock_print, mock_users, mock_clients, mock_audit_logs):
         """Test seed summary printing."""
         mock_session = Mock(spec=Session)
 
@@ -257,11 +242,7 @@ class TestClearDatabase:
     @patch("builtins.print")
     @pytest.mark.asyncio
     async def test_clear_database_success(
-        self,
-        mock_print,
-        _mock_engine,
-        mock_session_class,
-        mock_session
+        self, mock_print, _mock_engine, mock_session_class, mock_session
     ):
         """Test successful database clearing."""
         mock_session_class.return_value.__enter__.return_value = mock_session
@@ -272,7 +253,7 @@ class TestClearDatabase:
         expected_deletes = [
             "DELETE FROM audit_logs",
             "DELETE FROM agent1_clients",
-            "DELETE FROM users"
+            "DELETE FROM users",
         ]
 
         assert mock_session.exec.call_count == len(expected_deletes)
@@ -292,11 +273,7 @@ class TestClearDatabase:
     @patch("builtins.print")
     @pytest.mark.asyncio
     async def test_clear_database_exception(
-        self,
-        mock_print,
-        _mock_engine,
-        mock_session_class,
-        mock_session
+        self, mock_print, _mock_engine, mock_session_class, mock_session
     ):
         """Test exception handling during database clearing."""
         mock_session_class.return_value.__enter__.return_value = mock_session
@@ -348,7 +325,7 @@ class TestSeedForTesting:
         mock_create_users,
         _mock_engine,
         mock_session_class,
-        mock_session
+        mock_session,
     ):
         """Test seeding for testing environment."""
         mock_session_class.return_value.__enter__.return_value = mock_session

@@ -57,11 +57,7 @@ async def health_check() -> HealthCheckResponse:
         version=settings.PROJECT_VERSION,
         environment=settings.ENVIRONMENT,
         timestamp=datetime.utcnow().isoformat(),
-        components={
-            "database": "healthy",
-            "redis": "healthy",
-            "api": "healthy"
-        }
+        components={"database": "healthy", "redis": "healthy", "api": "healthy"},
     )
 
 

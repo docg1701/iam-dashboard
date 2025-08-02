@@ -10,6 +10,50 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine
 
 from src.core.database import get_session
+
+
+# Mock Redis before importing main app
+class MockRedis:
+    """Mock Redis client for testing."""
+
+    def __init__(self):
+        self.data = {}
+        self.expirations = {}
+
+    def ping(self):
+        return True
+
+    def setex(self, key, time, value):
+        self.data[key] = value
+        return True
+
+    def get(self, key):
+        return self.data.get(key)
+
+    def delete(self, key):
+        if key in self.data:
+            del self.data[key]
+        return True
+
+    def exists(self, key):
+        return key in self.data
+
+
+# Global mock Redis instance
+mock_redis_instance = MockRedis()
+
+
+def mock_redis_from_url(*args, **kwargs):
+    """Mock redis.from_url function."""
+    return mock_redis_instance
+
+
+# Apply Redis mocking globally
+import redis
+
+redis.from_url = mock_redis_from_url
+
+# Now import the app after mocking Redis
 from src.main import app
 
 

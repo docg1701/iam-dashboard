@@ -168,9 +168,7 @@ class ClientUpdate(SQLModel):
 class ClientSearch(SQLModel):
     """Schema for client search operations."""
 
-    full_name: str | None = Field(
-        default=None, description="Search by full name (partial match)"
-    )
+    full_name: str | None = Field(default=None, description="Search by full name (partial match)")
     ssn: str | None = Field(default=None, description="Search by exact SSN")
     status: ClientStatus | None = Field(default=None, description="Filter by client status")
     created_after: date | None = Field(

@@ -191,6 +191,7 @@ def generate_audit_values(table_name: str, action: AuditAction) -> dict[str, Any
 
 # Convenience functions for creating test data
 
+
 def create_test_user(role: UserRole = UserRole.USER, **kwargs) -> User:
     """Create a test user with specified role."""
     factory_class = {
@@ -212,7 +213,9 @@ def create_test_client(status: ClientStatus = ClientStatus.ACTIVE, **kwargs) -> 
     return factory_class(**kwargs)
 
 
-def create_test_audit_log(table_name: str = "users", action: AuditAction = AuditAction.CREATE, **kwargs) -> AuditLog:
+def create_test_audit_log(
+    table_name: str = "users", action: AuditAction = AuditAction.CREATE, **kwargs
+) -> AuditLog:
     """Create a test audit log for specified table and action."""
     return AuditLogFactory(table_name=table_name, action=action, **kwargs)
 
@@ -223,16 +226,15 @@ def create_user_with_clients(client_count: int = 3) -> tuple[User, list[Client]]
     clients = []
 
     for _ in range(client_count):
-        client = create_test_client(
-            created_by=user.user_id,
-            updated_by=user.user_id
-        )
+        client = create_test_client(created_by=user.user_id, updated_by=user.user_id)
         clients.append(client)
 
     return user, clients
 
 
-def create_complete_audit_trail(table_name: str = "agent1_clients", record_id: str = None) -> list[AuditLog]:
+def create_complete_audit_trail(
+    table_name: str = "agent1_clients", record_id: str = None
+) -> list[AuditLog]:
     """Create a complete audit trail for a record (CREATE -> UPDATE -> VIEW)."""
     if not record_id:
         record_id = str(fake.uuid4())
@@ -248,7 +250,7 @@ def create_complete_audit_trail(table_name: str = "agent1_clients", record_id: s
             action=AuditAction.CREATE,
             user_id=user_id,
             timestamp=base_time,
-            old_values=None
+            old_values=None,
         ),
         # UPDATE action
         create_test_audit_log(
@@ -256,7 +258,7 @@ def create_complete_audit_trail(table_name: str = "agent1_clients", record_id: s
             record_id=record_id,
             action=AuditAction.UPDATE,
             user_id=user_id,
-            timestamp=base_time + timedelta(days=1)
+            timestamp=base_time + timedelta(days=1),
         ),
         # VIEW action
         create_test_audit_log(
@@ -266,7 +268,7 @@ def create_complete_audit_trail(table_name: str = "agent1_clients", record_id: s
             user_id=user_id,
             timestamp=base_time + timedelta(days=2),
             old_values=None,
-            new_values=None
+            new_values=None,
         ),
     ]
 
@@ -275,40 +277,23 @@ def create_complete_audit_trail(table_name: str = "agent1_clients", record_id: s
 
 # Seed data functions for development environment
 
+
 def create_seed_users() -> list[User]:
     """Create seed users for development environment."""
     users = [
         # System administrator
         create_test_user(
-            role=UserRole.SYSADMIN,
-            email="sysadmin@company.com",
-            is_active=True,
-            totp_enabled=True
+            role=UserRole.SYSADMIN, email="sysadmin@company.com", is_active=True, totp_enabled=True
         ),
         # Regular admin
         create_test_user(
-            role=UserRole.ADMIN,
-            email="admin@company.com",
-            is_active=True,
-            totp_enabled=True
+            role=UserRole.ADMIN, email="admin@company.com", is_active=True, totp_enabled=True
         ),
         # Regular users
-        create_test_user(
-            role=UserRole.USER,
-            email="user1@company.com",
-            is_active=True
-        ),
-        create_test_user(
-            role=UserRole.USER,
-            email="user2@company.com",
-            is_active=True
-        ),
+        create_test_user(role=UserRole.USER, email="user1@company.com", is_active=True),
+        create_test_user(role=UserRole.USER, email="user2@company.com", is_active=True),
         # Inactive user
-        create_test_user(
-            role=UserRole.USER,
-            email="inactive@company.com",
-            is_active=False
-        ),
+        create_test_user(role=UserRole.USER, email="inactive@company.com", is_active=False),
     ]
 
     return users
@@ -323,19 +308,19 @@ def create_seed_clients(admin_user_id: UUID) -> list[Client]:
             status=ClientStatus.ACTIVE,
             created_by=admin_user_id,
             updated_by=admin_user_id,
-            notes="Initial client for testing"
+            notes="Initial client for testing",
         ),
         create_test_client(
             full_name="Jane Smith",
             status=ClientStatus.ACTIVE,
             created_by=admin_user_id,
-            updated_by=admin_user_id
+            updated_by=admin_user_id,
         ),
         create_test_client(
             full_name="Bob Johnson",
             status=ClientStatus.ACTIVE,
             created_by=admin_user_id,
-            updated_by=admin_user_id
+            updated_by=admin_user_id,
         ),
         # Inactive client
         create_test_client(
@@ -343,7 +328,7 @@ def create_seed_clients(admin_user_id: UUID) -> list[Client]:
             status=ClientStatus.INACTIVE,
             created_by=admin_user_id,
             updated_by=admin_user_id,
-            notes="Client requested account deactivation"
+            notes="Client requested account deactivation",
         ),
     ]
 

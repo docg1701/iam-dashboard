@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import EmailStr, field_validator
+from sqlalchemy import JSON, Column
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -61,6 +62,9 @@ class User(UserBase, table=True):
     )
     totp_secret: str | None = Field(
         default=None, min_length=32, max_length=32, description="Base32 TOTP secret key for 2FA"
+    )
+    totp_backup_codes: list[str] | None = Field(
+        default=None, description="List of backup codes for 2FA recovery", sa_column=Column(JSON)
     )
 
     # Relationships

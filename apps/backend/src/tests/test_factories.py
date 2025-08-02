@@ -97,8 +97,8 @@ class TestClientFactory:
             assert len(ssn_parts[1]) == 2  # Group number
             assert len(ssn_parts[2]) == 4  # Serial number
             assert ssn_parts[0] != "000"  # Invalid area
-            assert ssn_parts[1] != "00"   # Invalid group
-            assert ssn_parts[2] != "0000" # Invalid serial
+            assert ssn_parts[1] != "00"  # Invalid group
+            assert ssn_parts[2] != "0000"  # Invalid serial
 
     def test_inactive_client_has_notes(self):
         """Test that inactive clients get explanatory notes."""
@@ -114,7 +114,9 @@ class TestClientFactory:
 
         # Calculate more accurate age
         age = today.year - client.birth_date.year
-        if today.month < client.birth_date.month or (today.month == client.birth_date.month and today.day < client.birth_date.day):
+        if today.month < client.birth_date.month or (
+            today.month == client.birth_date.month and today.day < client.birth_date.day
+        ):
             age -= 1
 
         assert 18 <= age <= 95  # Allow slightly wider range
@@ -131,7 +133,12 @@ class TestAuditLogFactory:
         assert isinstance(audit_log.audit_id, UUID)
         assert audit_log.table_name in ["users", "agent1_clients"]
         assert isinstance(audit_log.record_id, str)
-        assert audit_log.action in [AuditAction.CREATE, AuditAction.UPDATE, AuditAction.DELETE, AuditAction.VIEW]
+        assert audit_log.action in [
+            AuditAction.CREATE,
+            AuditAction.UPDATE,
+            AuditAction.DELETE,
+            AuditAction.VIEW,
+        ]
         assert isinstance(audit_log.user_id, UUID)
         assert "." in audit_log.ip_address  # Basic IP format check
         assert len(audit_log.user_agent) > 0
@@ -293,6 +300,7 @@ class TestSeededData:
 
 # Integration tests that verify factory data passes model validation
 
+
 class TestFactoryDataValidation:
     """Test that factory-generated data passes model validation."""
 
@@ -358,7 +366,10 @@ class TestFactoryDataValidation:
         for audit_log in audit_logs:
             # Validate table name format
             assert audit_log.table_name.islower()
-            assert "_" not in audit_log.table_name or audit_log.table_name.replace("_", "").replace("1", "").isalpha()
+            assert (
+                "_" not in audit_log.table_name
+                or audit_log.table_name.replace("_", "").replace("1", "").isalpha()
+            )
 
             # Validate IP address format
             ip_parts = audit_log.ip_address.split(".")

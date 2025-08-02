@@ -14,6 +14,7 @@ T = TypeVar("T")
 
 class SuccessResponse(BaseModel):
     """Standard success response model."""
+
     success: bool = True
     message: str
     details: dict[str, Any] | None = None
@@ -21,6 +22,7 @@ class SuccessResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     """Standard error response model."""
+
     success: bool = False
     message: str
     error_code: str | None = None
@@ -29,6 +31,7 @@ class ErrorResponse(BaseModel):
 
 class PaginationInfo(BaseModel):
     """Pagination information model."""
+
     page: int
     per_page: int
     total: int
@@ -39,6 +42,7 @@ class PaginationInfo(BaseModel):
 
 class PaginatedResponse[T](BaseModel):
     """Generic paginated response model."""
+
     success: bool = True
     data: list[T]
     pagination: PaginationInfo
@@ -46,6 +50,7 @@ class PaginatedResponse[T](BaseModel):
 
 class HealthCheckResponse(BaseModel):
     """Health check response model."""
+
     status: str
     service: str
     version: str
