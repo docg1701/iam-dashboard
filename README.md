@@ -64,32 +64,79 @@ IAM Dashboard is a custom implementation service that delivers dedicated multi-a
 ## Development
 
 ### Prerequisites
-- **Node.js 18+** for frontend development
-- **Python 3.11+** with **UV** package manager
+- **Node.js 20+** and **npm 10+**
+- **Python 3.13.5+** with **UV** package manager
 - **Docker** and **Docker Compose**
 - **Terraform** and **Ansible** for deployment
 
 ### Quick Start
 
 ```bash
-# Clone repository
-git clone https://github.com/docg1701/iam-dashboard.git
-cd iam-dashboard
+# Install all dependencies
+make setup
 
-# Start development services
-docker-compose up --build
+# Start development environment
+make docker-up
+make dev
 
-# Frontend (separate terminal)
-cd frontend
-npm install
-npm run dev
-
-# Backend (separate terminal)
-cd backend
-uv venv && source .venv/bin/activate
-uv sync
-uv run uvicorn src.main:app --reload
+# Run database migrations
+make db-migrate
 ```
+
+The application will be available at:
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/api/docs
+
+### Development Commands
+
+```bash
+# Development
+make dev                   # Start both frontend and backend
+make dev-frontend         # Start only frontend
+make dev-backend          # Start only backend
+
+# Testing
+make test                 # Run all tests
+make test-coverage        # Run tests with coverage (>80% required)
+
+# Code Quality
+make lint                 # Lint all code
+make format              # Format all code
+make type-check          # Run TypeScript checks
+
+# Database
+make db-migrate          # Run database migrations
+make db-migration        # Create new migration
+
+# Docker
+make docker-up          # Start all services
+make docker-down        # Stop all services
+```
+
+### Technology Stack Details
+
+#### Backend
+- **FastAPI** 0.116.1+ - Modern Python web framework
+- **SQLModel** 0.0.21+ - Database ORM combining SQLAlchemy + Pydantic  
+- **PostgreSQL** 17.5+ with pgvector extension
+- **Pydantic** 2.11.7+ - Data validation and settings management
+- **Alembic** 1.16.4+ - Database migrations
+- **pytest** 8.4.1+ with 92.75% code coverage
+
+#### Frontend
+- **Next.js** 15.4.5+ with App Router
+- **React** 19+ - Latest features
+- **TypeScript** 5.9+ in strict mode
+- **shadcn/ui** 2.9.3+ - Customizable component library
+- **Tailwind CSS** 4.1.11+ - Utility-first CSS
+- **Vitest** 3.2.4+ - Fast testing framework
+
+### Code Quality Standards
+- **Backend**: Ruff formatting + mypy type checking
+- **Frontend**: ESLint + TypeScript strict mode
+- **Coverage**: 80% minimum (enforced)
+- **Testing**: pytest (backend) + Vitest (frontend)
 
 ## Implementation Process
 

@@ -1,0 +1,220 @@
+"""
+Tests for exceptions module.
+
+This module tests custom exception classes and HTTP exception mapping.
+"""
+
+from fastapi import HTTPException
+from sqlalchemy.exc import SQLAlchemyError
+
+from src.core.exceptions import (
+    AuthenticationError,
+    AuthorizationError,
+    ConflictError,
+    DashboardException,
+    DatabaseError,
+    ExternalServiceError,
+    FileProcessingError,
+    NotFoundError,
+    ValidationError,
+    dashboard_exception_to_http,
+)
+
+
+def test_dashboard_exception_creation():
+    """Test basic DashboardException creation."""
+    exc = DashboardException("Test message", "TEST_CODE", {"key": "value"})
+
+    assert exc.message == "Test message"
+    assert exc.error_code == "TEST_CODE"
+    assert exc.details == {"key": "value"}
+    assert str(exc) == "Test message"
+
+
+def test_dashboard_exception_defaults():
+    """Test DashboardException with default values."""
+    exc = DashboardException("Test message")
+
+    assert exc.message == "Test message"
+    assert exc.error_code is None
+    assert exc.details == {}
+
+
+def test_validation_error():
+    """Test ValidationError creation."""
+    exc = ValidationError("Validation failed", "VALIDATION_ERROR")
+
+    assert isinstance(exc, DashboardException)
+    assert exc.message == "Validation failed"
+    assert exc.error_code == "VALIDATION_ERROR"
+
+
+def test_authentication_error():
+    """Test AuthenticationError creation."""
+    exc = AuthenticationError("Auth failed")
+
+    assert isinstance(exc, DashboardException)
+    assert exc.message == "Auth failed"
+
+
+def test_authorization_error():
+    """Test AuthorizationError creation."""
+    exc = AuthorizationError("Access denied")
+
+    assert isinstance(exc, DashboardException)
+    assert exc.message == "Access denied"
+
+
+def test_not_found_error():
+    """Test NotFoundError creation."""
+    exc = NotFoundError("Resource not found")
+
+    assert isinstance(exc, DashboardException)
+    assert exc.message == "Resource not found"
+
+
+def test_conflict_error():
+    """Test ConflictError creation."""
+    exc = ConflictError("Resource conflict", "CONFLICT", {"field": "value"})
+
+    assert isinstance(exc, DashboardException)
+    assert exc.message == "Resource conflict"
+    assert exc.error_code == "CONFLICT"
+    assert exc.details == {"field": "value"}
+
+
+def test_database_error():
+    """Test DatabaseError creation."""
+    original_error = SQLAlchemyError("SQL error")
+    exc = DatabaseError("Database failed", original_error, error_code="DB_ERROR")
+
+    assert isinstance(exc, DashboardException)
+    assert exc.message == "Database failed"
+    assert exc.original_error == original_error
+    assert exc.error_code == "DB_ERROR"
+
+
+def test_database_error_without_original():
+    """Test DatabaseError without original error."""
+    exc = DatabaseError("Database failed")
+
+    assert isinstance(exc, DashboardException)
+    assert exc.message == "Database failed"
+    assert exc.original_error is None
+
+
+def test_file_processing_error():
+    """Test FileProcessingError creation."""
+    exc = FileProcessingError("File processing failed")
+
+    assert isinstance(exc, DashboardException)
+    assert exc.message == "File processing failed"
+
+
+def test_external_service_error():
+    """Test ExternalServiceError creation."""
+    exc = ExternalServiceError("Service unavailable")
+
+    assert isinstance(exc, DashboardException)
+    assert exc.message == "Service unavailable"
+
+
+def test_dashboard_exception_to_http_validation_error():
+    """Test ValidationError to HTTP mapping."""
+    exc = ValidationError("Invalid input", "VALIDATION_001", {"field": "email"})
+    http_exc = dashboard_exception_to_http(exc)
+
+    assert isinstance(http_exc, HTTPException)
+    assert http_exc.status_code == 400
+    assert http_exc.detail["message"] == "Invalid input"
+    assert http_exc.detail["error_code"] == "VALIDATION_001"
+    assert http_exc.detail["details"] == {"field": "email"}
+
+
+def test_dashboard_exception_to_http_authentication_error():
+    """Test AuthenticationError to HTTP mapping."""
+    exc = AuthenticationError("Invalid credentials", "AUTH_001")
+    http_exc = dashboard_exception_to_http(exc)
+
+    assert isinstance(http_exc, HTTPException)
+    assert http_exc.status_code == 401
+    assert http_exc.detail["message"] == "Invalid credentials"
+    assert http_exc.detail["error_code"] == "AUTH_001"
+
+
+def test_dashboard_exception_to_http_authorization_error():
+    """Test AuthorizationError to HTTP mapping."""
+    exc = AuthorizationError("Access denied", "AUTHZ_001")
+    http_exc = dashboard_exception_to_http(exc)
+
+    assert isinstance(http_exc, HTTPException)
+    assert http_exc.status_code == 403
+    assert http_exc.detail["message"] == "Access denied"
+    assert http_exc.detail["error_code"] == "AUTHZ_001"
+
+
+def test_dashboard_exception_to_http_not_found_error():
+    """Test NotFoundError to HTTP mapping."""
+    exc = NotFoundError("Resource not found", "NOT_FOUND_001")
+    http_exc = dashboard_exception_to_http(exc)
+
+    assert isinstance(http_exc, HTTPException)
+    assert http_exc.status_code == 404
+    assert http_exc.detail["message"] == "Resource not found"
+    assert http_exc.detail["error_code"] == "NOT_FOUND_001"
+
+
+def test_dashboard_exception_to_http_conflict_error():
+    """Test ConflictError to HTTP mapping."""
+    exc = ConflictError("Resource conflict", "CONFLICT_001", {"field": "ssn"})
+    http_exc = dashboard_exception_to_http(exc)
+
+    assert isinstance(http_exc, HTTPException)
+    assert http_exc.status_code == 409
+    assert http_exc.detail["message"] == "Resource conflict"
+    assert http_exc.detail["error_code"] == "CONFLICT_001"
+    assert http_exc.detail["details"] == {"field": "ssn"}
+
+
+def test_dashboard_exception_to_http_database_error():
+    """Test DatabaseError to HTTP mapping."""
+    exc = DatabaseError("Database failed", error_code="DB_001")
+    http_exc = dashboard_exception_to_http(exc)
+
+    assert isinstance(http_exc, HTTPException)
+    assert http_exc.status_code == 500
+    assert http_exc.detail["message"] == "Internal server error"
+    assert http_exc.detail["error_code"] == "DB_001"
+
+
+def test_dashboard_exception_to_http_file_processing_error():
+    """Test FileProcessingError to HTTP mapping."""
+    exc = FileProcessingError("File failed", error_code="FILE_001")
+    http_exc = dashboard_exception_to_http(exc)
+
+    assert isinstance(http_exc, HTTPException)
+    assert http_exc.status_code == 500
+    assert http_exc.detail["message"] == "Internal server error"
+    assert http_exc.detail["error_code"] == "FILE_001"
+
+
+def test_dashboard_exception_to_http_external_service_error():
+    """Test ExternalServiceError to HTTP mapping."""
+    exc = ExternalServiceError("Service failed", error_code="EXT_001")
+    http_exc = dashboard_exception_to_http(exc)
+
+    assert isinstance(http_exc, HTTPException)
+    assert http_exc.status_code == 500
+    assert http_exc.detail["message"] == "Internal server error"
+    assert http_exc.detail["error_code"] == "EXT_001"
+
+
+def test_dashboard_exception_to_http_unknown_error():
+    """Test unknown exception to HTTP mapping."""
+    exc = DashboardException("Unknown error")
+    http_exc = dashboard_exception_to_http(exc)
+
+    assert isinstance(http_exc, HTTPException)
+    assert http_exc.status_code == 500
+    assert http_exc.detail["message"] == "An unexpected error occurred"
+    assert http_exc.detail["error_code"] == "INTERNAL_ERROR"

@@ -1,0 +1,170 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: iam-dashboard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dashboard
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d dashboard"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - dashboard-network
+
+  # Redis for caching and Celery task queue
+  redis:
+    image: redis:7-alpine
+    container_name: iam-dashboard-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - dashboard-network
+    command: redis-server --appendonly yes --requirepass redis_password
+
+  # Backend API Service
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: ../../infrastructure/docker/backend/Dockerfile
+    container_name: iam-dashboard-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=dashboard
+      - REDIS_URL=redis://:redis_password@redis:6379
+      - CELERY_BROKER_URL=redis://:redis_password@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:redis_password@redis:6379/0
+      - SECRET_KEY=dev-secret-key-change-in-production
+    volumes:
+      - ./apps/backend:/app
+      - backend_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - dashboard-network
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: ../../infrastructure/docker/frontend/Dockerfile
+    container_name: iam-dashboard-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_APP_NAME=IAM Dashboard
+    volumes:
+      - ./apps/frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - dashboard-network
+
+  # Celery Worker for async tasks
+  celery-worker:
+    build:
+      context: ./apps/backend
+      dockerfile: ../../infrastructure/docker/backend/Dockerfile
+    container_name: iam-dashboard-celery
+    restart: unless-stopped
+    environment:
+      - ENVIRONMENT=development
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=dashboard
+      - REDIS_URL=redis://:redis_password@redis:6379
+      - CELERY_BROKER_URL=redis://:redis_password@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:redis_password@redis:6379/0
+    volumes:
+      - ./apps/backend:/app
+    depends_on:
+      - postgres
+      - redis
+    command: celery -A src.core.celery worker --loglevel=info
+    networks:
+      - dashboard-network
+
+  # Reverse Proxy with Caddy
+  caddy:
+    image: caddy:2-alpine
+    container_name: iam-dashboard-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - dashboard-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_logs:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local
+
+networks:
+  dashboard-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -1,0 +1,46 @@
+{
+  "name": "multi-agent-iam-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-Agent IAM Dashboard - Custom Implementation Service",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "npm run dev --workspace=apps/frontend",
+    "dev:backend": "cd apps/backend && uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
+    "build": "npm run build --workspaces",
+    "build:frontend": "npm run build --workspace=apps/frontend",
+    "build:backend": "cd apps/backend && uv run python -m build",
+    "test": "npm run test --workspaces",
+    "test:frontend": "npm run test --workspace=apps/frontend",
+    "test:backend": "cd apps/backend && uv run pytest",
+    "test:e2e": "npm run test:e2e --workspace=apps/frontend",
+    "lint": "npm run lint --workspaces",
+    "lint:frontend": "npm run lint --workspace=apps/frontend",
+    "lint:backend": "cd apps/backend && uv run ruff check . && uv run mypy src/",
+    "format": "npm run format --workspaces",
+    "format:frontend": "npm run format --workspace=apps/frontend",
+    "format:backend": "cd apps/backend && uv run ruff format .",
+    "type-check": "npm run type-check --workspaces",
+    "type-check:frontend": "npm run type-check --workspace=apps/frontend",
+    "clean": "rm -rf node_modules && npm run clean --workspaces",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "db:migrate": "cd apps/backend && uv run alembic upgrade head",
+    "db:migration": "cd apps/backend && uv run alembic revision --autogenerate",
+    "setup": "npm install && npm run setup --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "author": "Multi-Agent IAM Dashboard Team",
+  "license": "Private"
+}
