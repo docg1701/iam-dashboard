@@ -8,6 +8,19 @@ including login, token refresh, and user session data.
 from pydantic import BaseModel, EmailStr, Field
 
 
+class UserResponse(BaseModel):
+    """User response schema for authentication."""
+
+    user_id: str = Field(..., description="User ID")
+    email: str = Field(..., description="User email")
+    role: str = Field(..., description="User role")
+    is_active: bool = Field(..., description="User active status")
+    totp_enabled: bool = Field(..., description="2FA enabled status")
+    last_login: str | None = Field(default=None, description="Last login timestamp")
+    created_at: str = Field(..., description="User creation timestamp")
+    updated_at: str | None = Field(default=None, description="User update timestamp")
+
+
 class LoginRequest(BaseModel):
     """User login request schema."""
 
@@ -23,7 +36,7 @@ class LoginResponse(BaseModel):
     access_token: str = Field(..., description="JWT access token")
     token_type: str = Field(default="bearer", description="Token type")
     expires_in: int = Field(..., description="Token expiration time in seconds")
-    user: dict = Field(..., description="User information")
+    user: UserResponse | None = Field(default=None, description="User information")
     requires_2fa: bool = Field(default=False, description="Whether 2FA is required")
     session_id: str | None = Field(default=None, description="Session ID for 2FA flow")
 

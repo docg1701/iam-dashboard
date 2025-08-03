@@ -27,7 +27,7 @@ class TOTPSetupData(BaseModel):
 class TOTPService:
     """Service for TOTP-based two-factor authentication."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.issuer_name = settings.PROJECT_NAME
 
     def generate_secret(self) -> str:
@@ -63,7 +63,7 @@ class TOTPService:
 
         # Convert to base64 data URL
         buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
+        img.save(buffer, "PNG")
         img_data = buffer.getvalue()
         img_base64 = base64.b64encode(img_data).decode()
 

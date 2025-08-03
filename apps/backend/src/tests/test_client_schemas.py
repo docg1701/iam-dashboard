@@ -18,7 +18,7 @@ from src.schemas.clients import (
 class TestClientSearchParams:
     """Test ClientSearchParams schema."""
 
-    def test_client_search_params_empty(self):
+    def test_client_search_params_empty(self) -> None:
         """Test ClientSearchParams with no filters."""
         search = ClientSearchParams()
 
@@ -28,7 +28,7 @@ class TestClientSearchParams:
         assert search.created_after is None
         assert search.created_before is None
 
-    def test_client_search_params_partial(self):
+    def test_client_search_params_partial(self) -> None:
         """Test ClientSearchParams with some filters."""
         search = ClientSearchParams(name="John", status="active")
 
@@ -38,7 +38,7 @@ class TestClientSearchParams:
         assert search.created_after is None
         assert search.created_before is None
 
-    def test_client_search_params_full(self):
+    def test_client_search_params_full(self) -> None:
         """Test ClientSearchParams with all filters."""
         created_after = date(2023, 1, 1)
         created_before = date(2023, 12, 31)
@@ -57,7 +57,7 @@ class TestClientSearchParams:
         assert search.created_after == created_after
         assert search.created_before == created_before
 
-    def test_client_search_params_date_range(self):
+    def test_client_search_params_date_range(self) -> None:
         """Test ClientSearchParams with date range."""
         start_date = date(2023, 6, 1)
         end_date = date(2023, 6, 30)
@@ -71,7 +71,7 @@ class TestClientSearchParams:
 class TestClientCreate:
     """Test ClientCreate schema."""
 
-    def test_client_create_minimal(self):
+    def test_client_create_minimal(self) -> None:
         """Test ClientCreate with minimal required fields."""
         client_create = ClientCreate(
             full_name="John Doe", ssn="123-45-6789", birth_date=date(1990, 1, 1)
@@ -82,7 +82,7 @@ class TestClientCreate:
         assert client_create.birth_date == date(1990, 1, 1)
         assert client_create.notes is None
 
-    def test_client_create_full(self):
+    def test_client_create_full(self) -> None:
         """Test ClientCreate with all fields."""
         birth_date = date(1985, 6, 15)
         notes = "Important client notes"
@@ -96,7 +96,7 @@ class TestClientCreate:
         assert client_create.birth_date == birth_date
         assert client_create.notes == notes
 
-    def test_client_create_ssn_validation_valid(self):
+    def test_client_create_ssn_validation_valid(self) -> None:
         """Test ClientCreate SSN validation with valid SSNs."""
         valid_ssns = [
             "123-45-6789",
@@ -109,7 +109,7 @@ class TestClientCreate:
             client = ClientCreate(full_name="Test Client", ssn=ssn, birth_date=date(1990, 1, 1))
             assert client.ssn == ssn
 
-    def test_client_create_ssn_validation_invalid(self):
+    def test_client_create_ssn_validation_invalid(self) -> None:
         """Test ClientCreate SSN validation with invalid SSNs."""
         invalid_ssns = [
             "123456789",  # No dashes
@@ -128,7 +128,7 @@ class TestClientCreate:
                 ClientCreate(full_name="Test Client", ssn=ssn, birth_date=date(1990, 1, 1))
             assert "SSN must be in format XXX-XX-XXXX" in str(exc_info.value)
 
-    def test_client_create_birth_date_validation_valid(self):
+    def test_client_create_birth_date_validation_valid(self) -> None:
         """Test ClientCreate birth date validation with valid dates."""
         today = date.today()
         valid_dates = [
@@ -143,7 +143,7 @@ class TestClientCreate:
             client = ClientCreate(full_name="Test Client", ssn="123-45-6789", birth_date=birth_date)
             assert client.birth_date == birth_date
 
-    def test_client_create_birth_date_validation_invalid(self):
+    def test_client_create_birth_date_validation_invalid(self) -> None:
         """Test ClientCreate birth date validation with future dates."""
         today = date.today()
         future_dates = [
@@ -157,7 +157,7 @@ class TestClientCreate:
                 ClientCreate(full_name="Test Client", ssn="123-45-6789", birth_date=birth_date)
             assert "Birth date cannot be in the future" in str(exc_info.value)
 
-    def test_client_create_full_name_validation(self):
+    def test_client_create_full_name_validation(self) -> None:
         """Test ClientCreate full name validation."""
         # Too short
         with pytest.raises(ValidationError) as exc_info:
@@ -174,7 +174,7 @@ class TestClientCreate:
             ClientCreate(full_name=long_name, ssn="123-45-6789", birth_date=date(1990, 1, 1))
         assert "at most 255 characters" in str(exc_info.value)
 
-    def test_client_create_notes_validation(self):
+    def test_client_create_notes_validation(self) -> None:
         """Test ClientCreate notes validation."""
         # Valid notes
         valid_notes = [
@@ -205,7 +205,7 @@ class TestClientCreate:
 class TestClientUpdate:
     """Test ClientUpdate schema."""
 
-    def test_client_update_empty(self):
+    def test_client_update_empty(self) -> None:
         """Test ClientUpdate with no fields (all None)."""
         client_update = ClientUpdate()
 
@@ -215,7 +215,7 @@ class TestClientUpdate:
         assert client_update.status is None
         assert client_update.notes is None
 
-    def test_client_update_partial(self):
+    def test_client_update_partial(self) -> None:
         """Test ClientUpdate with some fields."""
         client_update = ClientUpdate(full_name="Updated Name", status="inactive")
 
@@ -225,7 +225,7 @@ class TestClientUpdate:
         assert client_update.birth_date is None
         assert client_update.notes is None
 
-    def test_client_update_full(self):
+    def test_client_update_full(self) -> None:
         """Test ClientUpdate with all fields."""
         birth_date = date(1980, 3, 20)
 
@@ -243,7 +243,7 @@ class TestClientUpdate:
         assert client_update.status == "archived"
         assert client_update.notes == "Updated notes"
 
-    def test_client_update_ssn_validation_valid(self):
+    def test_client_update_ssn_validation_valid(self) -> None:
         """Test ClientUpdate SSN validation with valid SSNs and None."""
         valid_ssns = [
             None,  # None is allowed
@@ -256,7 +256,7 @@ class TestClientUpdate:
             client_update = ClientUpdate(ssn=ssn)
             assert client_update.ssn == ssn
 
-    def test_client_update_ssn_validation_invalid(self):
+    def test_client_update_ssn_validation_invalid(self) -> None:
         """Test ClientUpdate SSN validation with invalid SSNs."""
         invalid_ssns = [
             "123456789",  # No dashes
@@ -271,7 +271,7 @@ class TestClientUpdate:
                 ClientUpdate(ssn=ssn)
             assert "SSN must be in format XXX-XX-XXXX" in str(exc_info.value)
 
-    def test_client_update_birth_date_validation_valid(self):
+    def test_client_update_birth_date_validation_valid(self) -> None:
         """Test ClientUpdate birth date validation with valid dates and None."""
         today = date.today()
         valid_dates = [
@@ -285,7 +285,7 @@ class TestClientUpdate:
             client_update = ClientUpdate(birth_date=birth_date)
             assert client_update.birth_date == birth_date
 
-    def test_client_update_birth_date_validation_invalid(self):
+    def test_client_update_birth_date_validation_invalid(self) -> None:
         """Test ClientUpdate birth date validation with future dates."""
         today = date.today()
         future_dates = [
@@ -303,7 +303,7 @@ class TestClientUpdate:
 class TestClientResponse:
     """Test ClientResponse schema."""
 
-    def test_client_response_creation(self):
+    def test_client_response_creation(self) -> None:
         """Test ClientResponse schema creation."""
         client_id = uuid4()
 
@@ -329,7 +329,7 @@ class TestClientResponse:
         assert client_response.updated_at == "2023-01-01T00:00:00"
         assert client_response.created_by == "admin"
 
-    def test_client_response_ssn_masking_normal(self):
+    def test_client_response_ssn_masking_normal(self) -> None:
         """Test ClientResponse SSN masking with normal SSNs."""
         test_cases = [
             ("123-45-6789", "***-**-6789"),
@@ -352,7 +352,7 @@ class TestClientResponse:
             )
             assert client_response.ssn == expected_masked
 
-    def test_client_response_ssn_masking_edge_cases(self):
+    def test_client_response_ssn_masking_edge_cases(self) -> None:
         """Test ClientResponse SSN masking with edge cases."""
         test_cases = [
             ("123", "***-**-****"),  # Too short, fallback
@@ -375,7 +375,7 @@ class TestClientResponse:
             )
             assert client_response.ssn == expected_masked
 
-    def test_client_response_minimal(self):
+    def test_client_response_minimal(self) -> None:
         """Test ClientResponse with minimal required fields."""
         client_id = uuid4()
 
@@ -404,7 +404,7 @@ class TestClientResponse:
 class TestClientList:
     """Test ClientList schema."""
 
-    def test_client_list_creation(self):
+    def test_client_list_creation(self) -> None:
         """Test ClientList schema creation."""
         client_id = uuid4()
 
@@ -422,7 +422,7 @@ class TestClientList:
         assert client_list.status == "active"
         assert client_list.created_at == "2023-01-01T00:00:00"
 
-    def test_client_list_multiple_clients(self):
+    def test_client_list_multiple_clients(self) -> None:
         """Test ClientList with multiple different clients."""
         clients_data = [
             {
@@ -456,7 +456,7 @@ class TestClientList:
             assert client_list.status == client_data["status"]
             assert client_list.created_at == client_data["created_at"]
 
-    def test_client_list_different_statuses(self):
+    def test_client_list_different_statuses(self) -> None:
         """Test ClientList with different status values."""
         statuses = ["active", "inactive", "archived", "pending"]
         client_id = uuid4()

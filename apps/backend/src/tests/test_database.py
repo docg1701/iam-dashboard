@@ -5,6 +5,7 @@ This module tests database configuration, session management, and utilities.
 """
 
 from contextlib import suppress
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -19,7 +20,7 @@ from src.core.database import (
 )
 
 
-def test_create_database_engine_success():
+def test_create_database_engine_success() -> None:
     """Test successful database engine creation."""
     with patch("src.core.database.create_engine") as mock_create_engine:
         mock_engine = MagicMock()
@@ -31,7 +32,7 @@ def test_create_database_engine_success():
         mock_create_engine.assert_called_once()
 
 
-def test_create_database_engine_failure():
+def test_create_database_engine_failure() -> None:
     """Test database engine creation failure."""
     with patch("src.core.database.create_engine") as mock_create_engine:
         mock_create_engine.side_effect = Exception("Connection failed")
@@ -41,7 +42,7 @@ def test_create_database_engine_failure():
         assert result is None
 
 
-def test_get_session_no_session_local():
+def test_get_session_no_session_local() -> None:
     """Test get_session when SessionLocal is None."""
     with patch("src.core.database.SessionLocal", None):
         session_gen = get_session()
@@ -50,7 +51,7 @@ def test_get_session_no_session_local():
             next(session_gen)
 
 
-def test_get_session_success(test_session):
+def test_get_session_success(test_session: Any) -> None:
     """Test successful session creation."""
     with patch("src.core.database.SessionLocal") as mock_session_local:
         mock_session = MagicMock()
@@ -68,7 +69,7 @@ def test_get_session_success(test_session):
         mock_session.close.assert_called_once()
 
 
-def test_create_test_session_no_session_local():
+def test_create_test_session_no_session_local() -> None:
     """Test create_test_session when SessionLocal is None."""
     with (
         patch("src.core.database.SessionLocal", None),
@@ -77,7 +78,7 @@ def test_create_test_session_no_session_local():
         create_test_session()
 
 
-def test_create_test_session_success():
+def test_create_test_session_success() -> None:
     """Test successful test session creation."""
     with patch("src.core.database.SessionLocal") as mock_session_local:
         mock_session = MagicMock()
@@ -90,7 +91,7 @@ def test_create_test_session_success():
 
 
 @pytest.mark.asyncio
-async def test_health_check_no_engine():
+async def test_health_check_no_engine() -> None:
     """Test health check when engine is None."""
     with patch("src.core.database.engine", None):
         result = await health_check()
@@ -98,7 +99,7 @@ async def test_health_check_no_engine():
 
 
 @pytest.mark.asyncio
-async def test_health_check_success():
+async def test_health_check_success() -> None:
     """Test successful health check."""
     mock_engine = MagicMock()
     mock_connection = MagicMock()
@@ -112,7 +113,7 @@ async def test_health_check_success():
 
 
 @pytest.mark.asyncio
-async def test_health_check_failure():
+async def test_health_check_failure() -> None:
     """Test health check failure."""
     mock_engine = MagicMock()
     mock_engine.connect.side_effect = Exception("Connection failed")
@@ -123,14 +124,14 @@ async def test_health_check_failure():
         assert result is False
 
 
-def test_close_db_connections_no_engine():
+def test_close_db_connections_no_engine() -> None:
     """Test close_db_connections when engine is None."""
     with patch("src.core.database.engine", None):
         # Should not raise exception
         close_db_connections()
 
 
-def test_close_db_connections_success():
+def test_close_db_connections_success() -> None:
     """Test successful connection closing."""
     mock_engine = MagicMock()
 
@@ -141,7 +142,7 @@ def test_close_db_connections_success():
 
 
 @pytest.mark.asyncio
-async def test_init_db_no_engine():
+async def test_init_db_no_engine() -> None:
     """Test init_db when engine is None."""
     with patch("src.core.database.engine", None):
         # Should not raise exception
@@ -149,7 +150,7 @@ async def test_init_db_no_engine():
 
 
 @pytest.mark.asyncio
-async def test_init_db_success():
+async def test_init_db_success() -> None:
     """Test successful database initialization."""
     mock_engine = MagicMock()
     mock_connection = MagicMock()
@@ -171,7 +172,7 @@ async def test_init_db_success():
 
 
 @pytest.mark.asyncio
-async def test_init_db_failure():
+async def test_init_db_failure() -> None:
     """Test database initialization failure."""
     mock_engine = MagicMock()
     mock_engine.connect.side_effect = Exception("Connection failed")

@@ -8,7 +8,8 @@ All authentication logic is centralized here for consistency.
 import contextlib
 import secrets
 from datetime import datetime, timedelta
-from typing import Any
+from collections.abc import Callable
+from typing import TypeVar
 from uuid import UUID
 
 import jwt
@@ -47,6 +48,15 @@ class SessionData(BaseModel):
     last_activity: str
 
 
+class TokenResponse(BaseModel):
+    """Token response data structure."""
+
+    access_token: str
+    token_type: str
+    expires_in: int
+    session_id: str
+
+
 class SecureAuthService:
     """Enhanced authentication service with session tracking and JWT blacklisting."""
 
@@ -60,7 +70,7 @@ class SecureAuthService:
         try:
             self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)  # type: ignore[no-untyped-call]
             # Test connection
-            self.redis_client.ping()  # type: ignore[no-untyped-call]
+            self.redis_client.ping()
         except (redis.ConnectionError, redis.RedisError) as e:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Redis connection failed"
@@ -76,7 +86,7 @@ class SecureAuthService:
 
     def create_access_token(
         self, user_id: UUID, user_role: str, user_email: str, session_id: str | None = None
-    ) -> dict[str, Any]:
+    ) -> TokenResponse:
         """Create secure JWT token with session tracking."""
         if session_id is None:
             session_id = secrets.token_hex(16)
@@ -116,12 +126,12 @@ class SecureAuthService:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Session storage failed"
             ) from e
 
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "expires_in": self.access_token_expire_minutes * 60,
-            "session_id": session_id,
-        }
+        return TokenResponse(
+            access_token=access_token,
+            token_type="bearer",
+            expires_in=self.access_token_expire_minutes * 60,
+            session_id=session_id,
+        )
 
     def create_refresh_token(self, user_id: UUID, session_id: str) -> str:
         """Create a refresh token for token renewal."""
@@ -182,7 +192,7 @@ class SecureAuthService:
                 headers={"WWW-Authenticate": "Bearer"},
             ) from err
 
-    def refresh_access_token(self, refresh_token: str) -> dict[str, Any]:
+    def refresh_access_token(self, refresh_token: str) -> TokenResponse:
         """Refresh an access token using a valid refresh token."""
         try:
             payload = jwt.decode(refresh_token, self.secret_key, algorithms=[self.algorithm])
@@ -298,7 +308,7 @@ class SecureAuthService:
     def _is_token_blacklisted(self, jti: str) -> bool:
         """Check if a token is blacklisted."""
         try:
-            return bool(self.redis_client.exists(f"blacklist:{jti}"))  # type: ignore[no-any-return]
+            return bool(self.redis_client.exists(f"blacklist:{jti}"))
         except redis.RedisError:
             # If Redis is unavailable, assume token is not blacklisted
             return False
@@ -357,7 +367,7 @@ def get_current_user_token(
     return auth_service.verify_token(credentials.credentials)
 
 
-def require_role(required_role: str) -> Any:
+def require_role(required_role: str) -> Callable[[TokenData], TokenData]:
     """
     Dependency factory for role-based access control.
 
@@ -378,7 +388,7 @@ def require_role(required_role: str) -> Any:
     return check_role
 
 
-def require_any_role(required_roles: list[str]) -> Any:
+def require_any_role(required_roles: list[str]) -> Callable[[TokenData], TokenData]:
     """
     Dependency factory for multi-role access control.
 
@@ -538,7 +548,7 @@ def has_permission(token_data: TokenData, required_permission: str) -> bool:
     return required_permission in user_permissions
 
 
-def require_permission(required_permission: str) -> Any:
+def require_permission(required_permission: str) -> Callable[[], TokenData]:
     """
     Dependency factory for permission-based access control.
 

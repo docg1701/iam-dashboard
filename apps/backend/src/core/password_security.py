@@ -5,9 +5,10 @@ This module provides password reset, password history, and account lockout
 functionality to enhance the security of the authentication system.
 """
 
+import contextlib
 import secrets
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TypedDict
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -34,10 +35,18 @@ class LoginAttempt(BaseModel):
     success: bool
 
 
+class LockoutInfo(TypedDict):
+    """Account lockout information structure."""
+    
+    locked: bool
+    unlock_in_minutes: int
+    failed_attempts: int
+
+
 class PasswordSecurityService:
     """Service for password security enhancements."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.redis_client = auth_service.redis_client
         self.reset_token_expire_hours = 1  # Password reset tokens expire in 1 hour
         self.max_failed_attempts = 5  # Lock account after 5 failed attempts
@@ -84,10 +93,8 @@ class PasswordSecurityService:
 
     def revoke_reset_token(self, token: str) -> None:
         """Revoke a password reset token after use."""
-        try:
+        with contextlib.suppress(Exception):
             self.redis_client.delete(f"password_reset:{token}")
-        except Exception:
-            pass
 
     def record_login_attempt(self, email: str, ip_address: str, success: bool) -> None:
         """Record a login attempt for tracking failed attempts."""
@@ -145,10 +152,8 @@ class PasswordSecurityService:
 
     def clear_failed_attempts(self, email: str) -> None:
         """Clear failed login attempts for an account after successful login."""
-        try:
+        with contextlib.suppress(Exception):
             self.redis_client.delete(f"login_attempts:{email}")
-        except Exception:
-            pass
 
     def store_password_hash(self, user_id: UUID, password_hash: str) -> None:
         """Store a password hash in the user's password history."""
@@ -184,7 +189,7 @@ class PasswordSecurityService:
             # If Redis is unavailable, allow password change
             return False
 
-    def get_lockout_info(self, email: str) -> dict[str, Any] | None:
+    def get_lockout_info(self, email: str) -> LockoutInfo | None:
         """Get information about account lockout status."""
         if not self.is_account_locked(email):
             return None

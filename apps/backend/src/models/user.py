@@ -90,7 +90,7 @@ class User(UserBase, table=True):
 
     @field_validator("password_hash")
     @classmethod
-    def validate_password_hash(cls, v):
+    def validate_password_hash(cls, v: str) -> str:
         """Validate password hash format."""
         if not v.startswith("$2b$"):
             raise ValueError("Password hash must be bcrypt format")
@@ -98,7 +98,7 @@ class User(UserBase, table=True):
 
     @field_validator("totp_secret")
     @classmethod
-    def validate_totp_secret(cls, v):
+    def validate_totp_secret(cls, v: str | None) -> str | None:
         """Validate TOTP secret format."""
         if v is not None and not re.match(r"^[A-Z2-7]{32}$", v):
             raise ValueError("TOTP secret must be 32 character Base32 string")
@@ -114,7 +114,7 @@ class UserCreate(UserBase):
 
     @field_validator("password")
     @classmethod
-    def validate_password_strength(cls, v):
+    def validate_password_strength(cls, v: str) -> str:
         """Validate password strength requirements."""
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters long")
@@ -147,7 +147,7 @@ class UserUpdate(SQLModel):
 
     @field_validator("password")
     @classmethod
-    def validate_password_strength(cls, v):
+    def validate_password_strength(cls, v: str | None) -> str | None:
         """Validate password strength requirements."""
         if v is not None:
             return UserCreate.validate_password_strength(v)

@@ -40,7 +40,7 @@ class ClientBase(SQLModel):
 
     @field_validator("full_name")
     @classmethod
-    def validate_full_name(cls, v):
+    def validate_full_name(cls, v: str) -> str:
         """Validate client full name."""
         # Trim whitespace and check minimum length
         v = v.strip()
@@ -55,7 +55,7 @@ class ClientBase(SQLModel):
 
     @field_validator("ssn")
     @classmethod
-    def validate_ssn_format(cls, v):
+    def validate_ssn_format(cls, v: str) -> str:
         """Validate SSN format and check sum."""
         # Check format
         if not re.match(r"^\d{3}-\d{2}-\d{4}$", v):
@@ -78,7 +78,7 @@ class ClientBase(SQLModel):
 
     @field_validator("birth_date")
     @classmethod
-    def validate_birth_date(cls, v):
+    def validate_birth_date(cls, v: date) -> date:
         """Validate birth date is within reasonable range."""
         # Must be at least 13 years old (minimum age for account)
         min_date = date(1900, 1, 1)

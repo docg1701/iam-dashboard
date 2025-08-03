@@ -30,7 +30,7 @@ from .factories import (
 class TestUserFactory:
     """Test the User factory."""
 
-    def test_creates_valid_user(self):
+    def test_creates_valid_user(self) -> None:
         """Test that UserFactory creates a valid User instance."""
         user = UserFactory()
 
@@ -44,7 +44,7 @@ class TestUserFactory:
         assert user.password_hash.startswith("$2b$")
         assert len(user.password_hash) >= 60
 
-    def test_admin_users_have_totp_enabled(self):
+    def test_admin_users_have_totp_enabled(self) -> None:
         """Test that admin users automatically get TOTP enabled."""
         admin_user = AdminUserFactory()
         sysadmin_user = SysAdminUserFactory()
@@ -58,7 +58,7 @@ class TestUserFactory:
         assert sysadmin_user.totp_enabled is True
         assert sysadmin_user.totp_secret is not None
 
-    def test_creates_multiple_unique_users(self):
+    def test_creates_multiple_unique_users(self) -> None:
         """Test that multiple users have unique data."""
         users = [UserFactory() for _ in range(5)]
 
@@ -72,7 +72,7 @@ class TestUserFactory:
 class TestClientFactory:
     """Test the Client factory."""
 
-    def test_creates_valid_client(self):
+    def test_creates_valid_client(self) -> None:
         """Test that ClientFactory creates a valid Client instance."""
         client = ClientFactory()
 
@@ -86,7 +86,7 @@ class TestClientFactory:
         assert isinstance(client.created_by, UUID)
         assert isinstance(client.updated_by, UUID)
 
-    def test_ssn_format_is_valid(self):
+    def test_ssn_format_is_valid(self) -> None:
         """Test that generated SSNs follow the correct format."""
         for _ in range(10):
             client = ClientFactory()
@@ -100,14 +100,14 @@ class TestClientFactory:
             assert ssn_parts[1] != "00"  # Invalid group
             assert ssn_parts[2] != "0000"  # Invalid serial
 
-    def test_inactive_client_has_notes(self):
+    def test_inactive_client_has_notes(self) -> None:
         """Test that inactive clients get explanatory notes."""
         inactive_client = InactiveClientFactory()
 
         assert inactive_client.status == ClientStatus.INACTIVE
         assert "inactive" in inactive_client.notes.lower()
 
-    def test_birth_date_is_reasonable(self):
+    def test_birth_date_is_reasonable(self) -> None:
         """Test that birth dates are within reasonable range."""
         client = ClientFactory()
         today = date.today()
@@ -125,7 +125,7 @@ class TestClientFactory:
 class TestAuditLogFactory:
     """Test the AuditLog factory."""
 
-    def test_creates_valid_audit_log(self):
+    def test_creates_valid_audit_log(self) -> None:
         """Test that AuditLogFactory creates a valid AuditLog instance."""
         audit_log = AuditLogFactory()
 
@@ -144,7 +144,7 @@ class TestAuditLogFactory:
         assert len(audit_log.user_agent) > 0
         assert isinstance(audit_log.timestamp, datetime)
 
-    def test_update_actions_have_old_values(self):
+    def test_update_actions_have_old_values(self) -> None:
         """Test that UPDATE and DELETE actions get old_values set."""
         update_log = AuditLogFactory(action=AuditAction.UPDATE)
         delete_log = AuditLogFactory(action=AuditAction.DELETE)
@@ -154,7 +154,7 @@ class TestAuditLogFactory:
         assert isinstance(update_log.old_values, dict)
         assert isinstance(delete_log.old_values, dict)
 
-    def test_audit_values_match_table(self):
+    def test_audit_values_match_table(self) -> None:
         """Test that audit values are appropriate for the table."""
         user_audit = AuditLogFactory(table_name="users")
         client_audit = AuditLogFactory(table_name="agent1_clients")
@@ -171,7 +171,7 @@ class TestAuditLogFactory:
 class TestUtilityFunctions:
     """Test utility functions."""
 
-    def test_generate_valid_ssn(self):
+    def test_generate_valid_ssn(self) -> None:
         """Test SSN generation utility."""
         for _ in range(20):
             ssn = generate_valid_ssn()
@@ -186,7 +186,7 @@ class TestUtilityFunctions:
             assert parts[1] != "00"
             assert parts[2] != "0000"
 
-    def test_generate_audit_values(self):
+    def test_generate_audit_values(self) -> None:
         """Test audit values generation."""
         user_values = generate_audit_values("users", AuditAction.CREATE)
         client_values = generate_audit_values("agent1_clients", AuditAction.CREATE)
@@ -199,7 +199,7 @@ class TestUtilityFunctions:
         assert "full_name" in client_values
         assert "ssn" in client_values
 
-    def test_create_test_user_with_role(self):
+    def test_create_test_user_with_role(self) -> None:
         """Test create_test_user function."""
         admin = create_test_user(role=UserRole.ADMIN)
         user = create_test_user(role=UserRole.USER)
@@ -213,7 +213,7 @@ class TestUtilityFunctions:
         assert sysadmin.role == UserRole.SYSADMIN
         assert sysadmin.totp_enabled is True
 
-    def test_create_test_client_with_status(self):
+    def test_create_test_client_with_status(self) -> None:
         """Test create_test_client function."""
         active_client = create_test_client(status=ClientStatus.ACTIVE)
         inactive_client = create_test_client(status=ClientStatus.INACTIVE)
@@ -222,7 +222,7 @@ class TestUtilityFunctions:
         assert inactive_client.status == ClientStatus.INACTIVE
         assert "inactive" in inactive_client.notes.lower()
 
-    def test_create_user_with_clients(self):
+    def test_create_user_with_clients(self) -> None:
         """Test creating user with associated clients."""
         user, clients = create_user_with_clients(client_count=3)
 
@@ -235,7 +235,7 @@ class TestUtilityFunctions:
             assert client.created_by == user.user_id
             assert client.updated_by == user.user_id
 
-    def test_create_complete_audit_trail(self):
+    def test_create_complete_audit_trail(self) -> None:
         """Test creating complete audit trail."""
         record_id = "test-record-123"
         audit_logs = create_complete_audit_trail(record_id=record_id)
@@ -264,7 +264,7 @@ class TestUtilityFunctions:
 class TestSeededData:
     """Test seeded data functions."""
 
-    def test_seed_users_creates_all_roles(self):
+    def test_seed_users_creates_all_roles(self) -> None:
         """Test that seed users include all roles."""
         seed_users = create_seed_users()
         roles = [user.role for user in seed_users]
@@ -283,7 +283,7 @@ class TestSeededData:
         assert admin.role == UserRole.ADMIN
         assert admin.totp_enabled is True
 
-    def test_seed_clients_creates_various_statuses(self):
+    def test_seed_clients_creates_various_statuses(self) -> None:
         """Test that seed clients include different statuses."""
         admin_id = uuid4()
         seed_clients = create_seed_clients(admin_id)
@@ -304,7 +304,7 @@ class TestSeededData:
 class TestFactoryDataValidation:
     """Test that factory-generated data passes model validation."""
 
-    def test_user_factory_data_is_valid(self):
+    def test_user_factory_data_is_valid(self) -> None:
         """Test that User factory data passes all validators."""
         # Test different user types
         regular_user = UserFactory()
@@ -327,7 +327,7 @@ class TestFactoryDataValidation:
                 assert len(user.totp_secret) == 32
                 assert all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567" for c in user.totp_secret)
 
-    def test_client_factory_data_is_valid(self):
+    def test_client_factory_data_is_valid(self) -> None:
         """Test that Client factory data passes all validators."""
         # Test different client types
         active_client = ClientFactory()
@@ -354,7 +354,7 @@ class TestFactoryDataValidation:
             max_date = date(today.year - 13, today.month, today.day)
             assert min_date <= client.birth_date <= max_date
 
-    def test_audit_log_factory_data_is_valid(self):
+    def test_audit_log_factory_data_is_valid(self) -> None:
         """Test that AuditLog factory data passes all validators."""
         # Test different audit log types
         create_audit = AuditLogFactory(action=AuditAction.CREATE)

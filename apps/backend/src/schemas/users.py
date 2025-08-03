@@ -30,7 +30,7 @@ class UserCreate(BaseModel):
 
     @field_validator("role")
     @classmethod
-    def validate_role(cls, v):
+    def validate_role(cls, v: str) -> str:
         """Validate user role."""
         allowed_roles = ["sysadmin", "admin", "user"]
         if v not in allowed_roles:
@@ -48,7 +48,7 @@ class UserUpdate(BaseModel):
 
     @field_validator("role")
     @classmethod
-    def validate_role(cls, v):
+    def validate_role(cls, v: str | None) -> str | None:
         """Validate user role."""
         if v is not None:
             allowed_roles = ["sysadmin", "admin", "user"]

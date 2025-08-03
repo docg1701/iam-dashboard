@@ -32,7 +32,7 @@ class ClientCreate(BaseModel):
 
     @field_validator("ssn")
     @classmethod
-    def validate_ssn(cls, v):
+    def validate_ssn(cls, v: str) -> str:
         """Validate SSN format."""
         if not re.match(r"^\d{3}-\d{2}-\d{4}$", v):
             raise ValueError("SSN must be in format XXX-XX-XXXX")
@@ -40,7 +40,7 @@ class ClientCreate(BaseModel):
 
     @field_validator("birth_date")
     @classmethod
-    def validate_birth_date(cls, v):
+    def validate_birth_date(cls, v: date) -> date:
         """Validate birth date is not in the future."""
         if v > date.today():
             raise ValueError("Birth date cannot be in the future")
@@ -60,7 +60,7 @@ class ClientUpdate(BaseModel):
 
     @field_validator("ssn")
     @classmethod
-    def validate_ssn(cls, v):
+    def validate_ssn(cls, v: str | None) -> str | None:
         """Validate SSN format."""
         if v is not None and not re.match(r"^\d{3}-\d{2}-\d{4}$", v):
             raise ValueError("SSN must be in format XXX-XX-XXXX")
@@ -68,7 +68,7 @@ class ClientUpdate(BaseModel):
 
     @field_validator("birth_date")
     @classmethod
-    def validate_birth_date(cls, v):
+    def validate_birth_date(cls, v: date | None) -> date | None:
         """Validate birth date is not in the future."""
         if v is not None and v > date.today():
             raise ValueError("Birth date cannot be in the future")
@@ -90,7 +90,7 @@ class ClientResponse(BaseModel):
 
     @field_validator("ssn")
     @classmethod
-    def mask_ssn(cls, v):
+    def mask_ssn(cls, v: str) -> str:
         """Mask SSN for security (show only last 4 digits)."""
         if len(v) >= 4:
             return f"***-**-{v[-4:]}"

@@ -99,7 +99,7 @@ def dashboard_exception_to_http(exc: DashboardException) -> HTTPException:
     # Check if it's a specific exception type
     for exc_type, (status_code, include_details) in exception_mappings.items():
         if isinstance(exc, exc_type):
-            detail = {"message": exc.message, "error_code": exc.error_code}
+            detail: dict[str, Any] = {"message": exc.message, "error_code": exc.error_code}
             if include_details:
                 detail["details"] = exc.details
             return HTTPException(status_code=status_code, detail=detail)

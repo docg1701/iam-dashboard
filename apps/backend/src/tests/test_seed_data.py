@@ -1,5 +1,6 @@
 """Tests for seed_data utility functions."""
 
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -22,7 +23,7 @@ class TestSeedDatabase:
     """Test database seeding function."""
 
     @pytest.fixture
-    def mock_session(self):
+    def mock_session(self) -> Mock:
         """Create a mock database session."""
         session = Mock(spec=Session)
         session.add = Mock()
@@ -46,16 +47,16 @@ class TestSeedDatabase:
     @pytest.mark.asyncio
     async def test_seed_database_success(
         self,
-        mock_print,
-        mock_print_summary,
-        mock_create_audit_log,
-        mock_create_audit_trail,
-        mock_create_clients,
-        mock_create_users,
-        _mock_engine,
-        mock_session_class,
-        mock_session,
-    ):
+        mock_print: Any,
+        mock_print_summary: Any,
+        mock_create_audit_log: Any,
+        mock_create_audit_trail: Any,
+        mock_create_clients: Any,
+        mock_create_users: Any,
+        _mock_engine: Any,
+        mock_session_class: Any,
+        mock_session: Any,
+    ) -> None:
         """Test successful database seeding."""
         mock_session_class.return_value.__enter__.return_value = mock_session
 
@@ -229,7 +230,7 @@ class TestClearDatabase:
     """Test database clearing function."""
 
     @pytest.fixture
-    def mock_session(self):
+    def mock_session(self) -> Mock:
         """Create a mock database session."""
         session = Mock(spec=Session)
         session.exec = Mock()
@@ -306,7 +307,7 @@ class TestSeedForTesting:
     """Test testing data seeding function."""
 
     @pytest.fixture
-    def mock_session(self):
+    def mock_session(self) -> Mock:
         """Create a mock database session."""
         session = Mock(spec=Session)
         session.add = Mock()

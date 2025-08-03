@@ -27,7 +27,7 @@ async def list_clients(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     token_data: TokenData = Depends(get_current_user_token),
-):
+) -> PaginatedResponse[ClientResponse]:
     """
     List clients with optional search and pagination.
 
@@ -50,7 +50,7 @@ async def list_clients(
 @router.post("", response_model=ClientResponse, status_code=status.HTTP_201_CREATED)
 async def create_client(
     client_data: ClientCreate, token_data: TokenData = Depends(require_any_role(["admin", "user"]))
-):
+) -> ClientResponse:
     """
     Create a new client.
 
@@ -72,7 +72,7 @@ async def create_client(
 
 
 @router.get("/{client_id}", response_model=ClientResponse)
-async def get_client(client_id: UUID, token_data: TokenData = Depends(get_current_user_token)):
+async def get_client(client_id: UUID, token_data: TokenData = Depends(get_current_user_token)) -> ClientResponse:
     """
     Get client by ID.
 
@@ -98,7 +98,7 @@ async def update_client(
     client_id: UUID,
     client_data: ClientUpdate,
     token_data: TokenData = Depends(require_any_role(["admin", "user"])),
-):
+) -> ClientResponse:
     """
     Update client information.
 
@@ -123,7 +123,7 @@ async def update_client(
 @router.delete("/{client_id}", response_model=SuccessResponse)
 async def delete_client(
     client_id: UUID, token_data: TokenData = Depends(require_any_role(["admin"]))
-):
+) -> SuccessResponse:
     """
     Delete client (soft delete).
 

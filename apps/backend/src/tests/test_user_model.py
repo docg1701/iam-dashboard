@@ -19,13 +19,13 @@ from src.models.user import (
 class TestUserRole:
     """Test UserRole enumeration."""
 
-    def test_user_role_values(self):
+    def test_user_role_values(self) -> None:
         """Test UserRole enum values."""
-        assert UserRole.SYSADMIN == "sysadmin"
-        assert UserRole.ADMIN == "admin"
-        assert UserRole.USER == "user"
+        assert UserRole.SYSADMIN.value == "sysadmin"
+        assert UserRole.ADMIN.value == "admin"
+        assert UserRole.USER.value == "user"
 
-    def test_user_role_iteration(self):
+    def test_user_role_iteration(self) -> None:
         """Test UserRole enum iteration."""
         roles = list(UserRole)
         assert len(roles) == 3
@@ -37,7 +37,7 @@ class TestUserRole:
 class TestUserBase:
     """Test UserBase model functionality."""
 
-    def test_user_base_creation_minimal(self):
+    def test_user_base_creation_minimal(self) -> None:
         """Test UserBase creation with minimal fields."""
         user_base = UserBase(email="user@example.com")
 
@@ -47,7 +47,7 @@ class TestUserBase:
         assert user_base.totp_enabled is False  # Default value
         assert user_base.last_login is None  # Default value
 
-    def test_user_base_creation_full(self):
+    def test_user_base_creation_full(self) -> None:
         """Test UserBase creation with all fields."""
         last_login = datetime.utcnow()
         user_base = UserBase(
@@ -64,14 +64,14 @@ class TestUserBase:
         assert user_base.totp_enabled is True
         assert user_base.last_login == last_login
 
-    def test_user_base_invalid_email(self):
+    def test_user_base_invalid_email(self) -> None:
         """Test UserBase validation with invalid email."""
         with pytest.raises(ValidationError) as exc_info:
             UserBase(email="invalid-email")
 
         assert "value is not a valid email address" in str(exc_info.value)
 
-    def test_user_base_invalid_role(self):
+    def test_user_base_invalid_role(self) -> None:
         """Test UserBase validation with invalid role."""
         with pytest.raises(ValidationError) as exc_info:
             UserBase(email="user@example.com", role="invalid_role")
@@ -85,7 +85,7 @@ class TestUserBase:
 class TestUser:
     """Test User database model."""
 
-    def test_user_creation_minimal(self):
+    def test_user_creation_minimal(self) -> None:
         """Test User creation with minimal required fields."""
         user = User(
             email="user@example.com",
@@ -102,7 +102,7 @@ class TestUser:
         assert user.updated_at is None
         assert user.totp_secret is None
 
-    def test_user_creation_full(self):
+    def test_user_creation_full(self) -> None:
         """Test User creation with all fields."""
         user_id = uuid4()
         created_at = datetime.utcnow()
@@ -128,7 +128,7 @@ class TestUser:
         assert user.created_at == created_at
         assert user.totp_secret == "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 
-    def test_user_password_hash_validation_valid(self):
+    def test_user_password_hash_validation_valid(self) -> None:
         """Test User password hash validation with valid bcrypt hash."""
         valid_hashes = [
             "$2b$12$abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqr",
@@ -140,7 +140,7 @@ class TestUser:
             user = User(email="user@example.com", password_hash=hash_value)
             assert user.password_hash == hash_value
 
-    def test_user_password_hash_validation_invalid(self):
+    def test_user_password_hash_validation_invalid(self) -> None:
         """Test User password hash validation with invalid hash."""
         # NOTE: SQLModel 0.0.24 doesn't support Pydantic v2 field validators
         # This test verifies that invalid password hashes are accepted (current behavior)
@@ -161,7 +161,7 @@ class TestUser:
         user = User(email="user@example.com", password_hash="")
         assert user.password_hash == ""
 
-    def test_user_totp_secret_validation_valid(self):
+    def test_user_totp_secret_validation_valid(self) -> None:
         """Test User TOTP secret validation with valid Base32."""
         valid_secrets = [
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567",  # All uppercase
@@ -177,7 +177,7 @@ class TestUser:
             )
             assert user.totp_secret == secret
 
-    def test_user_totp_secret_validation_invalid(self):
+    def test_user_totp_secret_validation_invalid(self) -> None:
         """Test User TOTP secret validation with invalid Base32."""
         valid_length_invalid_chars = [
             "abcdefghijklmnopqrstuvwxyz234567",  # Lowercase not allowed
@@ -212,7 +212,7 @@ class TestUser:
             )
             assert user.totp_secret == invalid_secret
 
-    def test_user_totp_secret_none_allowed(self):
+    def test_user_totp_secret_none_allowed(self) -> None:
         """Test User TOTP secret can be None."""
         user = User(
             email="user@example.com",
@@ -225,7 +225,7 @@ class TestUser:
 class TestUserCreate:
     """Test UserCreate schema."""
 
-    def test_user_create_minimal(self):
+    def test_user_create_minimal(self) -> None:
         """Test UserCreate with minimal valid data."""
         user_create = UserCreate(email="user@example.com", password="SecurePass123!")
 
@@ -234,7 +234,7 @@ class TestUserCreate:
         assert user_create.role == UserRole.USER  # Default
         assert user_create.is_active is True  # Default
 
-    def test_user_create_full(self):
+    def test_user_create_full(self) -> None:
         """Test UserCreate with all fields."""
         user_create = UserCreate(
             email="admin@example.com",
@@ -250,7 +250,7 @@ class TestUserCreate:
         assert user_create.is_active is False
         assert user_create.totp_enabled is True
 
-    def test_user_create_password_validation_valid(self):
+    def test_user_create_password_validation_valid(self) -> None:
         """Test UserCreate password validation with valid passwords."""
         valid_passwords = [
             "SecurePass123!",
@@ -263,7 +263,7 @@ class TestUserCreate:
             user_create = UserCreate(email="user@example.com", password=password)
             assert user_create.password == password
 
-    def test_user_create_password_validation_too_short(self):
+    def test_user_create_password_validation_too_short(self) -> None:
         """Test UserCreate password validation with too short password."""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
@@ -275,31 +275,31 @@ class TestUserCreate:
             exc_info.value
         ) or "String should have at least 8 characters" in str(exc_info.value)
 
-    def test_user_create_password_validation_no_uppercase(self):
+    def test_user_create_password_validation_no_uppercase(self) -> None:
         """Test UserCreate password validation without uppercase."""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(email="user@example.com", password="lowercase123!")
         assert "Password must contain at least one uppercase letter" in str(exc_info.value)
 
-    def test_user_create_password_validation_no_lowercase(self):
+    def test_user_create_password_validation_no_lowercase(self) -> None:
         """Test UserCreate password validation without lowercase."""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(email="user@example.com", password="UPPERCASE123!")
         assert "Password must contain at least one lowercase letter" in str(exc_info.value)
 
-    def test_user_create_password_validation_no_digit(self):
+    def test_user_create_password_validation_no_digit(self) -> None:
         """Test UserCreate password validation without digit."""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(email="user@example.com", password="NoNumbers!")
         assert "Password must contain at least one digit" in str(exc_info.value)
 
-    def test_user_create_password_validation_no_special(self):
+    def test_user_create_password_validation_no_special(self) -> None:
         """Test UserCreate password validation without special character."""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(email="user@example.com", password="NoSpecial123")
         assert "Password must contain at least one special character" in str(exc_info.value)
 
-    def test_user_create_password_validation_multiple_errors(self):
+    def test_user_create_password_validation_multiple_errors(self) -> None:
         """Test UserCreate password validation with multiple violations."""
         with pytest.raises(ValidationError) as exc_info:
             UserCreate(
@@ -318,7 +318,7 @@ class TestUserCreate:
 class TestUserUpdate:
     """Test UserUpdate schema."""
 
-    def test_user_update_empty(self):
+    def test_user_update_empty(self) -> None:
         """Test UserUpdate with no fields (all None)."""
         user_update = UserUpdate()
 
@@ -328,7 +328,7 @@ class TestUserUpdate:
         assert user_update.totp_enabled is None
         assert user_update.password is None
 
-    def test_user_update_partial(self):
+    def test_user_update_partial(self) -> None:
         """Test UserUpdate with some fields."""
         user_update = UserUpdate(
             email="new@example.com", role=UserRole.ADMIN, password="NewPassword123!"
@@ -340,7 +340,7 @@ class TestUserUpdate:
         assert user_update.is_active is None
         assert user_update.totp_enabled is None
 
-    def test_user_update_password_validation(self):
+    def test_user_update_password_validation(self) -> None:
         """Test UserUpdate password validation uses same rules."""
         # Valid password should work
         user_update = UserUpdate(password="ValidPass123!")
@@ -353,7 +353,7 @@ class TestUserUpdate:
             exc_info.value
         ) or "String should have at least 8 characters" in str(exc_info.value)
 
-    def test_user_update_password_none_allowed(self):
+    def test_user_update_password_none_allowed(self) -> None:
         """Test UserUpdate allows None password."""
         user_update = UserUpdate(email="user@example.com", password=None)
         assert user_update.password is None
@@ -362,7 +362,7 @@ class TestUserUpdate:
 class TestUserRead:
     """Test UserRead schema."""
 
-    def test_user_read_creation(self):
+    def test_user_read_creation(self) -> None:
         """Test UserRead schema creation."""
         user_id = uuid4()
         created_at = datetime.utcnow()
@@ -389,7 +389,7 @@ class TestUserRead:
         assert user_read.created_at == created_at
         assert user_read.updated_at == updated_at
 
-    def test_user_read_minimal(self):
+    def test_user_read_minimal(self) -> None:
         """Test UserRead with minimal required fields."""
         user_id = uuid4()
         created_at = datetime.utcnow()
@@ -410,6 +410,6 @@ class TestUserRead:
         assert user_read.last_login is None  # Default
         assert user_read.updated_at is None  # Explicit None
 
-    def test_user_read_config(self):
+    def test_user_read_config(self) -> None:
         """Test UserRead configuration."""
         assert UserRead.Config.from_attributes is True

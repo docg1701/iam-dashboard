@@ -20,13 +20,13 @@ from src.models.client import (
 class TestClientStatus:
     """Test ClientStatus enumeration."""
 
-    def test_client_status_values(self):
+    def test_client_status_values(self) -> None:
         """Test ClientStatus enum values."""
-        assert ClientStatus.ACTIVE == "active"
-        assert ClientStatus.INACTIVE == "inactive"
-        assert ClientStatus.ARCHIVED == "archived"
+        assert ClientStatus.ACTIVE.value == "active"
+        assert ClientStatus.INACTIVE.value == "inactive"
+        assert ClientStatus.ARCHIVED.value == "archived"
 
-    def test_client_status_iteration(self):
+    def test_client_status_iteration(self) -> None:
         """Test ClientStatus enum iteration."""
         statuses = list(ClientStatus)
         assert len(statuses) == 3
@@ -38,7 +38,7 @@ class TestClientStatus:
 class TestClientBase:
     """Test ClientBase model functionality."""
 
-    def test_client_base_creation_minimal(self):
+    def test_client_base_creation_minimal(self) -> None:
         """Test ClientBase creation with minimal fields."""
         client_base = ClientBase(
             full_name="John Doe", ssn="123-45-6789", birth_date=date(1990, 1, 1)
@@ -50,7 +50,7 @@ class TestClientBase:
         assert client_base.status == ClientStatus.ACTIVE  # Default
         assert client_base.notes is None  # Default
 
-    def test_client_base_creation_full(self):
+    def test_client_base_creation_full(self) -> None:
         """Test ClientBase creation with all fields."""
         birth_date = date(1985, 6, 15)
         client_base = ClientBase(
@@ -67,7 +67,7 @@ class TestClientBase:
         assert client_base.status == ClientStatus.INACTIVE
         assert client_base.notes == "Important client notes"
 
-    def test_client_base_full_name_validation_valid(self):
+    def test_client_base_full_name_validation_valid(self) -> None:
         """Test ClientBase full name validation with valid names."""
         valid_names = [
             "John Doe",
@@ -84,14 +84,14 @@ class TestClientBase:
             client = ClientBase(full_name=name, ssn="123-45-6789", birth_date=date(1990, 1, 1))
             assert client.full_name == name
 
-    def test_client_base_full_name_validation_trim_whitespace(self):
+    def test_client_base_full_name_validation_trim_whitespace(self) -> None:
         """Test ClientBase full name validation trims whitespace."""
         client = ClientBase(
             full_name="  John Doe  ", ssn="123-45-6789", birth_date=date(1990, 1, 1)
         )
         assert client.full_name == "John Doe"  # Trimmed
 
-    def test_client_base_full_name_validation_too_short(self):
+    def test_client_base_full_name_validation_too_short(self) -> None:
         """Test ClientBase full name validation with too short name."""
         short_names = [
             "",
@@ -107,7 +107,7 @@ class TestClientBase:
                 exc_info.value
             ) or "Full name must be at least 2 characters" in str(exc_info.value)
 
-    def test_client_base_full_name_validation_invalid_characters(self):
+    def test_client_base_full_name_validation_invalid_characters(self) -> None:
         """Test ClientBase full name validation with invalid characters."""
         invalid_names = [
             "John123",  # Numbers
@@ -125,7 +125,7 @@ class TestClientBase:
                 exc_info.value
             )
 
-    def test_client_base_ssn_validation_valid(self):
+    def test_client_base_ssn_validation_valid(self) -> None:
         """Test ClientBase SSN validation with valid SSNs."""
         valid_ssns = [
             "123-45-6789",
@@ -138,7 +138,7 @@ class TestClientBase:
             client = ClientBase(full_name="John Doe", ssn=ssn, birth_date=date(1990, 1, 1))
             assert client.ssn == ssn
 
-    def test_client_base_ssn_validation_format_errors(self):
+    def test_client_base_ssn_validation_format_errors(self) -> None:
         """Test ClientBase SSN validation with format errors."""
         invalid_formats = [
             "123456789",  # No dashes
@@ -157,7 +157,7 @@ class TestClientBase:
                 ClientBase(full_name="John Doe", ssn=invalid_ssn, birth_date=date(1990, 1, 1))
             assert "SSN must be in XXX-XX-XXXX format" in str(exc_info.value)
 
-    def test_client_base_ssn_validation_invalid_patterns(self):
+    def test_client_base_ssn_validation_invalid_patterns(self) -> None:
         """Test ClientBase SSN validation with invalid SSN patterns."""
         invalid_patterns = [
             ("000-12-3456", "SSN area number cannot be 000"),
@@ -175,7 +175,7 @@ class TestClientBase:
             ClientBase(full_name="John Doe", ssn="000000000", birth_date=date(1990, 1, 1))
         assert "SSN must be in XXX-XX-XXXX format" in str(exc_info.value)
 
-    def test_client_base_birth_date_validation_valid(self):
+    def test_client_base_birth_date_validation_valid(self) -> None:
         """Test ClientBase birth date validation with valid dates."""
         today = date.today()
         valid_dates = [
@@ -191,7 +191,7 @@ class TestClientBase:
             client = ClientBase(full_name="John Doe", ssn="123-45-6789", birth_date=birth_date)
             assert client.birth_date == birth_date
 
-    def test_client_base_birth_date_validation_too_old(self):
+    def test_client_base_birth_date_validation_too_old(self) -> None:
         """Test ClientBase birth date validation with too old date."""
         with pytest.raises(ValidationError) as exc_info:
             ClientBase(
@@ -201,7 +201,7 @@ class TestClientBase:
             )
         assert "Birth date cannot be before 1900-01-01" in str(exc_info.value)
 
-    def test_client_base_birth_date_validation_too_young(self):
+    def test_client_base_birth_date_validation_too_young(self) -> None:
         """Test ClientBase birth date validation with too young date."""
         today = date.today()
         too_young_date = date(today.year - 12, today.month, today.day)  # Only 12 years old
@@ -210,7 +210,7 @@ class TestClientBase:
             ClientBase(full_name="John Doe", ssn="123-45-6789", birth_date=too_young_date)
         assert "Client must be at least 13 years old" in str(exc_info.value)
 
-    def test_client_base_notes_validation(self):
+    def test_client_base_notes_validation(self) -> None:
         """Test ClientBase notes field validation."""
         # Valid notes
         client = ClientBase(
@@ -227,7 +227,7 @@ class TestClientBase:
         )
         assert client_no_notes.notes is None
 
-    def test_client_base_notes_max_length(self):
+    def test_client_base_notes_max_length(self) -> None:
         """Test ClientBase notes maximum length validation."""
         # Create notes that exceed 1000 characters
         long_notes = "A" * 1001
@@ -244,7 +244,7 @@ class TestClientBase:
             exc_info.value
         ) or "String should have at most 1000 characters" in str(exc_info.value)
 
-    def test_client_base_invalid_status(self):
+    def test_client_base_invalid_status(self) -> None:
         """Test ClientBase validation with invalid status."""
         with pytest.raises(ValidationError) as exc_info:
             ClientBase(
@@ -262,7 +262,7 @@ class TestClientBase:
 class TestClient:
     """Test Client database model."""
 
-    def test_client_creation_minimal(self):
+    def test_client_creation_minimal(self) -> None:
         """Test Client creation with minimal required fields."""
         created_by = uuid4()
         updated_by = uuid4()
@@ -286,7 +286,7 @@ class TestClient:
         assert client.updated_at is None
         assert client.notes is None
 
-    def test_client_creation_full(self):
+    def test_client_creation_full(self) -> None:
         """Test Client creation with all fields."""
         client_id = uuid4()
         created_by = uuid4()
@@ -319,7 +319,7 @@ class TestClient:
         assert client.created_at == created_at
         assert client.updated_at == updated_at
 
-    def test_client_tablename(self):
+    def test_client_tablename(self) -> None:
         """Test Client table name is correct."""
         assert Client.__tablename__ == "agent1_clients"
 
@@ -327,7 +327,7 @@ class TestClient:
 class TestClientCreate:
     """Test ClientCreate schema."""
 
-    def test_client_create_minimal(self):
+    def test_client_create_minimal(self) -> None:
         """Test ClientCreate with minimal valid data."""
         client_create = ClientCreate(
             full_name="John Doe", ssn="123-45-6789", birth_date=date(1990, 1, 1)
@@ -339,7 +339,7 @@ class TestClientCreate:
         assert client_create.status == ClientStatus.ACTIVE  # Default
         assert client_create.notes is None  # Default
 
-    def test_client_create_full(self):
+    def test_client_create_full(self) -> None:
         """Test ClientCreate with all fields."""
         birth_date = date(1985, 6, 15)
         client_create = ClientCreate(
@@ -356,7 +356,7 @@ class TestClientCreate:
         assert client_create.status == ClientStatus.ARCHIVED
         assert client_create.notes == "Test notes"
 
-    def test_client_create_inherits_validation(self):
+    def test_client_create_inherits_validation(self) -> None:
         """Test ClientCreate inherits validation from ClientBase."""
         # Should fail with invalid SSN
         with pytest.raises(ValidationError):
@@ -366,7 +366,7 @@ class TestClientCreate:
 class TestClientUpdate:
     """Test ClientUpdate schema."""
 
-    def test_client_update_empty(self):
+    def test_client_update_empty(self) -> None:
         """Test ClientUpdate with no fields (all None)."""
         client_update = ClientUpdate()
 
@@ -376,7 +376,7 @@ class TestClientUpdate:
         assert client_update.status is None
         assert client_update.notes is None
 
-    def test_client_update_partial(self):
+    def test_client_update_partial(self) -> None:
         """Test ClientUpdate with some fields."""
         client_update = ClientUpdate(full_name="New Name", status=ClientStatus.INACTIVE)
 
@@ -386,7 +386,7 @@ class TestClientUpdate:
         assert client_update.birth_date is None
         assert client_update.notes is None
 
-    def test_client_update_full(self):
+    def test_client_update_full(self) -> None:
         """Test ClientUpdate with all fields."""
         birth_date = date(1980, 3, 20)
         client_update = ClientUpdate(
@@ -403,7 +403,7 @@ class TestClientUpdate:
         assert client_update.status == ClientStatus.ARCHIVED
         assert client_update.notes == "Updated notes"
 
-    def test_client_update_validation_reuse(self):
+    def test_client_update_validation_reuse(self) -> None:
         """Test ClientUpdate uses Pydantic built-in validators."""
         # Should fail with invalid full name (min_length constraint works)
         with pytest.raises(ValidationError) as exc_info:
@@ -424,7 +424,7 @@ class TestClientUpdate:
 class TestClientSearch:
     """Test ClientSearch schema."""
 
-    def test_client_search_empty(self):
+    def test_client_search_empty(self) -> None:
         """Test ClientSearch with no filters."""
         client_search = ClientSearch()
 
@@ -434,7 +434,7 @@ class TestClientSearch:
         assert client_search.created_after is None
         assert client_search.created_before is None
 
-    def test_client_search_partial(self):
+    def test_client_search_partial(self) -> None:
         """Test ClientSearch with some filters."""
         client_search = ClientSearch(full_name="John", status=ClientStatus.ACTIVE)
 
@@ -444,7 +444,7 @@ class TestClientSearch:
         assert client_search.created_after is None
         assert client_search.created_before is None
 
-    def test_client_search_full(self):
+    def test_client_search_full(self) -> None:
         """Test ClientSearch with all filters."""
         created_after = date(2023, 1, 1)
         created_before = date(2023, 12, 31)
@@ -463,7 +463,7 @@ class TestClientSearch:
         assert client_search.created_after == created_after
         assert client_search.created_before == created_before
 
-    def test_client_search_date_range(self):
+    def test_client_search_date_range(self) -> None:
         """Test ClientSearch with date range filters."""
         start_date = date(2023, 1, 1)
         end_date = date(2023, 6, 30)
@@ -477,7 +477,7 @@ class TestClientSearch:
 class TestClientRead:
     """Test ClientRead schema."""
 
-    def test_client_read_creation(self):
+    def test_client_read_creation(self) -> None:
         """Test ClientRead schema creation."""
         client_id = uuid4()
         created_by = uuid4()
@@ -510,7 +510,7 @@ class TestClientRead:
         assert client_read.created_at == created_at
         assert client_read.updated_at == updated_at
 
-    def test_client_read_minimal(self):
+    def test_client_read_minimal(self) -> None:
         """Test ClientRead with minimal required fields."""
         client_id = uuid4()
         created_by = uuid4()
@@ -538,6 +538,6 @@ class TestClientRead:
         assert client_read.notes is None  # Default
         assert client_read.updated_at is None  # Explicit None
 
-    def test_client_read_config(self):
+    def test_client_read_config(self) -> None:
         """Test ClientRead configuration."""
         assert ClientRead.Config.from_attributes is True

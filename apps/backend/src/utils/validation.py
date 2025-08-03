@@ -4,7 +4,7 @@ import re
 from datetime import date
 
 
-def validate_ssn(ssn: str) -> bool:
+def validate_ssn(ssn: str | None) -> bool:
     """Validate Social Security Number format and basic rules.
 
     Args:
@@ -49,7 +49,7 @@ def validate_ssn(ssn: str) -> bool:
     return digits not in invalid_patterns
 
 
-def validate_email(email: str) -> bool:
+def validate_email(email: str | None) -> bool:
     """Validate email address format.
 
     Args:
@@ -96,7 +96,7 @@ def validate_email(email: str) -> bool:
     return not (domain.startswith("-") or domain.endswith("-"))
 
 
-def validate_name(name: str, min_length: int = 2, max_length: int = 255) -> bool:
+def validate_name(name: str | None, min_length: int = 2, max_length: int = 255) -> bool:
     """Validate person name format.
 
     Args:
@@ -127,7 +127,7 @@ def validate_name(name: str, min_length: int = 2, max_length: int = 255) -> bool
     return not ("--" in name or "''" in name)  # Consecutive special chars
 
 
-def validate_birth_date(birth_date: date, min_age: int = 13) -> bool:
+def validate_birth_date(birth_date: date | None, min_age: int = 13) -> bool:
     """Validate birth date is within reasonable range.
 
     Args:
@@ -156,7 +156,7 @@ def validate_birth_date(birth_date: date, min_age: int = 13) -> bool:
     return not birth_date > today
 
 
-def validate_password_strength(password: str) -> tuple[bool, list[str]]:
+def validate_password_strength(password: str | None) -> tuple[bool, list[str]]:
     """Validate password strength and return specific error messages.
 
     Args:
@@ -221,7 +221,7 @@ def validate_password_strength(password: str) -> tuple[bool, list[str]]:
     return len(errors) == 0, errors
 
 
-def sanitize_filename(filename: str) -> str:
+def sanitize_filename(filename: str | None) -> str:
     """Sanitize filename for safe storage.
 
     Args:

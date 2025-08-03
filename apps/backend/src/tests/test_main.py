@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 from src.main import app
 
 
-def test_health_endpoint(client: TestClient):
+def test_health_endpoint(client: TestClient) -> None:
     """Test the health check endpoint."""
     response = client.get("/health")
     assert response.status_code == 200
@@ -23,7 +23,7 @@ def test_health_endpoint(client: TestClient):
     assert "environment" in data
 
 
-def test_api_root(client: TestClient):
+def test_api_root(client: TestClient) -> None:
     """Test the API root endpoint."""
     response = client.get("/api/v1/")
     assert response.status_code == 200
@@ -34,7 +34,7 @@ def test_api_root(client: TestClient):
     assert data["docs_url"] == "/api/docs"
 
 
-def test_api_status(client: TestClient):
+def test_api_status(client: TestClient) -> None:
     """Test the API status endpoint."""
     response = client.get("/api/v1/status")
     assert response.status_code == 200
@@ -44,7 +44,7 @@ def test_api_status(client: TestClient):
     assert data["api_version"] == "v1"
 
 
-def test_not_found_endpoint(client: TestClient):
+def test_not_found_endpoint(client: TestClient) -> None:
     """Test 404 handler."""
     response = client.get("/non-existent-endpoint")
     assert response.status_code == 404
@@ -54,7 +54,7 @@ def test_not_found_endpoint(client: TestClient):
 
 
 @pytest.mark.asyncio
-async def test_application_startup():
+async def test_application_startup() -> None:
     """Test that the application starts up correctly."""
     # This test ensures the application can be imported and initialized
     assert app is not None

@@ -4,7 +4,7 @@ import asyncio
 import sys
 from collections import Counter
 
-from sqlmodel import Session, select
+from sqlmodel import Session, select, text
 
 from src.core.database import engine
 from src.models.audit import AuditLog
@@ -134,9 +134,9 @@ async def clear_database() -> None:
     with Session(engine) as session:
         try:
             # Delete in correct order due to foreign key constraints
-            session.exec("DELETE FROM audit_logs")
-            session.exec("DELETE FROM agent1_clients")
-            session.exec("DELETE FROM users")
+            session.exec(text("DELETE FROM audit_logs"))
+            session.exec(text("DELETE FROM agent1_clients"))
+            session.exec(text("DELETE FROM users"))
 
             session.commit()
             print("   ✅ Database cleared successfully")
@@ -189,7 +189,7 @@ def seed_for_testing() -> tuple[list[User], list[Client], list[AuditLog]]:
 # CLI commands for manual seeding
 
 
-async def main():
+async def main() -> None:
     """Main CLI interface for seeding operations."""
     if len(sys.argv) < 2:
         print("Usage: python -m src.utils.seed_data [seed|clear|reset]")

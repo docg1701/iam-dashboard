@@ -1,6 +1,7 @@
 """Tests for audit utility functions."""
 
 from datetime import datetime
+from typing import Any
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
@@ -20,7 +21,7 @@ from src.utils.audit import (
 class TestExtractRequestInfo:
     """Test request info extraction function."""
 
-    def test_extract_with_forwarded_for(self):
+    def test_extract_with_forwarded_for(self) -> None:
         """Test extraction with X-Forwarded-For header."""
         mock_request = Mock(spec=Request)
         mock_request.headers = {
@@ -35,7 +36,7 @@ class TestExtractRequestInfo:
         assert ip == "192.168.1.100"  # First IP from forwarded list
         assert user_agent == "Mozilla/5.0 Test Browser"
 
-    def test_extract_with_real_ip(self):
+    def test_extract_with_real_ip(self) -> None:
         """Test extraction with X-Real-IP header."""
         mock_request = Mock(spec=Request)
         mock_request.headers = {"X-Real-IP": "203.0.113.1", "User-Agent": "Test Agent"}
@@ -47,7 +48,7 @@ class TestExtractRequestInfo:
         assert ip == "203.0.113.1"
         assert user_agent == "Test Agent"
 
-    def test_extract_fallback_to_client_host(self):
+    def test_extract_fallback_to_client_host(self) -> None:
         """Test fallback to client host when no proxy headers."""
         mock_request = Mock(spec=Request)
         mock_request.headers = {"User-Agent": "Test Agent"}
@@ -59,7 +60,7 @@ class TestExtractRequestInfo:
         assert ip == "192.168.1.50"
         assert user_agent == "Test Agent"
 
-    def test_extract_no_client(self):
+    def test_extract_no_client(self) -> None:
         """Test extraction when no client info available."""
         mock_request = Mock(spec=Request)
         mock_request.headers = {"User-Agent": "Test Agent"}
@@ -70,7 +71,7 @@ class TestExtractRequestInfo:
         assert ip == "unknown"
         assert user_agent == "Test Agent"
 
-    def test_extract_missing_headers(self):
+    def test_extract_missing_headers(self) -> None:
         """Test extraction with missing headers."""
         mock_request = Mock(spec=Request)
         mock_request.headers = {}
@@ -82,7 +83,7 @@ class TestExtractRequestInfo:
         assert ip == "127.0.0.1"
         assert user_agent == "unknown"
 
-    def test_extract_long_user_agent(self):
+    def test_extract_long_user_agent(self) -> None:
         """Test user agent truncation."""
         mock_request = Mock(spec=Request)
         long_user_agent = "A" * 600  # Longer than 500 chars
@@ -118,7 +119,7 @@ class TestCreateAuditLog:
         return request
 
     @pytest.mark.asyncio
-    async def test_create_audit_log_success(self, mock_session, mock_request):
+    async def test_create_audit_log_success(self, mock_session: Any, mock_request: Any) -> None:
         """Test successful audit log creation."""
         user_id = uuid4()
 
@@ -150,7 +151,7 @@ class TestCreateAuditLog:
                 assert result == mock_audit_instance
 
     @pytest.mark.asyncio
-    async def test_create_audit_log_with_old_values(self, mock_session, mock_request):
+    async def test_create_audit_log_with_old_values(self, mock_session: Any, mock_request: Any) -> None:
         """Test audit log creation with old values."""
         user_id = uuid4()
         old_values = {"name": "Old Name"}
@@ -206,7 +207,7 @@ class TestLogDatabaseAction:
         request.client.host = "127.0.0.1"
         return request
 
-    def test_log_database_action_success(self, mock_session, mock_request):
+    def test_log_database_action_success(self, mock_session: Any, mock_request: Any) -> None:
         """Test successful database action logging."""
         user_id = uuid4()
 
@@ -239,7 +240,7 @@ class TestLogDatabaseAction:
 class TestPrepareAuditData:
     """Test audit data preparation function."""
 
-    def test_prepare_with_dict_method(self):
+    def test_prepare_with_dict_method(self) -> None:
         """Test preparation with object that has dict() method."""
         mock_instance = Mock()
         mock_instance.dict.return_value = {
@@ -267,7 +268,7 @@ class TestPrepareAuditData:
         # Check UUID conversion
         assert result["user_id"] == "12345678-1234-5678-1234-567812345678"
 
-    def test_prepare_without_dict_method(self):
+    def test_prepare_without_dict_method(self) -> None:
         """Test preparation with object without dict() method."""
         mock_instance = Mock()
         mock_instance.dict = None  # Remove dict method
@@ -277,12 +278,12 @@ class TestPrepareAuditData:
 
         assert result == {}
 
-    def test_prepare_with_none_instance(self):
+    def test_prepare_with_none_instance(self) -> None:
         """Test preparation with None instance."""
         result = prepare_audit_data(None)
         assert result == {}
 
-    def test_prepare_with_empty_instance(self):
+    def test_prepare_with_empty_instance(self) -> None:
         """Test preparation with empty data."""
         mock_instance = Mock()
         mock_instance.dict.return_value = {}
@@ -290,7 +291,7 @@ class TestPrepareAuditData:
         result = prepare_audit_data(mock_instance)
         assert result == {}
 
-    def test_prepare_all_sensitive_fields(self):
+    def test_prepare_all_sensitive_fields(self) -> None:
         """Test all sensitive fields are redacted."""
         mock_instance = Mock()
         mock_instance.dict.return_value = {
@@ -318,7 +319,7 @@ class TestPrepareAuditData:
         # Normal fields should be preserved
         assert result["normal_field"] == "normal_value"
 
-    def test_prepare_complex_types(self):
+    def test_prepare_complex_types(self) -> None:
         """Test handling of complex types."""
         test_uuid = UUID("12345678-1234-5678-1234-567812345678")
         test_datetime = datetime(2023, 6, 15, 14, 30, 45)

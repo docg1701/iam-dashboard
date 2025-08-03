@@ -1,6 +1,8 @@
 """Tests for security utilities and JWT handling."""
 
+import time
 from datetime import datetime, timedelta
+from typing import Any
 from uuid import UUID, uuid4
 
 import jwt
@@ -25,7 +27,7 @@ from src.core.security import (
 class TestTokenData:
     """Test TokenData Pydantic model."""
 
-    def test_token_data_creation(self):
+    def test_token_data_creation(self) -> None:
         """Test TokenData model creation."""
         user_id = uuid4()
         token_data = TokenData(user_id=user_id, role="admin", email="admin@example.com")
@@ -34,7 +36,7 @@ class TestTokenData:
         assert token_data.role == "admin"
         assert token_data.email == "admin@example.com"
 
-    def test_token_data_validation(self):
+    def test_token_data_validation(self) -> None:
         """Test TokenData model validation."""
         # Valid UUID string should work
         token_data = TokenData(
@@ -44,7 +46,7 @@ class TestTokenData:
         assert isinstance(token_data.user_id, UUID)
         assert str(token_data.user_id) == "12345678-1234-5678-1234-567812345678"
 
-    def test_token_data_invalid_uuid(self):
+    def test_token_data_invalid_uuid(self) -> None:
         """Test TokenData with invalid UUID."""
         with pytest.raises(ValidationError, match="Input should be a valid UUID"):
             TokenData(user_id="invalid-uuid", role="user", email="user@example.com")
@@ -54,17 +56,17 @@ class TestAuthService:
     """Test AuthService functionality."""
 
     @pytest.fixture
-    def auth_service_instance(self):
+    def auth_service_instance(self) -> AuthService:
         """Create AuthService instance for testing."""
         return AuthService()
 
-    def test_auth_service_init(self, auth_service_instance):
+    def test_auth_service_init(self, auth_service_instance: AuthService) -> None:
         """Test AuthService initialization."""
         assert auth_service_instance.algorithm == "HS256"
         assert auth_service_instance.access_token_expire_minutes > 0
         assert auth_service_instance.secret_key is not None
 
-    def test_password_hashing(self, auth_service_instance):
+    def test_password_hashing(self, auth_service_instance: AuthService) -> None:
         """Test password hashing functionality."""
         password = "test_password_123!"
         hashed = auth_service_instance.get_password_hash(password)
@@ -78,7 +80,7 @@ class TestAuthService:
         # Should verify correctly
         assert auth_service_instance.verify_password(password, hashed) is True
 
-    def test_password_verification_wrong_password(self, auth_service_instance):
+    def test_password_verification_wrong_password(self, auth_service_instance: AuthService) -> None:
         """Test password verification with wrong password."""
         password = "correct_password"
         wrong_password = "wrong_password"
@@ -86,7 +88,7 @@ class TestAuthService:
 
         assert auth_service_instance.verify_password(wrong_password, hashed) is False
 
-    def test_create_access_token(self, auth_service_instance):
+    def test_create_access_token(self, auth_service_instance: AuthService) -> None:
         """Test JWT token creation."""
         user_id = uuid4()
         role = "admin"
@@ -115,7 +117,7 @@ class TestAuthService:
         assert "iat" in decoded
         assert "exp" in decoded
 
-    def test_verify_token_valid(self, auth_service_instance):
+    def test_verify_token_valid(self, auth_service_instance: AuthService) -> None:
         """Test JWT token verification with valid token."""
         user_id = uuid4()
         role = "user"
@@ -133,7 +135,7 @@ class TestAuthService:
         assert verified_data.role == role
         assert verified_data.email == email
 
-    def test_verify_token_expired(self, auth_service_instance):
+    def test_verify_token_expired(self, auth_service_instance: AuthService) -> None:
         """Test JWT token verification with expired token."""
         user_id = uuid4()
 
@@ -156,7 +158,7 @@ class TestAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "expired" in exc_info.value.detail.lower()
 
-    def test_verify_token_invalid_signature(self, auth_service_instance):
+    def test_verify_token_invalid_signature(self, auth_service_instance: AuthService) -> None:
         """Test JWT token verification with invalid signature."""
         user_id = uuid4()
 
@@ -177,7 +179,7 @@ class TestAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "validate credentials" in exc_info.value.detail.lower()
 
-    def test_verify_token_malformed(self, auth_service_instance):
+    def test_verify_token_malformed(self, auth_service_instance: AuthService) -> None:
         """Test JWT token verification with malformed token."""
         malformed_token = "not.a.valid.jwt.token"
 
@@ -187,7 +189,7 @@ class TestAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Could not validate credentials" in exc_info.value.detail
 
-    def test_verify_token_missing_fields(self, auth_service_instance):
+    def test_verify_token_missing_fields(self, auth_service_instance: AuthService) -> None:
         """Test JWT token verification with missing required fields."""
         # Token missing required fields
         payload = {
@@ -205,7 +207,7 @@ class TestAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Could not validate credentials" in exc_info.value.detail
 
-    def test_verify_token_invalid_uuid(self, auth_service_instance):
+    def test_verify_token_invalid_uuid(self, auth_service_instance: AuthService) -> None:
         """Test JWT token verification with invalid UUID in sub field."""
         payload = {
             "sub": "invalid-uuid-string",
@@ -229,12 +231,12 @@ class TestAuthService:
 class TestGlobalAuthService:
     """Test global auth service instance."""
 
-    def test_global_auth_service_exists(self):
+    def test_global_auth_service_exists(self) -> None:
         """Test that global auth service instance exists."""
         assert auth_service is not None
         assert isinstance(auth_service, AuthService)
 
-    def test_global_auth_service_functionality(self):
+    def test_global_auth_service_functionality(self) -> None:
         """Test global auth service functionality."""
         password = "test_password"
         hashed = auth_service.get_password_hash(password)
@@ -244,7 +246,7 @@ class TestGlobalAuthService:
 class TestGetCurrentUserToken:
     """Test get_current_user_token dependency."""
 
-    def test_get_current_user_token_valid(self):
+    def test_get_current_user_token_valid(self) -> None:
         """Test get_current_user_token with valid credentials."""
         user_id = uuid4()
         role = "admin"
@@ -265,7 +267,7 @@ class TestGetCurrentUserToken:
         assert result.role == role
         assert result.email == email
 
-    def test_get_current_user_token_invalid(self):
+    def test_get_current_user_token_invalid(self) -> None:
         """Test get_current_user_token with invalid credentials."""
         # Mock invalid credentials
         credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="invalid.jwt.token")
@@ -280,7 +282,7 @@ class TestGetCurrentUserToken:
 class TestRequireRole:
     """Test require_role dependency factory."""
 
-    def test_require_role_valid_role(self):
+    def test_require_role_valid_role(self) -> None:
         """Test require_role with valid role."""
         required_role = "admin"
         check_role = require_role(required_role)
@@ -291,7 +293,7 @@ class TestRequireRole:
         result = check_role(token_data)
         assert result == token_data
 
-    def test_require_role_sysadmin_always_allowed(self):
+    def test_require_role_sysadmin_always_allowed(self) -> None:
         """Test require_role allows sysadmin for any required role."""
         required_role = "admin"
         check_role = require_role(required_role)
@@ -302,7 +304,7 @@ class TestRequireRole:
         result = check_role(token_data)
         assert result == token_data
 
-    def test_require_role_insufficient_permissions(self):
+    def test_require_role_insufficient_permissions(self) -> None:
         """Test require_role with insufficient permissions."""
         required_role = "admin"
         check_role = require_role(required_role)
@@ -316,7 +318,7 @@ class TestRequireRole:
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert "Insufficient permissions" in exc_info.value.detail
 
-    def test_require_role_exact_match(self):
+    def test_require_role_exact_match(self) -> None:
         """Test require_role with exact role match."""
         required_role = "user"
         check_role = require_role(required_role)
@@ -330,7 +332,7 @@ class TestRequireRole:
 class TestRequireAnyRole:
     """Test require_any_role dependency factory."""
 
-    def test_require_any_role_valid_role(self):
+    def test_require_any_role_valid_role(self) -> None:
         """Test require_any_role with valid role from list."""
         required_roles = ["admin", "moderator"]
         check_roles = require_any_role(required_roles)
@@ -341,7 +343,7 @@ class TestRequireAnyRole:
         result = check_roles(token_data)
         assert result == token_data
 
-    def test_require_any_role_sysadmin_always_allowed(self):
+    def test_require_any_role_sysadmin_always_allowed(self) -> None:
         """Test require_any_role allows sysadmin for any required roles."""
         required_roles = ["admin", "moderator"]
         check_roles = require_any_role(required_roles)
@@ -352,7 +354,7 @@ class TestRequireAnyRole:
         result = check_roles(token_data)
         assert result == token_data
 
-    def test_require_any_role_insufficient_permissions(self):
+    def test_require_any_role_insufficient_permissions(self) -> None:
         """Test require_any_role with insufficient permissions."""
         required_roles = ["admin", "moderator"]
         check_roles = require_any_role(required_roles)
@@ -366,7 +368,7 @@ class TestRequireAnyRole:
         assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
         assert "Insufficient permissions" in exc_info.value.detail
 
-    def test_require_any_role_multiple_valid_roles(self):
+    def test_require_any_role_multiple_valid_roles(self) -> None:
         """Test require_any_role with multiple valid roles."""
         required_roles = ["admin", "moderator", "editor"]
         check_roles = require_any_role(required_roles)
@@ -378,7 +380,7 @@ class TestRequireAnyRole:
             result = check_roles(token_data)
             assert result == token_data
 
-    def test_require_any_role_empty_list(self):
+    def test_require_any_role_empty_list(self) -> None:
         """Test require_any_role with empty role list."""
         required_roles = []
         check_roles = require_any_role(required_roles)
@@ -401,7 +403,7 @@ class TestRequireAnyRole:
 class TestPasswordContext:
     """Test password context configuration."""
 
-    def test_pwd_context_bcrypt(self):
+    def test_pwd_context_bcrypt(self) -> None:
         """Test password context uses bcrypt."""
         password = "test_password_123"
         hashed = pwd_context.hash(password)
@@ -413,7 +415,7 @@ class TestPasswordContext:
         assert pwd_context.verify(password, hashed) is True
         assert pwd_context.verify("wrong_password", hashed) is False
 
-    def test_pwd_context_deprecated_schemes(self):
+    def test_pwd_context_deprecated_schemes(self) -> None:
         """Test password context handles deprecated schemes."""
         # This tests that the context is configured to handle deprecated schemes
         assert "bcrypt" in str(pwd_context.schemes())
@@ -424,7 +426,7 @@ class TestPasswordContext:
 class TestSessionData:
     """Test SessionData Pydantic model."""
 
-    def test_session_data_creation(self):
+    def test_session_data_creation(self) -> None:
         """Test SessionData model creation."""
         session_data = SessionData(
             user_id="12345678-1234-5678-1234-567812345678",
@@ -440,7 +442,7 @@ class TestSessionData:
         assert session_data.created_at == "2025-08-02T10:00:00"
         assert session_data.last_activity == "2025-08-02T10:30:00"
 
-    def test_session_data_json_serialization(self):
+    def test_session_data_json_serialization(self) -> None:
         """Test SessionData JSON serialization."""
         session_data = SessionData(
             user_id="12345678-1234-5678-1234-567812345678",
@@ -464,7 +466,7 @@ class TestSecureAuthService:
     """Test SecureAuthService enhanced functionality."""
 
     @pytest.fixture
-    def mock_redis_client(self, monkeypatch):
+    def mock_redis_client(self, monkeypatch: Any) -> Any:
         """Mock Redis client for testing."""
 
         class MockRedis:
@@ -499,11 +501,11 @@ class TestSecureAuthService:
         return mock_redis
 
     @pytest.fixture
-    def secure_auth_service(self, mock_redis_client):
+    def secure_auth_service(self, mock_redis_client: Any) -> SecureAuthService:
         """Create SecureAuthService instance for testing."""
         return SecureAuthService()
 
-    def test_secure_auth_service_init(self, secure_auth_service):
+    def test_secure_auth_service_init(self, secure_auth_service: SecureAuthService) -> None:
         """Test SecureAuthService initialization."""
         assert secure_auth_service.algorithm == "HS256"
         assert secure_auth_service.access_token_expire_minutes > 0
@@ -511,7 +513,7 @@ class TestSecureAuthService:
         assert secure_auth_service.secret_key is not None
         assert secure_auth_service.redis_client is not None
 
-    def test_create_access_token_with_session(self, secure_auth_service, mock_redis_client):
+    def test_create_access_token_with_session(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
         """Test JWT creation with Redis session tracking."""
         user_id = uuid4()
         role = "admin"
@@ -553,7 +555,7 @@ class TestSecureAuthService:
         assert session_data.user_role == role
         assert session_data.user_email == email
 
-    def test_create_refresh_token(self, secure_auth_service):
+    def test_create_refresh_token(self, secure_auth_service: SecureAuthService) -> None:
         """Test refresh token creation."""
         user_id = uuid4()
         session_id = "test_session_123"
@@ -574,7 +576,7 @@ class TestSecureAuthService:
         assert "iat" in decoded
         assert "exp" in decoded
 
-    def test_verify_token_with_session_validation(self, secure_auth_service, mock_redis_client):
+    def test_verify_token_with_session_validation(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
         """Test token verification with session validation."""
         user_id = uuid4()
         role = "user"
@@ -594,7 +596,7 @@ class TestSecureAuthService:
         assert verified_data.session_id == token_data["session_id"]
         assert verified_data.jti is not None
 
-    def test_verify_token_invalid_session(self, secure_auth_service, mock_redis_client):
+    def test_verify_token_invalid_session(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
         """Test token verification with invalid session."""
         user_id = uuid4()
         role = "user"
@@ -615,7 +617,7 @@ class TestSecureAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid session" in exc_info.value.detail
 
-    def test_verify_token_blacklisted(self, secure_auth_service, mock_redis_client):
+    def test_verify_token_blacklisted(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
         """Test token verification with blacklisted token."""
         user_id = uuid4()
         role = "user"
@@ -641,7 +643,7 @@ class TestSecureAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Token has been revoked" in exc_info.value.detail
 
-    def test_refresh_access_token(self, secure_auth_service, mock_redis_client):
+    def test_refresh_access_token(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
         """Test access token refresh functionality."""
         user_id = uuid4()
         role = "admin"
@@ -672,7 +674,7 @@ class TestSecureAuthService:
         assert verified_data.role == role
         assert verified_data.email == email
 
-    def test_refresh_access_token_invalid_type(self, secure_auth_service):
+    def test_refresh_access_token_invalid_type(self, secure_auth_service: SecureAuthService) -> None:
         """Test refresh token with invalid type."""
         user_id = uuid4()
         role = "user"
@@ -689,7 +691,7 @@ class TestSecureAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid token type" in exc_info.value.detail
 
-    def test_refresh_access_token_blacklisted(self, secure_auth_service, mock_redis_client):
+    def test_refresh_access_token_blacklisted(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
         """Test refresh token that is blacklisted."""
         user_id = uuid4()
         session_id = "test_session"
@@ -711,7 +713,7 @@ class TestSecureAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Refresh token has been revoked" in exc_info.value.detail
 
-    def test_blacklist_token(self, secure_auth_service, mock_redis_client):
+    def test_blacklist_token(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
         """Test token blacklisting functionality."""
         jti = "test_jti_123"
         exp_timestamp = int((datetime.utcnow() + timedelta(hours=1)).timestamp())
@@ -725,7 +727,7 @@ class TestSecureAuthService:
         # Check Redis storage
         assert f"blacklist:{jti}" in mock_redis_client.data
 
-    def test_blacklist_token_expired(self, secure_auth_service, mock_redis_client):
+    def test_blacklist_token_expired(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
         """Test blacklisting already expired token."""
         jti = "expired_jti"
         exp_timestamp = int((datetime.utcnow() - timedelta(hours=1)).timestamp())
@@ -736,7 +738,7 @@ class TestSecureAuthService:
         # Should not be stored since it's already expired
         assert f"blacklist:{jti}" not in mock_redis_client.data
 
-    def test_revoke_session(self, secure_auth_service, mock_redis_client):
+    def test_revoke_session(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
         """Test session revocation."""
         user_id = uuid4()
         role = "user"
@@ -756,7 +758,7 @@ class TestSecureAuthService:
         # Session should be deleted
         assert session_key not in mock_redis_client.data
 
-    def test_validate_session_updates_activity(self, secure_auth_service, mock_redis_client):
+    def test_validate_session_updates_activity(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
         """Test that session validation updates last activity."""
         user_id = uuid4()
         role = "user"
@@ -772,8 +774,6 @@ class TestSecureAuthService:
         initial_session = SessionData.model_validate_json(initial_session_json)
 
         # Wait a moment and validate again
-        import time
-
         time.sleep(0.1)
 
         # Verify token (which calls _validate_session)
@@ -785,7 +785,7 @@ class TestSecureAuthService:
 
         assert updated_session.last_activity >= initial_session.last_activity
 
-    def test_redis_connection_failure_graceful_handling(self, mock_redis_client):
+    def test_redis_connection_failure_graceful_handling(self, mock_redis_client: Any) -> None:
         """Test that Redis failures are handled gracefully in most operations."""
         # Create service with mocked Redis that can fail
         service = SecureAuthService()

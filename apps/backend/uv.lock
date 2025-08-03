@@ -83,6 +83,7 @@ dev = [
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "ruff" },
+    { name = "types-qrcode" },
 ]
 
 [package.metadata]
@@ -115,6 +116,7 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=1.1.0" },
     { name = "pytest-cov", specifier = ">=6.2.1" },
     { name = "ruff", specifier = ">=0.12.7" },
+    { name = "types-qrcode", specifier = ">=8.2.0.20250506" },
 ]
 
 [[package]]
@@ -1019,6 +1021,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/04/57/d062573f391d062710d4088fa1369428c38d51460ab6fedff920efef932e/starlette-0.47.2.tar.gz", hash = "sha256:6ae9aa5db235e4846decc1e7b79c4f346adf41e9777aebeb49dfd09bbd7023d8", size = 2583948, upload-time = "2025-07-20T17:31:58.522Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f7/1f/b876b1f83aef204198a42dc101613fefccb32258e5428b5f9259677864b4/starlette-0.47.2-py3-none-any.whl", hash = "sha256:c5847e96134e5c5371ee9fac6fdf1a67336d5815e09eb2a01fdb57a351ef915b", size = 72984, upload-time = "2025-07-20T17:31:56.738Z" },
+]
+
+[[package]]
+name = "types-qrcode"
+version = "8.2.0.20250506"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pillow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9b/78/9f99714645b241c8762ba7a457b503024cd84805f4f645421deefd76d1d0/types_qrcode-8.2.0.20250506.tar.gz", hash = "sha256:6c28eec34da5ca0ec655e5f43501311e49d6b922fb7ad3d7ed9923b8ace9805f", size = 15020, upload-time = "2025-05-06T03:03:45.012Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e2/51/fb46d55e07bf785ca1d06c9d4917808ab2d691b45ee4df199d7336256412/types_qrcode-8.2.0.20250506-py3-none-any.whl", hash = "sha256:f6354b3aee767f6f48f1c21759ff00b54fef2691d0fc2afd3479242cd9cb0953", size = 19892, upload-time = "2025-05-06T03:03:43.821Z" },
 ]
 
 [[package]]

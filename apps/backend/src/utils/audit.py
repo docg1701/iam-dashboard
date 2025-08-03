@@ -73,7 +73,7 @@ async def create_audit_log(
     return audit_log
 
 
-def log_database_action(
+async def log_database_action(
     session: Session,
     action: AuditAction,
     table_name: str,
@@ -99,7 +99,7 @@ def log_database_action(
         new_data: New data state (for CREATE/UPDATE)
     """
     try:
-        create_audit_log(
+        await create_audit_log(
             session=session,
             table_name=table_name,
             record_id=record_id,

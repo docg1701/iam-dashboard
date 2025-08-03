@@ -28,6 +28,7 @@ from src.schemas.auth import (
     TokenRefreshResponse,
     TwoFALoginRequest,
     TwoFASetupResponse,
+    UserResponse,
 )
 from src.schemas.common import SuccessResponse
 
@@ -57,7 +58,7 @@ def _get_client_ip(request: Request) -> str:
 @router.post("/login", response_model=LoginResponse)
 async def login(
     login_data: LoginRequest, request: Request, session: Session = Depends(get_session)
-):
+) -> LoginResponse:
     """
     Authenticate user and return JWT token.
 
@@ -124,38 +125,38 @@ async def login(
             access_token="",  # No token yet
             token_type="bearer",
             expires_in=0,
-            user={},  # No user data yet
+            user=None,  # No user data yet
             requires_2fa=True,
             session_id=session_id,
         )
     else:
         # Direct login without 2FA
         token_data = auth_service.create_access_token(
-            user_id=str(user.user_id), user_role=user.role.value, user_email=user.email
+            user_id=user.user_id, user_role=user.role.value, user_email=user.email
         )
 
         return LoginResponse(
             success=True,
-            access_token=token_data["access_token"],
-            token_type=token_data["token_type"],
-            expires_in=token_data["expires_in"],
-            user={
-                "user_id": str(user.user_id),
-                "email": user.email,
-                "role": user.role.value,
-                "is_active": user.is_active,
-                "totp_enabled": user.totp_enabled,
-                "last_login": user.last_login.isoformat() if user.last_login else None,
-                "created_at": user.created_at.isoformat(),
-                "updated_at": user.updated_at.isoformat() if user.updated_at else None,
-            },
+            access_token=token_data.access_token,
+            token_type=token_data.token_type,
+            expires_in=token_data.expires_in,
+            user=UserResponse(
+                user_id=str(user.user_id),
+                email=user.email,
+                role=user.role.value,
+                is_active=user.is_active,
+                totp_enabled=user.totp_enabled,
+                last_login=user.last_login.isoformat() if user.last_login else None,
+                created_at=user.created_at.isoformat(),
+                updated_at=user.updated_at.isoformat() if user.updated_at else None,
+            ),
             requires_2fa=False,
             session_id=None,
         )
 
 
 @router.post("/2fa/verify", response_model=LoginResponse)
-async def verify_2fa(verify_data: TwoFALoginRequest, session: Session = Depends(get_session)):
+async def verify_2fa(verify_data: TwoFALoginRequest, session: Session = Depends(get_session)) -> LoginResponse:
     """
     Complete login with 2FA verification.
 
@@ -195,24 +196,24 @@ async def verify_2fa(verify_data: TwoFALoginRequest, session: Session = Depends(
 
     # Create access token
     token_data = auth_service.create_access_token(
-        user_id=str(user.user_id), user_role=user.role.value, user_email=user.email
+        user_id=user.user_id, user_role=user.role.value, user_email=user.email
     )
 
     return LoginResponse(
         success=True,
-        access_token=token_data["access_token"],
-        token_type=token_data["token_type"],
-        expires_in=token_data["expires_in"],
-        user={
-            "user_id": str(user.user_id),
-            "email": user.email,
-            "role": user.role.value,
-            "is_active": user.is_active,
-            "totp_enabled": user.totp_enabled,
-            "last_login": user.last_login.isoformat() if user.last_login else None,
-            "created_at": user.created_at.isoformat(),
-            "updated_at": user.updated_at.isoformat() if user.updated_at else None,
-        },
+        access_token=token_data.access_token,
+        token_type=token_data.token_type,
+        expires_in=token_data.expires_in,
+        user=UserResponse(
+            user_id=str(user.user_id),
+            email=user.email,
+            role=user.role.value,
+            is_active=user.is_active,
+            totp_enabled=user.totp_enabled,
+            last_login=user.last_login.isoformat() if user.last_login else None,
+            created_at=user.created_at.isoformat(),
+            updated_at=user.updated_at.isoformat() if user.updated_at else None,
+        ),
         requires_2fa=False,
         session_id=None,
     )
@@ -221,7 +222,7 @@ async def verify_2fa(verify_data: TwoFALoginRequest, session: Session = Depends(
 @router.post("/2fa/setup", response_model=TwoFASetupResponse)
 async def setup_2fa(
     token_data: TokenData = Depends(get_current_user_token), session: Session = Depends(get_session)
-):
+) -> TwoFASetupResponse:
     """
     Setup 2FA for the current user.
 
@@ -265,7 +266,7 @@ async def setup_2fa(
 
 
 @router.post("/refresh", response_model=TokenRefreshResponse)
-async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> TokenRefreshResponse:
     """
     Refresh JWT token.
 
@@ -286,11 +287,15 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(secu
         user_id=token_data.user_id, user_role=token_data.role, user_email=token_data.email
     )
 
-    return TokenRefreshResponse(**new_token)
+    return TokenRefreshResponse(
+        access_token=new_token.access_token,
+        token_type=new_token.token_type,
+        expires_in=new_token.expires_in,
+    )
 
 
 @router.post("/logout", response_model=SuccessResponse)
-async def logout(token_data: TokenData = Depends(get_current_user_token)):
+async def logout(token_data: TokenData = Depends(get_current_user_token)) -> SuccessResponse:
     """
     Logout user and invalidate token.
 
@@ -319,10 +324,10 @@ async def logout(token_data: TokenData = Depends(get_current_user_token)):
     return SuccessResponse(success=True, message="Logged out successfully")
 
 
-@router.get("/me", response_model=dict)
+@router.get("/me", response_model=UserResponse)
 async def get_current_user(
     token_data: TokenData = Depends(get_current_user_token), session: Session = Depends(get_session)
-):
+) -> UserResponse:
     """
     Get current user information from database.
 
@@ -338,13 +343,13 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    return {
-        "user_id": str(user.user_id),
-        "email": user.email,
-        "role": user.role.value,
-        "is_active": user.is_active,
-        "totp_enabled": user.totp_enabled,
-        "last_login": user.last_login.isoformat() if user.last_login else None,
-        "created_at": user.created_at.isoformat(),
-        "updated_at": user.updated_at.isoformat() if user.updated_at else None,
-    }
+    return UserResponse(
+        user_id=str(user.user_id),
+        email=user.email,
+        role=user.role.value,
+        is_active=user.is_active,
+        totp_enabled=user.totp_enabled,
+        last_login=user.last_login.isoformat() if user.last_login else None,
+        created_at=user.created_at.isoformat(),
+        updated_at=user.updated_at.isoformat() if user.updated_at else None,
+    )

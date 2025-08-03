@@ -22,7 +22,7 @@ async def list_users(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     token_data: TokenData = Depends(require_role("admin")),
-):
+) -> PaginatedResponse[UserResponse]:
     """
     List users with optional search and pagination.
 
@@ -45,7 +45,7 @@ async def list_users(
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
     user_data: UserCreate, token_data: TokenData = Depends(require_role("admin"))
-):
+) -> UserResponse:
     """
     Create a new user.
 
@@ -67,7 +67,7 @@ async def create_user(
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user(user_id: UUID, token_data: TokenData = Depends(require_role("admin"))):
+async def get_user(user_id: UUID, token_data: TokenData = Depends(require_role("admin"))) -> UserResponse:
     """
     Get user by ID.
 
@@ -91,7 +91,7 @@ async def get_user(user_id: UUID, token_data: TokenData = Depends(require_role("
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: UUID, user_data: UserUpdate, token_data: TokenData = Depends(require_role("admin"))
-):
+) -> UserResponse:
     """
     Update user information.
 
@@ -114,7 +114,7 @@ async def update_user(
 
 
 @router.delete("/{user_id}", response_model=SuccessResponse)
-async def delete_user(user_id: UUID, token_data: TokenData = Depends(require_role("admin"))):
+async def delete_user(user_id: UUID, token_data: TokenData = Depends(require_role("admin"))) -> SuccessResponse:
     """
     Delete user (soft delete).
 

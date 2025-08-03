@@ -7,16 +7,18 @@ authentication, rate limiting, and request/response processing.
 
 import json
 import logging
+import re
 import time
 import uuid
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Awaitable
 
 import redis
-from fastapi import HTTPException, Request, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 
 from .config import settings
 from .security import auth_service
@@ -59,7 +61,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         "/openapi.json",
     ]
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         """Process authentication for protected endpoints."""
         path = request.url.path
 
@@ -163,7 +165,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Middleware for rate limiting requests per IP address."""
 
-    def __init__(self, app, redis_url: str = None, rate_limit: int = 100):
+    def __init__(self, app: ASGIApp, redis_url: str | None = None, rate_limit: int = 100) -> None:
         super().__init__(app)
         self.rate_limit = rate_limit
         self.window_seconds = 60  # 1 minute window
@@ -173,12 +175,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             self.redis_client = redis.from_url(
                 redis_url or settings.REDIS_URL, decode_responses=True
             )  # type: ignore[no-untyped-call]
-            self.redis_client.ping()  # type: ignore[no-untyped-call]
+            self.redis_client.ping()
         except (redis.ConnectionError, redis.RedisError):
             # If Redis is unavailable, disable rate limiting
             self.redis_client = None
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         """Apply rate limiting based on client IP."""
         # Skip rate limiting if Redis is unavailable
         if not self.redis_client:
@@ -271,7 +273,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for logging all HTTP requests and responses."""
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         # Generate request ID for tracing
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
@@ -321,7 +323,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Middleware for adding comprehensive security headers to all responses."""
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         response = await call_next(request)
 
         # Core security headers
@@ -406,13 +408,11 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         r"%[0-9a-f]{2}",  # URL encoding suspicious
     ]
 
-    def __init__(self, app):
+    def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
-        import re
-
         self.patterns = [re.compile(pattern, re.IGNORECASE) for pattern in self.SUSPICIOUS_PATTERNS]
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         """Validate and sanitize incoming requests."""
 
         # Check request size (prevent DoS via large payloads)
@@ -448,21 +448,20 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         # Check for CSRF token in headers
         csrf_token = request.headers.get("X-CSRF-Token")
         origin = request.headers.get("Origin")
-        referer = request.headers.get("Referer")
 
         # For authenticated requests, validate origin/referer
-        if hasattr(request.state, "is_authenticated") and request.state.is_authenticated:
-            if not csrf_token:
-                # Allow requests with valid origin/referer for now
-                if origin:
-                    allowed_origins = settings.ALLOWED_ORIGINS
-                    if origin not in allowed_origins:
-                        self._log_security_event(
-                            request, "CSRF_INVALID_ORIGIN", f"Invalid origin: {origin}"
-                        )
-                        raise HTTPException(
-                            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid origin"
-                        )
+        if (hasattr(request.state, "is_authenticated") and
+            request.state.is_authenticated and
+            not csrf_token and
+            origin):
+            allowed_origins = settings.ALLOWED_ORIGINS
+            if origin not in allowed_origins:
+                self._log_security_event(
+                    request, "CSRF_INVALID_ORIGIN", f"Invalid origin: {origin}"
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="Invalid origin"
+                )
 
     async def _validate_headers(self, request: Request) -> None:
         """Validate request headers for suspicious content."""
@@ -496,11 +495,11 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request content"
                     )
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as e:
             self._log_security_event(request, "INVALID_ENCODING", "Non-UTF-8 request body")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request encoding"
-            )
+            ) from e
 
     def _contains_suspicious_content(self, content: str) -> bool:
         """Check if content contains suspicious patterns."""
@@ -535,7 +534,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         return request.client.host if request.client else "unknown"
 
 
-def setup_cors_middleware(app):
+def setup_cors_middleware(app: FastAPI) -> None:
     """Configure CORS middleware with appropriate settings."""
     app.add_middleware(
         CORSMiddleware,
@@ -554,7 +553,7 @@ def setup_cors_middleware(app):
     )
 
 
-def setup_middleware(app):
+def setup_middleware(app: FastAPI) -> None:
     """Setup all comprehensive middleware for the FastAPI application."""
     # Add custom middleware (order matters - last added is executed first)
     # Security headers should be last to ensure they're always applied

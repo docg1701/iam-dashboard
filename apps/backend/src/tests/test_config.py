@@ -7,7 +7,7 @@ This module tests the application configuration and settings validation.
 from src.core.config import Settings
 
 
-def test_default_settings():
+def test_default_settings() -> None:
     """Test default configuration values."""
     settings = Settings()
 
@@ -22,7 +22,7 @@ def test_default_settings():
     assert settings.POSTGRES_DB == "dashboard"
 
 
-def test_database_url_construction():
+def test_database_url_construction() -> None:
     """Test DATABASE_URL property construction."""
     settings = Settings()
     expected_url = (
@@ -32,14 +32,14 @@ def test_database_url_construction():
     assert str(settings.DATABASE_URL) == expected_url
 
 
-def test_allowed_origins_default():
+def test_allowed_origins_default() -> None:
     """Test default CORS origins."""
     settings = Settings()
     expected_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
     assert expected_origins == settings.ALLOWED_ORIGINS
 
 
-def test_environment_validation():
+def test_environment_validation() -> None:
     """Test environment value validation."""
     # Valid environment
     settings = Settings(ENVIRONMENT="production")
@@ -50,7 +50,7 @@ def test_environment_validation():
     assert settings.ENVIRONMENT == "development"
 
 
-def test_port_validation():
+def test_port_validation() -> None:
     """Test port number validation."""
     settings = Settings(PORT="8080")
     assert settings.PORT == 8080
@@ -60,7 +60,7 @@ def test_port_validation():
     assert settings.PORT == 8000
 
 
-def test_boolean_field_validation():
+def test_boolean_field_validation() -> None:
     """Test boolean field validation."""
     settings = Settings(DEBUG="true")
     assert settings.DEBUG is True

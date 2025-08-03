@@ -9,8 +9,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlalchemy import JSON, Column
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, JSON, Column
 
 
 class AuditAction(str, Enum):
@@ -87,7 +86,7 @@ class AuditLog(SQLModel, table=True):
 
     @field_validator("table_name")
     @classmethod
-    def validate_table_name(cls, v):
+    def validate_table_name(cls, v: str) -> str:
         """Validate table name format."""
         if not re.match(r"^[a-z][a-z0-9_]*$", v):
             raise ValueError("Table name must be lowercase with underscores only")
@@ -95,7 +94,7 @@ class AuditLog(SQLModel, table=True):
 
     @field_validator("ip_address")
     @classmethod
-    def validate_ip_address(cls, v):
+    def validate_ip_address(cls, v: str) -> str:
         """Validate IP address format."""
         try:
             ipaddress.ip_address(v)
@@ -105,7 +104,7 @@ class AuditLog(SQLModel, table=True):
 
     @field_validator("old_values", "new_values")
     @classmethod
-    def validate_json_data(cls, v):
+    def validate_json_data(cls, v: dict[str, object] | None) -> dict[str, object] | None:
         """Validate JSON data structure."""
         if v is not None:
             # Ensure values are JSON serializable
