@@ -1,6 +1,8 @@
 # Epic 3: Custom Implementation Service
 
-**Epic Goal:** Develop the core service delivery capabilities that enable the custom implementation business model. This epic transforms the platform from a standard application into a customizable service offering by implementing automated VPS provisioning, complete branding customization, and deployment automation. This delivers the key differentiator that justifies the premium pricing model.
+**Epic Goal:** Develop the core service delivery capabilities that enable the custom implementation business model. This epic transforms the platform from a standard application into a customizable service offering by implementing automated VPS provisioning, complete branding customization, and deployment automation. This epic leverages the enhanced permission system from Epic 1 to enable flexible user access configuration during implementation while maintaining the key differentiator that justifies the premium pricing model.
+
+**Permission System Integration:** While this epic primarily focuses on service provider (sysadmin) functionality with minimal permission restrictions, the enhanced permission system enables administrators to configure appropriate user access levels during client implementation setup.
 
 ## Story 3.1: Custom Branding System
 
@@ -18,6 +20,8 @@ so that each implementation reflects the client's professional brand and justifi
 6. **Brand Export/Import:** Ability to save, export, and apply complete brand configurations
 7. **Validation System:** Brand asset validation for file types, sizes, and accessibility compliance
 8. **Deployment Pipeline:** Automated deployment of branding changes to client instances
+9. **Permission System Integration:** Branding system integrates with permission-based UI components for consistent theming
+10. **Role-Aware Branding:** Custom branding adapts properly to permission-based navigation and feature visibility
 
 ## Story 3.2: VPS Provisioning Automation
 
@@ -49,9 +53,11 @@ so that I can consistently deploy and configure the platform across all client i
 3. **Database Setup:** Automated PostgreSQL installation, configuration, and initial schema deployment
 4. **Application Stack:** Automated deployment of FastAPI backend, Next.js frontend, and reverse proxy
 5. **Service Management:** System service configuration with automatic startup and monitoring
-6. **Health Checks:** Post-deployment validation of all services and functionality
+6. **Health Checks:** Post-deployment validation of all services and functionality including permission system
 7. **Deployment Pipeline:** Orchestrated deployment process with rollback capability
 8. **Configuration Templates:** Reusable configuration templates with client-specific customization
+9. **Permission System Deployment:** Automated setup of user-agent permission tables and default configurations
+10. **Template Permission Profiles:** Pre-configured permission templates for common user types during implementation
 
 ## Story 3.4: Implementation Quality Assurance
 
@@ -69,6 +75,8 @@ so that every deployment meets professional standards before client handover.
 6. **Compliance Checks:** Validation of WCAG accessibility and data protection compliance
 7. **Client Acceptance:** Structured handover process with client review and sign-off
 8. **Documentation Delivery:** Complete implementation documentation and user training materials
+9. **Permission System Testing:** Validation of user permission configurations and access controls
+10. **Role-Based User Training:** Training materials adapted to different user permission levels and capabilities
 
 ## Story 3.5: Implementation Management Dashboard
 

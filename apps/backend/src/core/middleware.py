@@ -10,8 +10,7 @@ import logging
 import re
 import time
 import uuid
-from collections.abc import Callable
-from typing import Any, Awaitable
+from collections.abc import Awaitable, Callable
 
 import redis
 from fastapi import FastAPI, HTTPException, Request, Response, status
@@ -49,19 +48,23 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         "/api/v1/agents",
         "/api/v1/auth/refresh",
         "/api/v1/auth/logout",
-        "/api/v1/auth/2fa",
+        "/api/v1/auth/2fa/setup",  # Only 2FA setup requires auth, not verify
+        "/api/v1/auth/me",
     ]
 
     # Endpoints that bypass authentication
     PUBLIC_PATHS = [
         "/api/v1/auth/login",
+        "/api/v1/auth/2fa/verify",  # 2FA verification must be public
         "/api/v1/health",
         "/docs",
         "/redoc",
         "/openapi.json",
     ]
 
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Process authentication for protected endpoints."""
         path = request.url.path
 
@@ -126,7 +129,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         request: Request,
         event_type: str,
         message: str,
-        extra_data: dict[str, Any] | None = None,
+        extra_data: dict[str, object] | None = None,
     ) -> None:
         """Log security events for audit purposes."""
         event_data = {
@@ -180,7 +183,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # If Redis is unavailable, disable rate limiting
             self.redis_client = None
 
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Apply rate limiting based on client IP."""
         # Skip rate limiting if Redis is unavailable
         if not self.redis_client:
@@ -273,7 +278,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Middleware for logging all HTTP requests and responses."""
 
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         # Generate request ID for tracing
         request_id = str(uuid.uuid4())
         request.state.request_id = request_id
@@ -323,7 +330,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Middleware for adding comprehensive security headers to all responses."""
 
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         response = await call_next(request)
 
         # Core security headers
@@ -412,7 +421,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self.patterns = [re.compile(pattern, re.IGNORECASE) for pattern in self.SUSPICIOUS_PATTERNS]
 
-    async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         """Validate and sanitize incoming requests."""
 
         # Check request size (prevent DoS via large payloads)
@@ -450,18 +461,18 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         origin = request.headers.get("Origin")
 
         # For authenticated requests, validate origin/referer
-        if (hasattr(request.state, "is_authenticated") and
-            request.state.is_authenticated and
-            not csrf_token and
-            origin):
+        if (
+            hasattr(request.state, "is_authenticated")
+            and request.state.is_authenticated
+            and not csrf_token
+            and origin
+        ):
             allowed_origins = settings.ALLOWED_ORIGINS
             if origin not in allowed_origins:
                 self._log_security_event(
                     request, "CSRF_INVALID_ORIGIN", f"Invalid origin: {origin}"
                 )
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="Invalid origin"
-                )
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid origin")
 
     async def _validate_headers(self, request: Request) -> None:
         """Validate request headers for suspicious content."""

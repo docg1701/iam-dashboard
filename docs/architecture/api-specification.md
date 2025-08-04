@@ -187,6 +187,255 @@ paths:
         '404':
           description: Client not found
 
+  /users/{user_id}/permissions:
+    get:
+      tags: [Permissions]
+      summary: Get user's agent permissions
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User's permission matrix
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPermissions'
+        '403':
+          description: Insufficient permissions to view user permissions
+        '404':
+          description: User not found
+      security:
+        - BearerAuth: []
+          x-required-permission: "admin"
+
+    put:
+      tags: [Permissions]
+      summary: Update user's agent permissions
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPermissionsUpdate'
+      responses:
+        '200':
+          description: Permissions updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  updated_permissions:
+                    $ref: '#/components/schemas/UserPermissions'
+        '403':
+          description: Insufficient permissions to modify user permissions
+        '404':
+          description: User not found
+      security:
+        - BearerAuth: []
+          x-required-permission: "admin"
+
+  /permissions/bulk:
+    put:
+      tags: [Permissions]
+      summary: Bulk update permissions for multiple users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkPermissionRequest'
+      responses:
+        '200':
+          description: Bulk operation completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkPermissionResponse'
+        '403':
+          description: Insufficient permissions for bulk operations
+      security:
+        - BearerAuth: []
+          x-required-permission: "admin"
+
+  /permissions/agents:
+    get:
+      tags: [Permissions]
+      summary: Get available agents and operations
+      responses:
+        '200':
+          description: List of available agents and their operations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AgentInfo'
+      security:
+        - BearerAuth: []
+          x-required-permission: "admin"
+
+  /permissions/templates:
+    get:
+      tags: [Permission Templates]
+      summary: Get all permission templates
+      responses:
+        '200':
+          description: List of permission templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PermissionTemplate'
+      security:
+        - BearerAuth: []
+          x-required-permission: "admin"
+
+    post:
+      tags: [Permission Templates]
+      summary: Create a new permission template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PermissionTemplateCreate'
+      responses:
+        '201':
+          description: Template created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionTemplate'
+        '400':
+          description: Invalid template data
+        '403':
+          description: Insufficient permissions to create templates
+      security:
+        - BearerAuth: []
+          x-required-permission: "admin"
+
+  /permissions/templates/{template_id}/apply:
+    post:
+      tags: [Permission Templates]
+      summary: Apply permission template to users
+      parameters:
+        - name: template_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_ids]
+              properties:
+                user_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Template applied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkPermissionResponse'
+        '404':
+          description: Template not found
+        '403':
+          description: Insufficient permissions to apply templates
+      security:
+        - BearerAuth: []
+          x-required-permission: "admin"
+
+  /permissions/audit:
+    get:
+      tags: [Permission Audit]
+      summary: Get permission change audit log
+      parameters:
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: agent_name
+          in: query
+          schema:
+            type: string
+            enum: [client_management, pdf_processing, reports_analysis, audio_recording]
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Permission audit log
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PermissionAuditEntry'
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  pages:
+                    type: integer
+        '403':
+          description: Insufficient permissions to view audit log
+      security:
+        - BearerAuth: []
+          x-required-permission: "admin"
+
 components:
   securitySchemes:
     BearerAuth:
@@ -257,4 +506,252 @@ components:
         notes:
           type: string
           maxLength: 1000
+
+    # Permission System Schemas
+    AgentPermissions:
+      type: object
+      required: [create, read, update, delete]
+      properties:
+        create:
+          type: boolean
+          description: Permission to create new records
+        read:
+          type: boolean
+          description: Permission to read/view records
+        update:
+          type: boolean
+          description: Permission to modify existing records
+        delete:
+          type: boolean
+          description: Permission to delete records
+
+    UserPermissions:
+      type: object
+      properties:
+        client_management:
+          $ref: '#/components/schemas/AgentPermissions'
+        pdf_processing:
+          $ref: '#/components/schemas/AgentPermissions'
+        reports_analysis:
+          $ref: '#/components/schemas/AgentPermissions'
+        audio_recording:
+          $ref: '#/components/schemas/AgentPermissions'
+
+    UserPermissionsUpdate:
+      type: object
+      required: [permissions]
+      properties:
+        permissions:
+          $ref: '#/components/schemas/UserPermissions'
+
+    BulkPermissionRequest:
+      type: object
+      required: [user_ids, permissions]
+      properties:
+        user_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 200
+        permissions:
+          $ref: '#/components/schemas/UserPermissions'
+        operation:
+          type: string
+          enum: [grant, revoke, replace]
+          default: replace
+          description: "grant: add permissions, revoke: remove permissions, replace: completely replace permissions"
+
+    BulkPermissionResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id:
+                type: string
+                format: uuid
+              status:
+                type: string
+                enum: [success, error]
+              error:
+                type: string
+                description: Error message if status is error
+        success_count:
+          type: integer
+        error_count:
+          type: integer
+
+    AgentInfo:
+      type: object
+      required: [name, display_name, operations]
+      properties:
+        name:
+          type: string
+          enum: [client_management, pdf_processing, reports_analysis, audio_recording]
+        display_name:
+          type: string
+          example: "Client Management"
+        description:
+          type: string
+          example: "Manage client information and records"
+        operations:
+          type: array
+          items:
+            type: string
+            enum: [create, read, update, delete]
+
+    PermissionTemplate:
+      type: object
+      required: [template_id, template_name, permissions, is_system_template]
+      properties:
+        template_id:
+          type: string
+          format: uuid
+        template_name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        permissions:
+          $ref: '#/components/schemas/UserPermissions'
+        is_system_template:
+          type: boolean
+          description: Whether this is a system-defined template (read-only)
+        created_by_user_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PermissionTemplateCreate:
+      type: object
+      required: [template_name, permissions]
+      properties:
+        template_name:
+          type: string
+          minLength: 3
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        permissions:
+          $ref: '#/components/schemas/UserPermissions'
+
+    PermissionAuditEntry:
+      type: object
+      required: [audit_id, user_id, agent_name, action, changed_by_user_id, timestamp]
+      properties:
+        audit_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        agent_name:
+          type: string
+          enum: [client_management, pdf_processing, reports_analysis, audio_recording]
+        action:
+          type: string
+          enum: [GRANT, REVOKE, UPDATE, BULK_GRANT, BULK_REVOKE, TEMPLATE_APPLIED]
+        old_permissions:
+          $ref: '#/components/schemas/AgentPermissions'
+        new_permissions:
+          $ref: '#/components/schemas/AgentPermissions'
+        changed_by_user_id:
+          type: string
+          format: uuid
+        change_reason:
+          type: string
+        ip_address:
+          type: string
+          format: ipv4
+        user_agent:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # Error Response Schema
+    ErrorResponse:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+          description: Error type identifier
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+        required_permission:
+          type: string
+          description: Required permission for protected endpoints
+          example: "client_management:create"
+        user_role:
+          type: string
+          description: Current user's role
+          enum: [sysadmin, admin, user]
+
+# WebSocket Events Documentation
+# Note: WebSocket events are not part of OpenAPI spec but documented here for reference
+
+# Permission Update WebSocket Events:
+# Event Type: permission_update
+# {
+#   "type": "permission_update",
+#   "user_id": "uuid",
+#   "permissions": UserPermissions,
+#   "timestamp": "ISO8601 datetime"
+# }
+```
+
+### Permission System Integration
+
+All client-related endpoints now include permission validation:
+
+#### Client Endpoints with Permission Requirements
+
+- `GET /clients` - Requires: `client_management:read`
+- `POST /clients` - Requires: `client_management:create`  
+- `GET /clients/{id}` - Requires: `client_management:read`
+- `PUT /clients/{id}` - Requires: `client_management:update`
+- `DELETE /clients/{id}` - Requires: `client_management:delete`
+
+#### Permission Validation Headers
+
+All protected endpoints return additional headers for permission context:
+
+```yaml
+# Response Headers for Permission Context
+X-User-Role: sysadmin|admin|user
+X-Permission-Check-Duration: 5ms
+X-Permission-Cache-Hit: true|false
+```
+
+#### Error Responses for Permission Violations
+
+```yaml
+# 403 Forbidden Response for Permission Violations
+{
+  "error": "Insufficient permissions",
+  "message": "Access denied for create operation on client_management agent",
+  "required_permission": "client_management:create",
+  "user_role": "user",
+  "details": {
+    "available_permissions": ["client_management:read"],
+    "contact_admin": "Request additional permissions from your administrator"
+  }
+}
 ```

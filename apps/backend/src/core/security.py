@@ -7,9 +7,8 @@ All authentication logic is centralized here for consistency.
 
 import contextlib
 import secrets
-from datetime import datetime, timedelta
 from collections.abc import Callable
-from typing import TypeVar
+from datetime import datetime, timedelta
 from uuid import UUID
 
 import jwt
@@ -78,11 +77,11 @@ class SecureAuthService:
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a plain password against its hash."""
-        return pwd_context.verify(plain_password, hashed_password)  # type: ignore[no-any-return]
+        return pwd_context.verify(plain_password, hashed_password)
 
     def get_password_hash(self, password: str) -> str:
         """Hash a plain password."""
-        return pwd_context.hash(password)  # type: ignore[no-any-return]
+        return pwd_context.hash(password)
 
     def create_access_token(
         self, user_id: UUID, user_role: str, user_email: str, session_id: str | None = None

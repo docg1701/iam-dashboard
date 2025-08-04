@@ -13,40 +13,35 @@ def validate_ssn(ssn: str | None) -> bool:
     Returns:
         True if SSN is valid, False otherwise
     """
-    if not ssn:
-        return False
-
-    # Check format: XXX-XX-XXXX
-    if not re.match(r"^\d{3}-\d{2}-\d{4}$", ssn):
+    # Initial checks
+    if not ssn or not re.match(r"^\d{3}-\d{2}-\d{4}$", ssn):
         return False
 
     # Extract digits for validation
     digits = ssn.replace("-", "")
 
-    # Check for invalid SSN patterns
-    if digits == "000000000":
-        return False
-    if digits[:3] == "000":  # Area number cannot be 000
-        return False
-    if digits[3:5] == "00":  # Group number cannot be 00
-        return False
-    if digits[5:] == "0000":  # Serial number cannot be 0000
-        return False
-
-    # Check for other invalid patterns
-    invalid_patterns = [
-        "123456789",
-        "111111111",
-        "222222222",
-        "333333333",
-        "444444444",
-        "555555555",
-        "666666666",
-        "777777777",
-        "888888888",
-        "999999999",
+    # Invalid patterns to check
+    invalid_conditions = [
+        digits == "000000000",
+        digits[:3] == "000",  # Area number cannot be 000
+        digits[3:5] == "00",  # Group number cannot be 00
+        digits[5:] == "0000",  # Serial number cannot be 0000
+        digits
+        in [
+            "123456789",
+            "111111111",
+            "222222222",
+            "333333333",
+            "444444444",
+            "555555555",
+            "666666666",
+            "777777777",
+            "888888888",
+            "999999999",
+        ],
     ]
-    return digits not in invalid_patterns
+
+    return not any(invalid_conditions)
 
 
 def validate_email(email: str | None) -> bool:
@@ -58,42 +53,34 @@ def validate_email(email: str | None) -> bool:
     Returns:
         True if email is valid, False otherwise
     """
+    # Initial validation
     if not email:
         return False
 
     # Basic email regex pattern
     pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-
     if not re.match(pattern, email):
         return False
 
-    # Additional checks
-    if len(email) > 255:
-        return False
-
-    # Check for consecutive dots
-    if ".." in email:
-        return False
-
-    # Check for valid domain
+    # Split email into parts for detailed validation
     parts = email.split("@")
     if len(parts) != 2:
         return False
 
     local, domain = parts
 
-    # Local part checks
-    if not local or len(local) > 64:
-        return False
-    if local.startswith(".") or local.endswith("."):
-        return False
+    # Compile all validation conditions
+    invalid_conditions = [
+        len(email) > 255,
+        ".." in email,
+        not local or len(local) > 64,
+        local.startswith(".") or local.endswith("."),
+        not domain or len(domain) > 255,
+        domain.startswith(".") or domain.endswith("."),
+        domain.startswith("-") or domain.endswith("-"),
+    ]
 
-    # Domain part checks
-    if not domain or len(domain) > 255:
-        return False
-    if domain.startswith(".") or domain.endswith("."):
-        return False
-    return not (domain.startswith("-") or domain.endswith("-"))
+    return not any(invalid_conditions)
 
 
 def validate_name(name: str | None, min_length: int = 2, max_length: int = 255) -> bool:

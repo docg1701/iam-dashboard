@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { Check, X, Eye } from "lucide-react"
+import { Check, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { PasswordStrengthResult } from "@/types/auth"
 

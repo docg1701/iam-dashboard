@@ -7,7 +7,6 @@ from uuid import uuid4
 import pytest
 
 import src.core.password_security as ps_module
-
 from src.core.password_security import (
     LoginAttempt,
     PasswordResetToken,
@@ -19,72 +18,30 @@ from src.core.password_security import (
 class TestPasswordSecurityService:
     """Test password security service functionality."""
 
-    @pytest.fixture
-    def mock_redis_client(self, monkeypatch: Any) -> Any:
-        """Mock Redis client for testing."""
-
-        class MockRedis:
-            def __init__(self):
-                self.data = {}
-                self.lists = {}
-
-            def setex(self, key, _time, value):
-                self.data[key] = value
-                return True
-
-            def get(self, key):
-                return self.data.get(key)
-
-            def delete(self, key):
-                if key in self.data:
-                    del self.data[key]
-                if key in self.lists:
-                    del self.lists[key]
-                return True
-
-            def lpush(self, key, value):
-                if key not in self.lists:
-                    self.lists[key] = []
-                self.lists[key].insert(0, value)
-                return len(self.lists[key])
-
-            def lrange(self, key, start, end):
-                if key not in self.lists:
-                    return []
-                items = self.lists[key]
-                if end == -1:
-                    return items[start:]
-                return items[start : end + 1]
-
-            def ltrim(self, key, start, end):
-                if key in self.lists:
-                    items = self.lists[key]
-                    self.lists[key] = items[start : end + 1]
-                return True
-
-            def expire(self, _key, _time):
-                return True
-
-        mock_redis = MockRedis()
-
-        # Mock the auth_service redis client
-        monkeypatch.setattr(ps_module.auth_service, "redis_client", mock_redis)
-
-        return mock_redis
 
     @pytest.fixture
-    def password_security_service_instance(self, mock_redis_client: Any) -> PasswordSecurityService:
+    def password_security_service_instance(
+        self, mock_redis_client: Any, monkeypatch: pytest.MonkeyPatch
+    ) -> PasswordSecurityService:
         """Create PasswordSecurityService instance for testing."""
+        # Mock the auth_service redis client
+        monkeypatch.setattr(ps_module.auth_service, "redis_client", mock_redis_client)  # type: ignore[attr-defined]
         return PasswordSecurityService()
 
-    def test_password_security_service_init(self, password_security_service_instance: PasswordSecurityService) -> None:
+    def test_password_security_service_init(
+        self, password_security_service_instance: PasswordSecurityService
+    ) -> None:
         """Test PasswordSecurityService initialization."""
         assert password_security_service_instance.reset_token_expire_hours == 1
         assert password_security_service_instance.max_failed_attempts == 5
         assert password_security_service_instance.lockout_duration_minutes == 15
         assert password_security_service_instance.password_history_count == 5
 
-    def test_generate_reset_token(self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any) -> None:
+    def test_generate_reset_token(
+        self,
+        password_security_service_instance: PasswordSecurityService,
+        mock_redis_client: Any,
+    ) -> None:
         """Test password reset token generation."""
         user_id = uuid4()
         user_email = "test@example.com"
@@ -105,7 +62,9 @@ class TestPasswordSecurityService:
         assert stored_data.email == user_email
         assert stored_data.token_type == "password_reset"
 
-    def test_verify_reset_token_valid(self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any) -> None:
+    def test_verify_reset_token_valid(
+        self, password_security_service_instance: PasswordSecurityService
+    ) -> None:
         """Test password reset token verification with valid token."""
         user_id = uuid4()
         user_email = "test@example.com"
@@ -120,7 +79,9 @@ class TestPasswordSecurityService:
         assert token_data.user_id == str(user_id)
         assert token_data.email == user_email
 
-    def test_verify_reset_token_invalid(self, password_security_service_instance: PasswordSecurityService) -> None:
+    def test_verify_reset_token_invalid(
+        self, password_security_service_instance: PasswordSecurityService
+    ) -> None:
         """Test password reset token verification with invalid token."""
         invalid_token = "invalid_token_123"
 
@@ -129,7 +90,9 @@ class TestPasswordSecurityService:
         assert token_data is None
 
     def test_verify_reset_token_expired(
-        self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any
+        self,
+        password_security_service_instance: PasswordSecurityService,
+        mock_redis_client: Any,
     ) -> None:
         """Test password reset token verification with expired token."""
         user_id = uuid4()
@@ -148,7 +111,11 @@ class TestPasswordSecurityService:
         result = password_security_service_instance.verify_reset_token(token)
         assert result is None
 
-    def test_revoke_reset_token(self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any) -> None:
+    def test_revoke_reset_token(
+        self,
+        password_security_service_instance: PasswordSecurityService,
+        mock_redis_client: Any,
+    ) -> None:
         """Test password reset token revocation."""
         user_id = uuid4()
         user_email = "test@example.com"
@@ -166,13 +133,17 @@ class TestPasswordSecurityService:
         # Token should be deleted
         assert token_key not in mock_redis_client.data
 
-    def test_record_login_attempt(self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any) -> None:
+    def test_record_login_attempt(
+        self,
+        password_security_service_instance: PasswordSecurityService,
+        mock_redis_client: Any,
+    ) -> None:
         """Test login attempt recording."""
         email = "test@example.com"
         ip_address = "192.168.1.1"
 
         # Record failed attempt
-        password_security_service_instance.record_login_attempt(email, ip_address, False)
+        password_security_service_instance.record_login_attempt(email, ip_address, success=False)
 
         # Check if attempt was recorded
         attempts_key = f"login_attempts:{email}"
@@ -185,7 +156,9 @@ class TestPasswordSecurityService:
         assert attempt_data.ip_address == ip_address
         assert attempt_data.success is False
 
-    def test_is_account_locked_not_locked(self, password_security_service_instance: PasswordSecurityService) -> None:
+    def test_is_account_locked_not_locked(
+        self, password_security_service_instance: PasswordSecurityService
+    ) -> None:
         """Test account lock check when account is not locked."""
         email = "test@example.com"
 
@@ -194,7 +167,7 @@ class TestPasswordSecurityService:
         assert is_locked is False
 
     def test_is_account_locked_after_max_attempts(
-        self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any
+        self, password_security_service_instance: PasswordSecurityService
     ) -> None:
         """Test account lock after maximum failed attempts."""
         email = "test@example.com"
@@ -202,14 +175,16 @@ class TestPasswordSecurityService:
 
         # Record maximum failed attempts
         for _ in range(5):
-            password_security_service_instance.record_login_attempt(email, ip_address, False)
+            password_security_service_instance.record_login_attempt(
+                email, ip_address, success=False
+            )
 
         is_locked = password_security_service_instance.is_account_locked(email)
 
         assert is_locked is True
 
     def test_is_account_locked_successful_login_breaks_chain(
-        self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any
+        self, password_security_service_instance: PasswordSecurityService
     ) -> None:
         """Test that successful login breaks the chain of failed attempts."""
         email = "test@example.com"
@@ -217,28 +192,38 @@ class TestPasswordSecurityService:
 
         # Record some failed attempts
         for _ in range(3):
-            password_security_service_instance.record_login_attempt(email, ip_address, False)
+            password_security_service_instance.record_login_attempt(
+                email, ip_address, success=False
+            )
 
         # Record successful login
-        password_security_service_instance.record_login_attempt(email, ip_address, True)
+        password_security_service_instance.record_login_attempt(email, ip_address, success=True)
 
         # Record more failed attempts (less than max)
         for _ in range(2):
-            password_security_service_instance.record_login_attempt(email, ip_address, False)
+            password_security_service_instance.record_login_attempt(
+                email, ip_address, success=False
+            )
 
         is_locked = password_security_service_instance.is_account_locked(email)
 
         # Should not be locked because successful login broke the chain
         assert is_locked is False
 
-    def test_clear_failed_attempts(self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any) -> None:
+    def test_clear_failed_attempts(
+        self,
+        password_security_service_instance: PasswordSecurityService,
+        mock_redis_client: Any,
+    ) -> None:
         """Test clearing failed login attempts."""
         email = "test@example.com"
         ip_address = "192.168.1.1"
 
         # Record failed attempts
         for _ in range(3):
-            password_security_service_instance.record_login_attempt(email, ip_address, False)
+            password_security_service_instance.record_login_attempt(
+                email, ip_address, success=False
+            )
 
         attempts_key = f"login_attempts:{email}"
         assert attempts_key in mock_redis_client.lists
@@ -249,7 +234,11 @@ class TestPasswordSecurityService:
         # Attempts should be cleared
         assert attempts_key not in mock_redis_client.lists
 
-    def test_store_password_hash(self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any) -> None:
+    def test_store_password_hash(
+        self,
+        password_security_service_instance: PasswordSecurityService,
+        mock_redis_client: Any,
+    ) -> None:
         """Test password hash storage in history."""
         user_id = uuid4()
         password_hash = "$2b$12$test_hash"
@@ -262,7 +251,9 @@ class TestPasswordSecurityService:
         assert mock_redis_client.lists[history_key][0] == password_hash
 
     def test_store_password_hash_history_limit(
-        self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any
+        self,
+        password_security_service_instance: PasswordSecurityService,
+        mock_redis_client: Any,
     ) -> None:
         """Test password history limit enforcement."""
         user_id = uuid4()
@@ -280,7 +271,9 @@ class TestPasswordSecurityService:
         assert mock_redis_client.lists[history_key][0] == "$2b$12$test_hash_6"
 
     def test_is_password_reused_true(
-        self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any, monkeypatch: Any
+        self,
+        password_security_service_instance: PasswordSecurityService,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test password reuse detection when password is reused."""
         user_id = uuid4()
@@ -291,12 +284,10 @@ class TestPasswordSecurityService:
         password_security_service_instance.store_password_hash(user_id, password_hash)
 
         # Mock password verification to return True
-        def mock_verify_password(plain_password, hashed_password):
+        def mock_verify_password(plain_password: str, hashed_password: str) -> bool:
             return plain_password == "test_password" and hashed_password == password_hash
 
-        import src.core.password_security as ps_module
-
-        monkeypatch.setattr(ps_module.auth_service, "verify_password", mock_verify_password)
+        monkeypatch.setattr(ps_module.auth_service, "verify_password", mock_verify_password)  # type: ignore[attr-defined]
 
         # Check if password is reused
         is_reused = password_security_service_instance.is_password_reused(user_id, password)
@@ -304,7 +295,9 @@ class TestPasswordSecurityService:
         assert is_reused is True
 
     def test_is_password_reused_false(
-        self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any, monkeypatch: Any
+        self,
+        password_security_service_instance: PasswordSecurityService,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test password reuse detection when password is not reused."""
         user_id = uuid4()
@@ -315,19 +308,19 @@ class TestPasswordSecurityService:
         password_security_service_instance.store_password_hash(user_id, old_password_hash)
 
         # Mock password verification to return False for different passwords
-        def mock_verify_password(plain_password, hashed_password):
+        def mock_verify_password(plain_password: str, hashed_password: str) -> bool:
             return False
 
-        import src.core.password_security as ps_module
-
-        monkeypatch.setattr(ps_module.auth_service, "verify_password", mock_verify_password)
+        monkeypatch.setattr(ps_module.auth_service, "verify_password", mock_verify_password)  # type: ignore[attr-defined]
 
         # Check if password is reused
         is_reused = password_security_service_instance.is_password_reused(user_id, new_password)
 
         assert is_reused is False
 
-    def test_get_lockout_info_not_locked(self, password_security_service_instance: PasswordSecurityService) -> None:
+    def test_get_lockout_info_not_locked(
+        self, password_security_service_instance: PasswordSecurityService
+    ) -> None:
         """Test lockout info when account is not locked."""
         email = "test@example.com"
 
@@ -335,14 +328,18 @@ class TestPasswordSecurityService:
 
         assert lockout_info is None
 
-    def test_get_lockout_info_locked(self, password_security_service_instance: PasswordSecurityService, mock_redis_client: Any) -> None:
+    def test_get_lockout_info_locked(
+        self, password_security_service_instance: PasswordSecurityService
+    ) -> None:
         """Test lockout info when account is locked."""
         email = "test@example.com"
         ip_address = "192.168.1.1"
 
         # Record maximum failed attempts
         for _ in range(5):
-            password_security_service_instance.record_login_attempt(email, ip_address, False)
+            password_security_service_instance.record_login_attempt(
+                email, ip_address, success=False
+            )
 
         lockout_info = password_security_service_instance.get_lockout_info(email)
 

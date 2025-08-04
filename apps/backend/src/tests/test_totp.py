@@ -2,7 +2,6 @@
 
 import re
 import time
-from typing import Any
 
 import pyotp
 import pytest

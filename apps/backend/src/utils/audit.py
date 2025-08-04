@@ -1,12 +1,11 @@
 """Audit logging utility functions."""
 
 import logging
-from datetime import datetime
-from typing import Any
+from datetime import date, datetime
 from uuid import UUID
 
 from fastapi import Request
-from sqlmodel import Session
+from sqlmodel import Session, SQLModel
 
 from src.models.audit import AuditAction, AuditLog, AuditLogCreate
 
@@ -34,8 +33,8 @@ async def create_audit_log(
     action: AuditAction,
     user_id: UUID,
     request: Request,
-    old_values: dict[str, Any] | None = None,
-    new_values: dict[str, Any] | None = None,
+    old_values: dict[str, object] | None = None,
+    new_values: dict[str, object] | None = None,
 ) -> AuditLog:
     """Create an audit log entry for a database action.
 
@@ -65,7 +64,7 @@ async def create_audit_log(
         user_agent=user_agent,
     )
 
-    audit_log = AuditLog(**audit_data.dict())
+    audit_log = AuditLog(**audit_data.model_dump())
     session.add(audit_log)
     session.commit()
     session.refresh(audit_log)
@@ -80,8 +79,8 @@ async def log_database_action(
     record_id: str,
     user_id: UUID,
     request: Request,
-    old_data: dict[str, Any] | None = None,
-    new_data: dict[str, Any] | None = None,
+    old_data: dict[str, object] | None = None,
+    new_data: dict[str, object] | None = None,
 ) -> None:
     """Convenience function to log database actions.
 
@@ -115,7 +114,7 @@ async def log_database_action(
         logger.error(f"Failed to create audit log for {action} on {table_name}:{record_id}: {e}")
 
 
-def prepare_audit_data(model_instance: Any) -> dict[str, Any]:
+def prepare_audit_data(model_instance: SQLModel | None) -> dict[str, object]:
     """Prepare model data for audit logging.
 
     Converts a SQLModel instance to a dictionary suitable for audit logging,
@@ -131,7 +130,12 @@ def prepare_audit_data(model_instance: Any) -> dict[str, Any]:
         return {}
 
     # Get model data as dict
-    data = model_instance.dict() if hasattr(model_instance, "dict") else {}
+    if hasattr(model_instance, "model_dump"):
+        data = model_instance.model_dump()
+    elif hasattr(model_instance, "dict"):
+        data = model_instance.dict()
+    else:
+        data = {}
 
     # Remove sensitive fields that shouldn't be logged
     sensitive_fields = {"password", "password_hash", "totp_secret", "access_token", "refresh_token"}
@@ -140,9 +144,9 @@ def prepare_audit_data(model_instance: Any) -> dict[str, Any]:
         if field in data:
             data[field] = "[REDACTED]"
 
-    # Convert datetime objects to ISO strings for JSON serialization
+    # Convert datetime and date objects to ISO strings for JSON serialization
     for key, value in data.items():
-        if isinstance(value, datetime):
+        if isinstance(value, datetime | date):
             data[key] = value.isoformat()
         elif isinstance(value, UUID):
             data[key] = str(value)

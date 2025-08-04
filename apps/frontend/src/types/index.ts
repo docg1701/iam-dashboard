@@ -1,20 +1,14 @@
 // Basic type definitions for the IAM Dashboard
 
-export interface User {
-  id: string
-  email: string
-  full_name: string
-  role: UserRole
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
+// Re-export user types from shared package to maintain consistency
+export type {
+  User,
+  UserRole,
+  UserStatus,
+  UserCreateSchema
+} from '@iam-dashboard/shared'
 
-export enum UserRole {
-  SYSADMIN = 'sysadmin',
-  ADMIN = 'admin',
-  USER = 'user',
-}
+import type { User } from '@iam-dashboard/shared'
 
 export interface AuthState {
   user: User | null
@@ -38,22 +32,19 @@ export interface PaginatedResponse<T = unknown> {
   pages: number
 }
 
-export interface Client {
-  client_id: string
-  full_name: string
-  ssn: string
-  birth_date: string
-  status: ClientStatus
-  created_at: string
-  updated_at: string
-  created_by: string
-}
+// Re-export client types from shared package
+export type {
+  Client,
+  ClientCreate,
+  ClientUpdate,
+  ClientResponse,
+  ClientListItem,
+  ClientStatus,
+  ClientErrorResponse,
+  ClientFormData
+} from '@iam-dashboard/shared'
 
-export enum ClientStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  SUSPENDED = 'suspended',
-}
+export * from './auth'
 
 // Theme and branding types
 export interface ThemeConfig {

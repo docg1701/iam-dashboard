@@ -5,8 +5,6 @@ All exceptions should inherit from the base DashboardException class
 and provide meaningful error messages for debugging and user feedback.
 """
 
-from typing import Any
-
 from fastapi import HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -18,7 +16,7 @@ class DashboardException(Exception):
         self,
         message: str,
         error_code: str | None = None,
-        details: dict[str, Any] | None = None,
+        details: dict[str, object] | None = None,
     ):
         self.message = message
         self.error_code = error_code
@@ -59,8 +57,13 @@ class ConflictError(DashboardException):
 class DatabaseError(DashboardException):
     """Raised when database operations fail."""
 
-    def __init__(self, message: str, original_error: SQLAlchemyError | None = None, **kwargs: Any):
-        super().__init__(message, **kwargs)
+    def __init__(
+        self, message: str, original_error: SQLAlchemyError | None = None, **kwargs: object
+    ) -> None:
+        super().__init__(message)
+        # Store any additional kwargs as attributes
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self.original_error = original_error
 
 
@@ -99,7 +102,7 @@ def dashboard_exception_to_http(exc: DashboardException) -> HTTPException:
     # Check if it's a specific exception type
     for exc_type, (status_code, include_details) in exception_mappings.items():
         if isinstance(exc, exc_type):
-            detail: dict[str, Any] = {"message": exc.message, "error_code": exc.error_code}
+            detail: dict[str, object] = {"message": exc.message, "error_code": exc.error_code}
             if include_details:
                 detail["details"] = exc.details
             return HTTPException(status_code=status_code, detail=detail)

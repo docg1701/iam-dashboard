@@ -1,7 +1,6 @@
 """Tests for audit utility functions."""
 
 from datetime import datetime
-from typing import Any
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
@@ -119,7 +118,9 @@ class TestCreateAuditLog:
         return request
 
     @pytest.mark.asyncio
-    async def test_create_audit_log_success(self, mock_session: Any, mock_request: Any) -> None:
+    async def test_create_audit_log_success(
+        self, mock_session: object, mock_request: object
+    ) -> None:
         """Test successful audit log creation."""
         user_id = uuid4()
 
@@ -129,7 +130,7 @@ class TestCreateAuditLog:
 
             with patch("src.utils.audit.AuditLogCreate") as MockAuditLogCreate:
                 mock_create_data = Mock()
-                mock_create_data.dict.return_value = {"test": "data"}
+                mock_create_data.model_dump.return_value = {"test": "data"}
                 MockAuditLogCreate.return_value = mock_create_data
 
                 result = await create_audit_log(
@@ -151,7 +152,9 @@ class TestCreateAuditLog:
                 assert result == mock_audit_instance
 
     @pytest.mark.asyncio
-    async def test_create_audit_log_with_old_values(self, mock_session: Any, mock_request: Any) -> None:
+    async def test_create_audit_log_with_old_values(
+        self, mock_session: object, mock_request: object
+    ) -> None:
         """Test audit log creation with old values."""
         user_id = uuid4()
         old_values = {"name": "Old Name"}
@@ -163,7 +166,7 @@ class TestCreateAuditLog:
 
             with patch("src.utils.audit.AuditLogCreate") as MockAuditLogCreate:
                 mock_create_data = Mock()
-                mock_create_data.dict.return_value = {"test": "data"}
+                mock_create_data.model_dump.return_value = {"test": "data"}
                 MockAuditLogCreate.return_value = mock_create_data
 
                 await create_audit_log(
@@ -207,12 +210,15 @@ class TestLogDatabaseAction:
         request.client.host = "127.0.0.1"
         return request
 
-    def test_log_database_action_success(self, mock_session: Any, mock_request: Any) -> None:
+    @pytest.mark.asyncio
+    async def test_log_database_action_success(
+        self, mock_session: object, mock_request: object
+    ) -> None:
         """Test successful database action logging."""
         user_id = uuid4()
 
         with patch("src.utils.audit.create_audit_log") as mock_create:
-            log_database_action(
+            await log_database_action(
                 session=mock_session,
                 action=AuditAction.CREATE,
                 table_name="clients",
@@ -241,9 +247,9 @@ class TestPrepareAuditData:
     """Test audit data preparation function."""
 
     def test_prepare_with_dict_method(self) -> None:
-        """Test preparation with object that has dict() method."""
+        """Test preparation with object that has model_dump() method."""
         mock_instance = Mock()
-        mock_instance.dict.return_value = {
+        mock_instance.model_dump.return_value = {
             "id": "123",
             "name": "Test Name",
             "password": "secret123",
@@ -269,10 +275,12 @@ class TestPrepareAuditData:
         assert result["user_id"] == "12345678-1234-5678-1234-567812345678"
 
     def test_prepare_without_dict_method(self) -> None:
-        """Test preparation with object without dict() method."""
+        """Test preparation with object without model_dump() method."""
         mock_instance = Mock()
-        mock_instance.dict = None  # Remove dict method
-        del mock_instance.dict
+        # Remove both model_dump and dict methods completely
+        delattr(mock_instance, "model_dump")
+        if hasattr(mock_instance, "dict"):
+            delattr(mock_instance, "dict")
 
         result = prepare_audit_data(mock_instance)
 
@@ -286,7 +294,7 @@ class TestPrepareAuditData:
     def test_prepare_with_empty_instance(self) -> None:
         """Test preparation with empty data."""
         mock_instance = Mock()
-        mock_instance.dict.return_value = {}
+        mock_instance.model_dump.return_value = {}
 
         result = prepare_audit_data(mock_instance)
         assert result == {}
@@ -294,7 +302,7 @@ class TestPrepareAuditData:
     def test_prepare_all_sensitive_fields(self) -> None:
         """Test all sensitive fields are redacted."""
         mock_instance = Mock()
-        mock_instance.dict.return_value = {
+        mock_instance.model_dump.return_value = {
             "password": "secret",
             "password_hash": "hashed_secret",
             "totp_secret": "base32",
@@ -325,7 +333,7 @@ class TestPrepareAuditData:
         test_datetime = datetime(2023, 6, 15, 14, 30, 45)
 
         mock_instance = Mock()
-        mock_instance.dict.return_value = {
+        mock_instance.model_dump.return_value = {
             "uuid_field": test_uuid,
             "datetime_field": test_datetime,
             "string_field": "normal string",

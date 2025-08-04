@@ -31,41 +31,68 @@ graph TB
         subgraph "Frontend Layer"
             A[Next.js 15 App] --> B[shadcn/ui Components]
             B --> C[Custom Branding System]
+            A --> D[Permission Guards & Hooks]
+            D --> E[WebSocket Connection]
         end
         
         subgraph "Backend Layer"
-            D[FastAPI API] --> E[SQLModel ORM]
-            E --> F[PostgreSQL + pgvector]
+            F[FastAPI API] --> G[Permission Middleware]
+            G --> H[SQLModel ORM]
+            H --> I[PostgreSQL + pgvector]
+            F --> J[WebSocket Manager]
+            J --> K[Redis Cache]
+            K --> I
+        end
+        
+        subgraph "Permission System"
+            L[Permission Service] --> K
+            L --> I
+            M[Permission Templates] --> L
+            N[Audit Service] --> I
+            L --> N
         end
         
         subgraph "Agent Layer"
-            G[Client Management Agent] --> F
-            H[PDF Processing Agent] --> F
-            I[Reports Agent] --> F
-            J[Audio Recording Agent] --> F
+            O[Client Management Agent] --> G
+            P[PDF Processing Agent] --> G
+            Q[Reports Agent] --> G
+            R[Audio Recording Agent] --> G
+            O --> I
+            P --> I
+            Q --> I
+            R --> I
         end
         
         subgraph "Infrastructure"
-            K[Caddy Reverse Proxy] --> A
-            K --> D
-            L[Docker Compose] --> K
-            L --> A
-            L --> D
-            L --> F
+            S[Caddy Reverse Proxy] --> A
+            S --> F
+            T[Docker Compose] --> S
+            T --> A
+            T --> F
+            T --> I
+            T --> K
         end
     end
     
     subgraph "Service Provider Infrastructure"
-        M[Terraform Scripts] --> L
-        N[Ansible Playbooks] --> L
-        O[Monitoring Dashboard] --> K
-        P[Backup System] --> F
+        U[Terraform Scripts] --> T
+        V[Ansible Playbooks] --> T
+        W[Monitoring Dashboard] --> S
+        X[Backup System] --> I
     end
     
-    Q[Client Users] --> K
-    R[Service Provider] --> M
-    R --> N
-    R --> O
+    Y[Client Users] --> S
+    Z[Service Provider] --> U
+    Z --> V
+    Z --> W
+    
+    %% Permission Flow
+    A -.->|Permission Check| D
+    D -.->|Validate| L
+    L -.->|Cache Hit/Miss| K
+    L -.->|DB Query| I
+    L -.->|Real-time Update| J
+    J -.->|Broadcast| E
 ```
 
 ### Architectural Patterns
@@ -77,3 +104,5 @@ graph TB
 - **Infrastructure as Code**: Terraform + Ansible automation - *Rationale:* Ensures consistent deployments and reduces implementation time from months to weeks
 - **Container-First Deployment**: Docker Compose over Kubernetes - *Rationale:* Simpler per-client deployment model with lower operational complexity
 - **Progressive Web App**: Next.js with service worker for offline capability - *Rationale:* Professional user experience with mobile and offline support
+- **Layered Permission Architecture**: Agent-based permissions with role inheritance and caching - *Rationale:* Transforms rigid role hierarchy into flexible, granular access control while maintaining performance through Redis caching
+- **Permission-First API Design**: All endpoints protected by default with explicit permission decorators - *Rationale:* Secure by default approach prevents accidental privilege escalation and ensures comprehensive audit trails

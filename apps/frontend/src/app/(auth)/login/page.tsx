@@ -19,11 +19,8 @@ enum AuthStep {
 export default function LoginPage() {
   const [currentStep, setCurrentStep] = useState<AuthStep>(AuthStep.LOGIN)
   const [tempToken, setTempToken] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
   const handleLogin = async (data: LoginFormData): Promise<LoginResponse> => {
-    setIsLoading(true)
-    
     try {
       // Use the auth store directly - no need for manual API calls
       const { default: useAuthStore } = await import('@/store/authStore')
@@ -42,8 +39,6 @@ export default function LoginPage() {
       }
     } catch (error) {
       throw error
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -51,8 +46,6 @@ export default function LoginPage() {
     if (!tempToken) {
       throw new Error('Token temporário não encontrado')
     }
-
-    setIsLoading(true)
 
     try {
       // Use the auth store for 2FA verification
@@ -73,8 +66,6 @@ export default function LoginPage() {
       }
     } catch (error) {
       throw error
-    } finally {
-      setIsLoading(false)
     }
   }
 

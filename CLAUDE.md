@@ -207,6 +207,92 @@ mcp__playwright__browser_wait_for --text="Upload Complete"
   - [ ] System configuration files
   - [ ] Agent card configuration
 
+## 🚀 Quick Start Commands
+
+### Development Setup
+```bash
+# Clone and setup (first time)
+git clone <repository-url> iam-dashboard
+cd iam-dashboard
+npm run setup  # Install all dependencies
+
+# Start development environment
+npm run dev  # Starts both frontend and backend
+# Or individually:
+npm run dev:frontend  # Next.js on :3000
+npm run dev:backend   # FastAPI on :8000
+
+# Database setup
+npm run db:migrate  # Apply Alembic migrations
+
+# Run tests
+npm run test        # All tests
+npm run test:e2e    # Playwright E2E tests
+```
+
+### Daily Development Workflow
+```bash
+# Pull latest changes
+git pull origin main
+
+# Install any new dependencies
+npm run setup
+
+# Apply database migrations
+npm run db:migrate
+
+# Start development
+npm run dev
+
+# Run quality checks before commit
+npm run lint
+npm run type-check
+npm run test
+
+# Commit with conventional format
+git add .
+git commit -m "feat: add client SSN validation"
+git push origin feature/client-validation
+```
+
+## 📋 Current Implementation Status
+
+### ✅ Completed Features (Stories 1.1-1.3)
+- **Project Setup**: Monorepo structure with npm workspaces
+- **Database Schema**: PostgreSQL with Alembic migrations, UUID primary keys
+- **Authentication System**: 
+  - Email/password authentication with bcrypt hashing
+  - TOTP 2FA with QR code generation and backup codes
+  - JWT token management with refresh tokens
+  - Role-based access control (sysadmin, admin, user)
+- **Core Models**: User, Client, Audit logging with comprehensive validation
+- **API Endpoints**: Authentication, user management, client management
+- **Frontend Components**: 
+  - Login form with 2FA integration
+  - User creation and editing forms
+  - Client registration forms
+  - Password strength indicator
+  - Protected route wrapper
+- **Testing Infrastructure**: 
+  - Backend: pytest with 80% coverage requirement
+  - Frontend: Vitest + React Testing Library + Playwright E2E
+  - Factory patterns for test data generation
+- **Code Quality**: Ruff (Python), ESLint/Prettier (TypeScript), strict typing
+
+### 🚧 In Progress (Stories 1.4-1.6)
+- **Enhanced Client Management**: Full CRUD operations with validation
+- **User Permission System**: Granular agent-based permissions
+- **Admin Interface**: Permission management and user administration
+- **Advanced UI Components**: Tables, dialogs, form improvements
+
+### 📅 Planned Features (Stories 1.7+)
+- **Agent 2**: PDF processing with pgvector embeddings
+- **Agent 3**: Report generation and analysis
+- **Agent 4**: Audio recording and transcription
+- **Custom Branding**: White-label theming system
+- **Performance Optimization**: Caching, query optimization
+- **Deployment Automation**: Docker containerization, CI/CD
+
 ## Core Development Philosophy
 
 ### KISS (Keep It Simple, Stupid)
@@ -454,12 +540,22 @@ def test_client_agent_creates_client():
 
 ## 🗄️ Database Design
 
-### Naming Conventions
-- **Primary Keys**: `{entity}_id` (e.g., `client_id`, `pdf_id`)
-- **Foreign Keys**: `{referenced_entity}_id`
-- **Timestamps**: `{action}_at` (e.g., `created_at`, `updated_at`)
-- **Booleans**: `is_{state}` (e.g., `is_active`, `is_processed`)
-- **Counts**: `{entity}_count`
+### Database Design Principles
+
+#### Naming Conventions
+- **Primary Keys**: `{entity}_id` UUID (e.g., `client_id`, `user_id`)
+- **Foreign Keys**: `{referenced_entity}_id` with proper REFERENCES constraints
+- **Timestamps**: `{action}_at` with TIME ZONE (e.g., `created_at`, `updated_at`)
+- **Booleans**: `is_{state}` with NOT NULL DEFAULT (e.g., `is_active`, `is_processed`)
+- **Enums**: Use CHECK constraints for small fixed sets, separate tables for dynamic sets
+- **JSON Data**: Use JSONB with proper constraints and GIN indexes
+
+#### Current Schema Status
+- **Users Table**: Complete with TOTP 2FA, role-based access, and audit fields
+- **Clients Table**: Implemented with SSN validation, status tracking, and audit trail
+- **Permission System**: Granular agent-based permissions with templates and audit logging
+- **Database Extensions**: uuid-ossp, pgcrypto, pgvector (for future document embeddings)
+- **Migrations**: Managed through Alembic with proper versioning and rollback support
 
 ### Agent Table Structure
 Each agent maintains its own tables with references to other agents:
@@ -733,17 +829,129 @@ All services configured in `docker-compose.yml`:
 
 ## 📊 Monitoring & Observability
 
-### Logging
-- **Structured logging**: JSON format for all logs
-- **Log levels**: DEBUG, INFO, WARNING, ERROR, CRITICAL
-- **Request tracking**: Unique request IDs for tracing
-- **Agent activity**: Log all agent interactions and decisions
+### Logging Strategy
+- **Structured logging**: JSON format for all logs with consistent schema
+- **Log levels**: DEBUG (development), INFO (operations), WARNING (issues), ERROR (failures), CRITICAL (system down)
+- **Request tracking**: Unique request IDs for distributed tracing across services
+- **Agent activity**: Comprehensive logging of agent interactions and decision points
+- **Security events**: Authentication attempts, authorization failures, permission changes
+- **Performance metrics**: Query execution times, API response times, resource usage
 
-### Health Checks
-- **Database connectivity**: PostgreSQL health endpoint
-- **Redis connectivity**: Cache service health
-- **Agent status**: Individual agent health checks
-- **External APIs**: Third-party service availability
+### Health Checks & Monitoring
+- **Database connectivity**: PostgreSQL connection pool health and query performance
+- **Application health**: FastAPI `/health` endpoint with dependency checks
+- **Frontend status**: Next.js build status and runtime errors
+- **Test coverage**: Continuous monitoring of test coverage across all modules
+- **Error tracking**: Comprehensive error logging with stack traces and context
+
+### Development Metrics
+```bash
+# Backend health check
+curl http://localhost:8000/health
+
+# Database connection test
+npm run db:migrate --dry-run
+
+# Test coverage reports
+npm run test:coverage  # Frontend
+uv run pytest --cov=src --cov-report=html  # Backend
+
+# Performance monitoring
+npm run build  # Build time monitoring
+```
+
+## 🔧 Troubleshooting Guide
+
+### Common Issues & Solutions
+
+#### Database Issues
+```bash
+# Migration fails
+npm run db:migrate --dry-run  # Check migration without applying
+cd apps/backend && uv run alembic history  # View migration history
+cd apps/backend && uv run alembic downgrade -1  # Rollback one migration
+
+# Connection issues
+docker compose logs postgres  # Check PostgreSQL logs
+docker compose restart postgres  # Restart database
+
+# Permission denied errors
+sudo chown -R $USER:$USER .  # Fix file permissions
+```
+
+#### Frontend Issues
+```bash
+# Build fails
+rm -rf apps/frontend/.next  # Clear Next.js cache
+npm run clean  # Clean all node_modules
+npm install  # Reinstall dependencies
+
+# Type errors
+npm run type-check  # Check TypeScript errors
+npx tsc --noEmit --incremental false  # Force type check
+
+# Test failures
+npm run test -- --reporter=verbose  # Detailed test output
+npm run test -- --ui  # Open Vitest UI for debugging
+```
+
+#### Backend Issues
+```bash
+# Import errors
+cd apps/backend && uv sync  # Sync dependencies
+cd apps/backend && uv run mypy src/  # Check type issues
+
+# Server won't start
+cd apps/backend && uv run uvicorn src.main:app --reload --port 8001  # Try different port
+lsof -ti:8000 | xargs kill -9  # Kill process on port 8000
+
+# Test failures
+cd apps/backend && uv run pytest -v --tb=short  # Verbose output with short traceback
+cd apps/backend && uv run pytest --lf  # Run only failed tests
+```
+
+#### Authentication Issues
+```bash
+# JWT token issues
+# Check token expiration in browser devtools
+# Verify SECRET_KEY in environment variables
+# Clear browser localStorage/sessionStorage
+
+# 2FA not working
+# Verify system time synchronization
+# Check TOTP secret generation
+# Test with authenticator app manual entry
+```
+
+#### Performance Issues
+```bash
+# Slow queries
+docker compose exec postgres psql -U postgres -d dashboard -c "SELECT * FROM pg_stat_activity;"
+
+# Memory issues
+docker compose stats  # Monitor container resource usage
+npm run build -- --analyze  # Analyze bundle size
+
+# Test coverage too low
+npm run test:coverage  # Check detailed coverage report
+# Focus on uncovered lines in HTML reports
+```
+
+### Environment Setup Issues
+```bash
+# Node version issues
+nvm use 20  # Switch to Node.js 20+
+node --version  # Verify version
+
+# Python version issues
+uv python install 3.13  # Install Python 3.13
+uv python pin 3.13  # Pin to specific version
+
+# Docker issues
+docker compose down -v  # Remove volumes
+docker system prune -f  # Clean up Docker
+docker compose up --build  # Rebuild containers
+```
 
 ## ⚠️ Critical Development Rules
 

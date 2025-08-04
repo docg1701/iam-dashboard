@@ -156,7 +156,9 @@ async def login(
 
 
 @router.post("/2fa/verify", response_model=LoginResponse)
-async def verify_2fa(verify_data: TwoFALoginRequest, session: Session = Depends(get_session)) -> LoginResponse:
+async def verify_2fa(
+    verify_data: TwoFALoginRequest, session: Session = Depends(get_session)
+) -> LoginResponse:
     """
     Complete login with 2FA verification.
 
@@ -266,7 +268,9 @@ async def setup_2fa(
 
 
 @router.post("/refresh", response_model=TokenRefreshResponse)
-async def refresh_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> TokenRefreshResponse:
+async def refresh_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> TokenRefreshResponse:
     """
     Refresh JWT token.
 

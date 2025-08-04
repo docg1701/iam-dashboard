@@ -22,15 +22,21 @@
 
 **FR10:** The system shall implement comprehensive audit trails for all client data modifications and system access
 
-**FR11:** The system shall provide role-based access control with sysadmin, admin, and user permission levels
+**FR11:** The system shall provide an enhanced role-based access control system with agent-specific permissions, where sysadmin maintains full system control, admin can configure user permissions for individual agents, and users can be assigned flexible access to specific agents (client_management, pdf_processing, reports_analysis, audio_recording) with granular operation permissions
 
 **FR12:** The system shall include 2FA authentication using TOTP-based two-factor authentication
 
-**FR13:** The system shall provide user account management capabilities allowing sysadmins to create and manage user accounts with different permission levels to control system access
+**FR13:** The system shall provide comprehensive user account management capabilities allowing sysadmins to create and manage user accounts, and administrators to configure granular agent-specific permissions for individual users, enabling flexible access control that adapts to different organizational needs and job responsibilities
 
 **FR14:** The system shall support batch data import functionality allowing users to import client data from CSV files to migrate existing client databases
 
-**FR15:** The system shall provide advanced client search capabilities allowing users to filter clients by date ranges and custom criteria to generate specific client reports
+**FR15:** The system shall provide advanced client search capabilities allowing users to filter clients by date ranges and custom criteria to generate specific client reports, with search functionality and bulk operations available based on user's assigned agent permissions
+
+**FR16:** The system shall implement a flexible agent permission system allowing administrators to assign users access to specific agents (client_management, pdf_processing, reports_analysis, audio_recording) with granular operation controls (create, read, update, delete) while maintaining security boundaries and audit trails
+
+**FR17:** The system shall provide permission-aware user interfaces that dynamically show or hide features based on individual user's assigned agent permissions, ensuring users see only functionality they can access while providing clear messaging for restricted features
+
+**FR18:** The system shall include a comprehensive permission template system that provides pre-defined permission sets for common job roles (Client Specialist, Report Analyst, Document Processor, Audio Specialist), enabling administrators to quickly assign appropriate permission combinations while maintaining consistent access patterns across similar roles and reducing administrative overhead through standardized permission management
 
 ## Non Functional
 
@@ -53,3 +59,7 @@
 **NFR9:** The system shall achieve 80% minimum code coverage across all modules for quality assurance
 
 **NFR10:** The system shall provide comprehensive logging and monitoring for troubleshooting and performance optimization
+
+**NFR11:** The system shall implement high-performance permission checking with Redis caching to achieve <10ms permission validation response times for optimal user experience
+
+**NFR12:** The system shall maintain permission cache consistency with 5-minute TTL and immediate invalidation on permission changes to balance performance and data accuracy

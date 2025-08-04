@@ -1,12 +1,11 @@
 """Test data factories for creating realistic test data."""
 
 from datetime import timedelta
-from typing import TypedDict, Union
+from typing import Any, TypedDict
 from uuid import UUID
 
-import factory  # type: ignore[import-untyped]
-from factory.faker import Faker  # type: ignore[import-untyped]
-from factory import LazyAttribute  # type: ignore[import-untyped,attr-defined]
+import factory
+from factory.faker import Faker
 from faker import Faker as FakerInstance
 
 from ..models.audit import AuditAction, AuditLog
@@ -18,6 +17,7 @@ fake = FakerInstance()
 
 class UserAuditValues(TypedDict):
     """Audit values structure for users table."""
+
     user_id: str
     email: str
     role: str
@@ -28,6 +28,7 @@ class UserAuditValues(TypedDict):
 
 class ClientAuditValues(TypedDict):
     """Audit values structure for agent1_clients table."""
+
     client_id: str
     full_name: str
     ssn: str
@@ -39,6 +40,7 @@ class ClientAuditValues(TypedDict):
 
 class GenericAuditValues(TypedDict):
     """Generic audit values structure for unknown tables."""
+
     id: str
     created_at: str
 
@@ -58,16 +60,20 @@ class UserFactory(factory.Factory):  # type: ignore[misc,name-defined]
 
     # Timestamps
     created_at = Faker("date_time_this_year")  # type: ignore[no-untyped-call]
-    updated_at = LazyAttribute(lambda obj: obj.created_at + timedelta(days=fake.random_int(0, 30)))  # type: ignore[no-untyped-call]
+    updated_at = factory.LazyAttribute(  # type: ignore[attr-defined,no-untyped-call]
+        lambda obj: obj.created_at + timedelta(days=fake.random_int(0, 30))
+    )
 
     # Authentication fields
     password_hash = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/lewfBNgCI.BZGV/Y6"  # "password"
     totp_secret = None
 
-    @factory.post_generation  # type: ignore[attr-defined]
-    def enable_totp_for_admins(obj, _create, _extracted, **_kwargs):  # type: ignore[no-untyped-def]
+    @factory.post_generation  # type: ignore[attr-defined,misc]
+    def enable_totp_for_admins(obj: Any, _create: bool, _extracted: Any, **_kwargs: Any) -> None:
         """Enable TOTP for admin and sysadmin users."""
-        if obj.role in [UserRole.ADMIN, UserRole.SYSADMIN]:  # type: ignore[comparison-overlap]
+        # Handle factory Iterator values safely
+        role_val = obj.role.value if hasattr(obj.role, "value") else obj.role
+        if role_val in [UserRole.ADMIN.value, UserRole.SYSADMIN.value]:
             obj.totp_enabled = True
             obj.totp_secret = fake.lexify(text="?" * 32, letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567")
 
@@ -80,24 +86,31 @@ class ClientFactory(factory.Factory):  # type: ignore[misc,name-defined]
 
     # Client basic fields
     full_name = Faker("name")  # type: ignore[no-untyped-call]
-    ssn = LazyAttribute(lambda _: generate_valid_ssn())  # type: ignore[no-untyped-call]
+    ssn = factory.LazyAttribute(lambda _: generate_valid_ssn())  # type: ignore[attr-defined,no-untyped-call]
     birth_date = Faker("date_of_birth", minimum_age=18, maximum_age=90)  # type: ignore[no-untyped-call]
     status = factory.Iterator([ClientStatus.ACTIVE, ClientStatus.INACTIVE])  # type: ignore[attr-defined,no-untyped-call]
     notes = Faker("text", max_nb_chars=200)  # type: ignore[no-untyped-call]
 
     # Timestamps
     created_at = Faker("date_time_this_year")  # type: ignore[no-untyped-call]
-    updated_at = LazyAttribute(lambda obj: obj.created_at + timedelta(days=fake.random_int(0, 15)))  # type: ignore[no-untyped-call]
+    updated_at = factory.LazyAttribute(  # type: ignore[attr-defined,no-untyped-call]
+        lambda obj: obj.created_at + timedelta(days=fake.random_int(0, 15))
+    )
 
     # Foreign key relationships (will be set via SubFactory when needed)
     created_by = factory.LazyFunction(lambda: UUID(fake.uuid4()))  # type: ignore[attr-defined,no-untyped-call]
-    updated_by = LazyAttribute(lambda obj: obj.created_by)  # type: ignore[no-untyped-call]
+    updated_by = factory.LazyAttribute(lambda obj: obj.created_by)  # type: ignore[attr-defined,no-untyped-call]
 
-    @factory.post_generation  # type: ignore[attr-defined]
-    def set_notes_for_inactive(obj, _create, _extracted, **_kwargs):  # type: ignore[no-untyped-def]
+    @factory.post_generation  # type: ignore[attr-defined,misc]
+    def set_notes_for_inactive(obj: Any, _create: bool, _extracted: Any, **_kwargs: Any) -> None:
         """Add explanatory notes for inactive clients."""
-        if obj.status == ClientStatus.INACTIVE:
-            obj.notes = f"Client marked inactive. {obj.notes or 'No additional notes.'}"
+        # Cast to ClientStatus to avoid mypy iterator comparison issue
+        status_val = obj.status.value if hasattr(obj.status, "value") else obj.status
+        if status_val in {ClientStatus.INACTIVE.value, ClientStatus.INACTIVE}:
+            current_notes = (
+                obj.notes if hasattr(obj, "notes") and obj.notes else "No additional notes."
+            )
+            obj.notes = f"Client marked inactive. {current_notes}"
 
 
 class AuditLogFactory(factory.Factory):  # type: ignore[misc,name-defined]
@@ -113,7 +126,9 @@ class AuditLogFactory(factory.Factory):  # type: ignore[misc,name-defined]
 
     # Audit data
     old_values = None
-    new_values = LazyAttribute(lambda obj: generate_audit_values(obj.table_name, obj.action))  # type: ignore[no-untyped-call]
+    new_values = factory.LazyAttribute(  # type: ignore[attr-defined,no-untyped-call]
+        lambda obj: generate_audit_values(obj.table_name, obj.action)
+    )
 
     # User and session tracking
     user_id = factory.LazyFunction(lambda: UUID(fake.uuid4()))  # type: ignore[attr-defined,no-untyped-call]
@@ -122,55 +137,62 @@ class AuditLogFactory(factory.Factory):  # type: ignore[misc,name-defined]
 
     # Timestamps
     timestamp = Faker("date_time_this_year")  # type: ignore[no-untyped-call]
-    created_at = LazyAttribute(lambda obj: obj.timestamp)  # type: ignore[no-untyped-call]
+    created_at = factory.LazyAttribute(lambda obj: obj.timestamp)  # type: ignore[attr-defined,no-untyped-call]
     updated_at = None
 
-    @factory.post_generation  # type: ignore[attr-defined]
-    def set_old_values_for_updates(obj, _create, _extracted, **_kwargs):  # type: ignore[no-untyped-def]
+    @factory.post_generation  # type: ignore[attr-defined,misc]
+    def set_old_values_for_updates(
+        obj: Any, _create: bool, _extracted: Any, **_kwargs: Any
+    ) -> None:
         """Set old_values for UPDATE and DELETE actions."""
-        if obj.action in [AuditAction.UPDATE, AuditAction.DELETE]:
-            obj.old_values = generate_audit_values(obj.table_name, AuditAction.CREATE)
+        # Convert factory Iterator to actual value for comparison
+        action_val = obj.action.value if hasattr(obj.action, "value") else obj.action
+        if action_val in [AuditAction.UPDATE.value, AuditAction.DELETE.value]:
+            table_name = obj.table_name if isinstance(obj.table_name, str) else str(obj.table_name)
+            obj.old_values = generate_audit_values(table_name, AuditAction.CREATE)
 
 
 class AdminUserFactory(UserFactory):
     """Factory for creating admin users specifically."""
 
-    role = UserRole.ADMIN
+    role = factory.LazyFunction(lambda: UserRole.ADMIN)  # type: ignore[attr-defined,no-untyped-call,assignment]
     is_active = True
     totp_enabled = True
-    totp_secret = factory.LazyFunction(  # type: ignore[attr-defined,no-untyped-call]
+    totp_secret = factory.LazyFunction(  # type: ignore[attr-defined,no-untyped-call,assignment]
         lambda: fake.lexify(text="?" * 32, letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567")
     )
-    last_login = Faker("date_time_this_month")  # type: ignore[no-untyped-call]
+    last_login = factory.LazyFunction(lambda: fake.date_time_this_month())  # type: ignore[attr-defined,no-untyped-call,assignment]
 
 
 class SysAdminUserFactory(UserFactory):
     """Factory for creating system administrator users."""
 
-    role = UserRole.SYSADMIN
+    role = factory.LazyFunction(lambda: UserRole.SYSADMIN)  # type: ignore[attr-defined,no-untyped-call,assignment]
     is_active = True
     totp_enabled = True
-    totp_secret = factory.LazyFunction(  # type: ignore[attr-defined,no-untyped-call]
+    totp_secret = factory.LazyFunction(  # type: ignore[attr-defined,no-untyped-call,assignment]
         lambda: fake.lexify(text="?" * 32, letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ234567")
     )
-    last_login = Faker("date_time_this_month")  # type: ignore[no-untyped-call]
-    email = factory.LazyFunction(lambda: f"sysadmin.{fake.user_name()}@company.com")  # type: ignore[attr-defined,no-untyped-call]
+    last_login = factory.LazyFunction(lambda: fake.date_time_this_month())  # type: ignore[attr-defined,no-untyped-call,assignment]
+    email = factory.LazyFunction(lambda: f"sysadmin.{fake.user_name()}@company.com")  # type: ignore[attr-defined,no-untyped-call,assignment]
 
 
 class InactiveClientFactory(ClientFactory):
     """Factory for creating inactive clients."""
 
-    status = ClientStatus.INACTIVE
-    notes = "Client account deactivated per client request"
-    updated_at = Faker("date_time_this_month")  # type: ignore[no-untyped-call]
+    status = factory.LazyFunction(lambda: ClientStatus.INACTIVE)  # type: ignore[attr-defined,no-untyped-call,assignment]
+    notes = "Client account deactivated per client request"  # type: ignore[assignment]
+    updated_at = Faker("date_time_this_month")  # type: ignore[no-untyped-call,assignment]
 
 
 class RecentClientFactory(ClientFactory):
     """Factory for creating recently added clients."""
 
     created_at = Faker("date_time_this_month")  # type: ignore[no-untyped-call]
-    updated_at = LazyAttribute(lambda obj: obj.created_at + timedelta(hours=fake.random_int(1, 48)))  # type: ignore[no-untyped-call]
-    status = ClientStatus.ACTIVE
+    updated_at = factory.LazyAttribute(  # type: ignore[attr-defined,no-untyped-call]
+        lambda obj: obj.created_at + timedelta(hours=fake.random_int(1, 48))
+    )
+    status = ClientStatus.ACTIVE  # type: ignore[assignment]
 
 
 def generate_valid_ssn() -> str:
@@ -189,7 +211,9 @@ def generate_valid_ssn() -> str:
     return f"{area:03d}-{group:02d}-{serial:04d}"
 
 
-def generate_audit_values(table_name: str, action: AuditAction) -> Union[UserAuditValues, ClientAuditValues, GenericAuditValues]:
+def generate_audit_values(
+    table_name: str, action: AuditAction
+) -> UserAuditValues | ClientAuditValues | GenericAuditValues:
     """Generate realistic audit values based on table and action."""
     if table_name == "users":
         return {
@@ -220,7 +244,7 @@ def generate_audit_values(table_name: str, action: AuditAction) -> Union[UserAud
 # Convenience functions for creating test data
 
 
-def create_test_user(role: UserRole = UserRole.USER, **kwargs) -> User:
+def create_test_user(role: UserRole = UserRole.USER, **kwargs: Any) -> User:
     """Create a test user with specified role."""
     factory_class = {
         UserRole.USER: UserFactory,
@@ -231,7 +255,7 @@ def create_test_user(role: UserRole = UserRole.USER, **kwargs) -> User:
     return factory_class(**kwargs)
 
 
-def create_test_client(status: ClientStatus = ClientStatus.ACTIVE, **kwargs) -> Client:
+def create_test_client(status: ClientStatus = ClientStatus.ACTIVE, **kwargs: Any) -> Client:
     """Create a test client with specified status."""
     factory_class = {
         ClientStatus.ACTIVE: ClientFactory,
@@ -242,7 +266,7 @@ def create_test_client(status: ClientStatus = ClientStatus.ACTIVE, **kwargs) -> 
 
 
 def create_test_audit_log(
-    table_name: str = "users", action: AuditAction = AuditAction.CREATE, **kwargs
+    table_name: str = "users", action: AuditAction = AuditAction.CREATE, **kwargs: Any
 ) -> AuditLog:
     """Create a test audit log for specified table and action."""
     return AuditLogFactory(table_name=table_name, action=action, **kwargs)

@@ -7,6 +7,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    typecheck: {
+      include: ['**/*.{test,spec}.{ts,tsx}'],
+    },
     exclude: [
       '**/node_modules/**',
       '**/tests/e2e/**', // Exclude Playwright E2E tests

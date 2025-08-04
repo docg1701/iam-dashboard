@@ -37,7 +37,7 @@ class LoginAttempt(BaseModel):
 
 class LockoutInfo(TypedDict):
     """Account lockout information structure."""
-    
+
     locked: bool
     unlock_in_minutes: int
     failed_attempts: int

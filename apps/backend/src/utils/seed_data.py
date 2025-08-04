@@ -4,7 +4,7 @@ import asyncio
 import sys
 from collections import Counter
 
-from sqlmodel import Session, select, text
+from sqlmodel import Session, delete, select
 
 from src.core.database import engine
 from src.models.audit import AuditLog
@@ -134,9 +134,9 @@ async def clear_database() -> None:
     with Session(engine) as session:
         try:
             # Delete in correct order due to foreign key constraints
-            session.exec(text("DELETE FROM audit_logs"))
-            session.exec(text("DELETE FROM agent1_clients"))
-            session.exec(text("DELETE FROM users"))
+            session.connection().execute(delete(AuditLog))
+            session.connection().execute(delete(Client))
+            session.connection().execute(delete(User))
 
             session.commit()
             print("   ✅ Database cleared successfully")

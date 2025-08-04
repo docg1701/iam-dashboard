@@ -2,7 +2,6 @@
 
 import time
 from datetime import datetime, timedelta
-from typing import Any
 from uuid import UUID, uuid4
 
 import jwt
@@ -10,6 +9,8 @@ import pytest
 from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import ValidationError
+
+from src.tests.conftest import MockRedis
 
 from src.core.security import (
     AuthService,
@@ -96,17 +97,17 @@ class TestAuthService:
 
         token_data = auth_service_instance.create_access_token(user_id, role, email)
 
-        # Should return dict with required fields
-        assert "access_token" in token_data
-        assert "token_type" in token_data
-        assert "expires_in" in token_data
+        # Should return TokenResponse with required fields
+        assert hasattr(token_data, "access_token")
+        assert hasattr(token_data, "token_type")
+        assert hasattr(token_data, "expires_in")
 
-        assert token_data["token_type"] == "bearer"
-        assert token_data["expires_in"] == auth_service_instance.access_token_expire_minutes * 60
+        assert token_data.token_type == "bearer"
+        assert token_data.expires_in == auth_service_instance.access_token_expire_minutes * 60
 
         # Token should be decodable
         decoded = jwt.decode(
-            token_data["access_token"],
+            token_data.access_token,
             auth_service_instance.secret_key,
             algorithms=[auth_service_instance.algorithm],
         )
@@ -125,7 +126,7 @@ class TestAuthService:
 
         # Create token
         token_data = auth_service_instance.create_access_token(user_id, role, email)
-        access_token = token_data["access_token"]
+        access_token = token_data.access_token
 
         # Verify token
         verified_data = auth_service_instance.verify_token(access_token)
@@ -254,7 +255,7 @@ class TestGetCurrentUserToken:
 
         # Create valid token
         token_data = auth_service.create_access_token(user_id, role, email)
-        access_token = token_data["access_token"]
+        access_token = token_data.access_token
 
         # Mock credentials
         credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=access_token)
@@ -382,7 +383,7 @@ class TestRequireAnyRole:
 
     def test_require_any_role_empty_list(self) -> None:
         """Test require_any_role with empty role list."""
-        required_roles = []
+        required_roles: list[str] = []
         check_roles = require_any_role(required_roles)
 
         # Only sysadmin should be allowed
@@ -465,44 +466,13 @@ class TestSessionData:
 class TestSecureAuthService:
     """Test SecureAuthService enhanced functionality."""
 
-    @pytest.fixture
-    def mock_redis_client(self, monkeypatch: Any) -> Any:
-        """Mock Redis client for testing."""
-
-        class MockRedis:
-            def __init__(self):
-                self.data = {}
-                self.expirations = {}
-
-            def ping(self):
-                return True
-
-            def setex(self, key, time, value):
-                self.data[key] = value
-                return True
-
-            def get(self, key):
-                return self.data.get(key)
-
-            def delete(self, key):
-                if key in self.data:
-                    del self.data[key]
-                return True
-
-            def exists(self, key):
-                return key in self.data
-
-        mock_redis = MockRedis()
-
-        def mock_from_url(*args, **kwargs):
-            return mock_redis
-
-        monkeypatch.setattr("redis.from_url", mock_from_url)
-        return mock_redis
 
     @pytest.fixture
-    def secure_auth_service(self, mock_redis_client: Any) -> SecureAuthService:
+    def secure_auth_service(self, mock_redis_client: MockRedis, monkeypatch: pytest.MonkeyPatch) -> SecureAuthService:
         """Create SecureAuthService instance for testing."""
+        # Mock the auth_service redis client
+        import src.core.security as security_module  # noqa: PLC0415
+        monkeypatch.setattr(security_module.auth_service, "redis_client", mock_redis_client)
         return SecureAuthService()
 
     def test_secure_auth_service_init(self, secure_auth_service: SecureAuthService) -> None:
@@ -513,7 +483,9 @@ class TestSecureAuthService:
         assert secure_auth_service.secret_key is not None
         assert secure_auth_service.redis_client is not None
 
-    def test_create_access_token_with_session(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
+    def test_create_access_token_with_session(
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+    ) -> None:
         """Test JWT creation with Redis session tracking."""
         user_id = uuid4()
         role = "admin"
@@ -522,17 +494,17 @@ class TestSecureAuthService:
         token_data = secure_auth_service.create_access_token(user_id, role, email)
 
         # Should return enhanced token data
-        assert "access_token" in token_data
-        assert "token_type" in token_data
-        assert "expires_in" in token_data
-        assert "session_id" in token_data
+        assert hasattr(token_data, "access_token")
+        assert hasattr(token_data, "token_type")
+        assert hasattr(token_data, "expires_in")
+        assert hasattr(token_data, "session_id")
 
-        assert token_data["token_type"] == "bearer"
-        assert token_data["expires_in"] == secure_auth_service.access_token_expire_minutes * 60
+        assert token_data.token_type == "bearer"
+        assert token_data.expires_in == secure_auth_service.access_token_expire_minutes * 60
 
         # Token should be decodable with enhanced fields
         decoded = jwt.decode(
-            token_data["access_token"],
+            token_data.access_token,
             secure_auth_service.secret_key,
             algorithms=[secure_auth_service.algorithm],
         )
@@ -540,13 +512,13 @@ class TestSecureAuthService:
         assert decoded["sub"] == str(user_id)
         assert decoded["role"] == role
         assert decoded["email"] == email
-        assert decoded["session_id"] == token_data["session_id"]
+        assert decoded["session_id"] == token_data.session_id
         assert "jti" in decoded
         assert "iat" in decoded
         assert "exp" in decoded
 
         # Session should be stored in Redis
-        session_key = f"session:{token_data['session_id']}"
+        session_key = f"session:{token_data.session_id}"
         assert session_key in mock_redis_client.data
 
         session_json = mock_redis_client.data[session_key]
@@ -576,7 +548,9 @@ class TestSecureAuthService:
         assert "iat" in decoded
         assert "exp" in decoded
 
-    def test_verify_token_with_session_validation(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
+    def test_verify_token_with_session_validation(
+        self, secure_auth_service: SecureAuthService
+    ) -> None:
         """Test token verification with session validation."""
         user_id = uuid4()
         role = "user"
@@ -584,7 +558,7 @@ class TestSecureAuthService:
 
         # Create token (which stores session)
         token_data = secure_auth_service.create_access_token(user_id, role, email)
-        access_token = token_data["access_token"]
+        access_token = token_data.access_token
 
         # Verify token
         verified_data = secure_auth_service.verify_token(access_token)
@@ -593,10 +567,12 @@ class TestSecureAuthService:
         assert verified_data.user_id == user_id
         assert verified_data.role == role
         assert verified_data.email == email
-        assert verified_data.session_id == token_data["session_id"]
+        assert verified_data.session_id == token_data.session_id
         assert verified_data.jti is not None
 
-    def test_verify_token_invalid_session(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
+    def test_verify_token_invalid_session(
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+    ) -> None:
         """Test token verification with invalid session."""
         user_id = uuid4()
         role = "user"
@@ -604,10 +580,10 @@ class TestSecureAuthService:
 
         # Create token
         token_data = secure_auth_service.create_access_token(user_id, role, email)
-        access_token = token_data["access_token"]
+        access_token = token_data.access_token
 
         # Delete session from Redis
-        session_key = f"session:{token_data['session_id']}"
+        session_key = f"session:{token_data.session_id}"
         del mock_redis_client.data[session_key]
 
         # Token verification should fail
@@ -617,7 +593,9 @@ class TestSecureAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid session" in exc_info.value.detail
 
-    def test_verify_token_blacklisted(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
+    def test_verify_token_blacklisted(
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+    ) -> None:
         """Test token verification with blacklisted token."""
         user_id = uuid4()
         role = "user"
@@ -625,7 +603,7 @@ class TestSecureAuthService:
 
         # Create token
         token_data = secure_auth_service.create_access_token(user_id, role, email)
-        access_token = token_data["access_token"]
+        access_token = token_data.access_token
 
         # Decode to get JTI
         decoded = jwt.decode(
@@ -643,7 +621,7 @@ class TestSecureAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Token has been revoked" in exc_info.value.detail
 
-    def test_refresh_access_token(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
+    def test_refresh_access_token(self, secure_auth_service: SecureAuthService) -> None:
         """Test access token refresh functionality."""
         user_id = uuid4()
         role = "admin"
@@ -651,7 +629,7 @@ class TestSecureAuthService:
 
         # Create initial token and session
         token_data = secure_auth_service.create_access_token(user_id, role, email)
-        session_id = token_data["session_id"]
+        session_id = token_data.session_id
 
         # Create refresh token
         refresh_token = secure_auth_service.create_refresh_token(user_id, session_id)
@@ -660,21 +638,23 @@ class TestSecureAuthService:
         new_token_data = secure_auth_service.refresh_access_token(refresh_token)
 
         # Should return new access token
-        assert "access_token" in new_token_data
-        assert "token_type" in new_token_data
-        assert "expires_in" in new_token_data
-        assert "session_id" in new_token_data
+        assert hasattr(new_token_data, "access_token")
+        assert hasattr(new_token_data, "token_type")
+        assert hasattr(new_token_data, "expires_in")
+        assert hasattr(new_token_data, "session_id")
 
         # Session ID should be the same
-        assert new_token_data["session_id"] == session_id
+        assert new_token_data.session_id == session_id
 
         # New token should be valid
-        verified_data = secure_auth_service.verify_token(new_token_data["access_token"])
+        verified_data = secure_auth_service.verify_token(new_token_data.access_token)
         assert verified_data.user_id == user_id
         assert verified_data.role == role
         assert verified_data.email == email
 
-    def test_refresh_access_token_invalid_type(self, secure_auth_service: SecureAuthService) -> None:
+    def test_refresh_access_token_invalid_type(
+        self, secure_auth_service: SecureAuthService
+    ) -> None:
         """Test refresh token with invalid type."""
         user_id = uuid4()
         role = "user"
@@ -682,7 +662,7 @@ class TestSecureAuthService:
 
         # Create regular access token (not refresh)
         token_data = secure_auth_service.create_access_token(user_id, role, email)
-        access_token = token_data["access_token"]
+        access_token = token_data.access_token
 
         # Try to use access token as refresh token
         with pytest.raises(HTTPException) as exc_info:
@@ -691,7 +671,9 @@ class TestSecureAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid token type" in exc_info.value.detail
 
-    def test_refresh_access_token_blacklisted(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
+    def test_refresh_access_token_blacklisted(
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+    ) -> None:
         """Test refresh token that is blacklisted."""
         user_id = uuid4()
         session_id = "test_session"
@@ -713,7 +695,9 @@ class TestSecureAuthService:
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Refresh token has been revoked" in exc_info.value.detail
 
-    def test_blacklist_token(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
+    def test_blacklist_token(
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+    ) -> None:
         """Test token blacklisting functionality."""
         jti = "test_jti_123"
         exp_timestamp = int((datetime.utcnow() + timedelta(hours=1)).timestamp())
@@ -727,7 +711,9 @@ class TestSecureAuthService:
         # Check Redis storage
         assert f"blacklist:{jti}" in mock_redis_client.data
 
-    def test_blacklist_token_expired(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
+    def test_blacklist_token_expired(
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+    ) -> None:
         """Test blacklisting already expired token."""
         jti = "expired_jti"
         exp_timestamp = int((datetime.utcnow() - timedelta(hours=1)).timestamp())
@@ -738,7 +724,9 @@ class TestSecureAuthService:
         # Should not be stored since it's already expired
         assert f"blacklist:{jti}" not in mock_redis_client.data
 
-    def test_revoke_session(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
+    def test_revoke_session(
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+    ) -> None:
         """Test session revocation."""
         user_id = uuid4()
         role = "user"
@@ -746,7 +734,7 @@ class TestSecureAuthService:
 
         # Create token and session
         token_data = secure_auth_service.create_access_token(user_id, role, email)
-        session_id = token_data["session_id"]
+        session_id = token_data.session_id
 
         # Verify session exists
         session_key = f"session:{session_id}"
@@ -758,7 +746,9 @@ class TestSecureAuthService:
         # Session should be deleted
         assert session_key not in mock_redis_client.data
 
-    def test_validate_session_updates_activity(self, secure_auth_service: SecureAuthService, mock_redis_client: Any) -> None:
+    def test_validate_session_updates_activity(
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+    ) -> None:
         """Test that session validation updates last activity."""
         user_id = uuid4()
         role = "user"
@@ -766,7 +756,7 @@ class TestSecureAuthService:
 
         # Create token and session
         token_data = secure_auth_service.create_access_token(user_id, role, email)
-        session_id = token_data["session_id"]
+        session_id = token_data.session_id
 
         # Get initial session data
         session_key = f"session:{session_id}"
@@ -777,7 +767,7 @@ class TestSecureAuthService:
         time.sleep(0.1)
 
         # Verify token (which calls _validate_session)
-        secure_auth_service.verify_token(token_data["access_token"])
+        secure_auth_service.verify_token(token_data.access_token)
 
         # Session should have updated last_activity
         updated_session_json = mock_redis_client.data[session_key]
@@ -785,13 +775,13 @@ class TestSecureAuthService:
 
         assert updated_session.last_activity >= initial_session.last_activity
 
-    def test_redis_connection_failure_graceful_handling(self, mock_redis_client: Any) -> None:
+    def test_redis_connection_failure_graceful_handling(self, mock_redis_client: MockRedis) -> None:
         """Test that Redis failures are handled gracefully in most operations."""
         # Create service with mocked Redis that can fail
         service = SecureAuthService()
 
         # Mock Redis to fail for certain operations
-        def failing_operation(*args, **kwargs):
+        def failing_operation(*args: object, **kwargs: object) -> None:
             raise Exception("Redis connection failed")
 
         mock_redis_client.setex = failing_operation

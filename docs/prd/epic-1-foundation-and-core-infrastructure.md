@@ -1,6 +1,6 @@
-# Epic 1: Foundation & Core Infrastructure
+# Epic 1: Foundation & Enhanced User Permission System
 
-**Epic Goal:** Establish a solid foundation for the multi-agent IAM dashboard by implementing core authentication, user management, and basic client registration functionality. This epic delivers immediate business value through a working client management system while establishing the technical infrastructure required for all subsequent features.
+**Epic Goal:** Establish a solid foundation for the multi-agent IAM dashboard by implementing core authentication, enhanced user management with agent-based permissions, and client operations while delivering immediate functional value through a working client registration system that supports flexible user access control. This epic transforms the platform from a restrictive administrative tool into a practical operational system for all user types while establishing the technical infrastructure required for all subsequent features.
 
 ## Story 1.1: Project Setup and Development Environment
 
@@ -80,8 +80,76 @@ so that I can control system access and maintain proper security boundaries.
 1. **User Management API:** CRUD endpoints for user account creation, modification, and deactivation
 2. **Role Assignment:** Ability to assign and modify user roles (sysadmin, admin, user) with proper validation
 3. **User Administration UI:** Interface for creating users, setting roles, and managing account status
-4. **Permission Enforcement:** Role-based access control properly enforced across all system functions
+4. **Permission Enforcement:** Enhanced role-based access control with agent-specific permissions properly enforced
 5. **Account Status Management:** Ability to activate, deactivate, and reset user accounts
-6. **User List Display:** Comprehensive view of all users with filtering and search capabilities  
+6. **User List Display:** Comprehensive view of all users with filtering and search capabilities, including permission summaries
 7. **Audit Trail:** All user management actions logged with administrator and timestamp details
 8. **Password Management:** Secure password reset functionality for administrators
+
+## Story 1.6: Enhanced User Roles with Agent Permissions
+
+As a **regular user**,  
+I want to have appropriate permissions to access agents I'm assigned to,  
+so that I can perform my daily work without being restricted by overly restrictive role permissions.
+
+### Acceptance Criteria
+
+1. **Enhanced User Role System:** Transform the basic USER role into a flexible permission-based system where users can be assigned access to specific agents
+2. **Agent Permission Assignment:** Administrators can assign/revoke user access to individual agents (client_management, pdf_processing, reports_analysis, audio_recording)
+3. **Permission Database Schema:** New user_agent_permissions table to store user-specific agent access permissions
+4. **Permission Validation Middleware:** Backend middleware validates user permissions for agent-specific operations
+5. **Dynamic UI Permissions:** Frontend dynamically shows/hides features based on user's assigned agent permissions
+6. **Admin Permission Management UI:** Interface for administrators to manage user permissions for each agent
+7. **Backward Compatibility:** Existing sysadmin and admin roles maintain full access, no breaking changes
+8. **Permission Audit Trail:** All permission changes logged with administrator details and timestamps
+
+## Story 1.7: Admin Permission Configuration Interface
+
+As an **administrator**,  
+I want to easily configure user permissions for different agents,  
+so that I can assign appropriate access levels to employees based on their job responsibilities.
+
+### Acceptance Criteria
+
+1. **Permission Management Dashboard:** Centralized interface for viewing and managing all user permissions across agents
+2. **User Permission Matrix:** Visual matrix showing users vs agents with their current permission levels
+3. **Individual User Permission Dialog:** Detailed permission configuration interface for specific users
+4. **Bulk Permission Assignment:** Ability to assign the same permissions to multiple users simultaneously
+5. **Permission Templates:** Pre-defined permission sets for common job roles (e.g., "Client Specialist", "Report Analyst")
+6. **Real-time Permission Updates:** Changes take effect immediately without requiring user logout/login
+7. **Permission Change Audit:** Complete history of permission changes with administrator details
+8. **Permission Impact Warnings:** Clear warnings when removing permissions that might affect user's current work
+
+## Story 1.8: Permission System Database Migration
+
+As a **developer**,  
+I want a comprehensive database migration for the permission system,  
+so that existing users maintain their current access while the new permission system is properly integrated.
+
+### Acceptance Criteria
+
+1. **Migration Script Creation:** Alembic migration script that adds user_agent_permissions table with proper constraints
+2. **Data Migration:** Existing users automatically receive appropriate agent permissions based on their current roles
+3. **Permission Inheritance:** Admin and sysadmin users receive full permissions for all agents
+4. **Default User Permissions:** Regular users receive enhanced client management permissions
+5. **Migration Validation:** Post-migration validation ensures all users can access expected functionality
+6. **Rollback Capability:** Safe rollback procedure in case migration issues occur
+7. **Performance Optimization:** Database indexes optimized for permission checking performance
+8. **Migration Documentation:** Complete documentation of migration process and any manual steps required
+
+## Story 1.9: User Permission Testing and Validation
+
+As a **QA engineer**,  
+I want comprehensive testing of the permission system,  
+so that user access controls work correctly and securely across all agents.
+
+### Acceptance Criteria
+
+1. **Permission Matrix Testing:** Verify all user role and agent permission combinations work correctly
+2. **UI Permission Testing:** Confirm frontend components show/hide appropriately based on user permissions
+3. **API Permission Testing:** Validate backend endpoints properly enforce permission requirements
+4. **Permission Bypass Testing:** Security testing to ensure users cannot bypass permission restrictions
+5. **Admin Interface Testing:** Verify administrators can successfully manage user permissions
+6. **Migration Testing:** Confirm database migration preserves existing access and grants appropriate new permissions
+7. **Performance Testing:** Ensure permission checking doesn't significantly impact system performance
+8. **User Experience Testing:** Validate that permission-based interfaces provide clear user guidance

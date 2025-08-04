@@ -201,7 +201,7 @@ export function TwoFactorForm({
               <FormField
                 control={form.control}
                 name="totp_code"
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel className="text-center block">
                       Código de Verificação

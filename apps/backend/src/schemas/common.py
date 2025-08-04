@@ -5,7 +5,7 @@ This module contains base schemas and common response models
 that are reused throughout the API.
 """
 
-from typing import Any, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel
 
@@ -17,7 +17,7 @@ class SuccessResponse(BaseModel):
 
     success: bool = True
     message: str
-    details: dict[str, Any] | None = None
+    details: dict[str, object] | None = None
 
 
 class ErrorResponse(BaseModel):
@@ -26,7 +26,7 @@ class ErrorResponse(BaseModel):
     success: bool = False
     message: str
     error_code: str | None = None
-    details: dict[str, Any] | None = None
+    details: dict[str, object] | None = None
 
 
 class PaginationInfo(BaseModel):

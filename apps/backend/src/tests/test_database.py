@@ -5,7 +5,6 @@ This module tests database configuration, session management, and utilities.
 """
 
 from contextlib import suppress
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -51,7 +50,7 @@ def test_get_session_no_session_local() -> None:
             next(session_gen)
 
 
-def test_get_session_success(test_session: Any) -> None:
+def test_get_session_success(test_session: object) -> None:
     """Test successful session creation."""
     with patch("src.core.database.SessionLocal") as mock_session_local:
         mock_session = MagicMock()

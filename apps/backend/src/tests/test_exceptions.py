@@ -126,6 +126,7 @@ def test_dashboard_exception_to_http_validation_error() -> None:
 
     assert isinstance(http_exc, HTTPException)
     assert http_exc.status_code == 400
+    assert isinstance(http_exc.detail, dict)
     assert http_exc.detail["message"] == "Invalid input"
     assert http_exc.detail["error_code"] == "VALIDATION_001"
     assert http_exc.detail["details"] == {"field": "email"}

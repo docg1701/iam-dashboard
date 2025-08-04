@@ -1,6 +1,8 @@
 # Epic 4: Service Management & Operations
 
-**Epic Goal:** Implement comprehensive monitoring, backup/recovery, system administration, and operational tools required for managing multiple client implementations as a professional managed service. This epic ensures the platform can operate reliably at scale with 99.9% uptime guarantees and professional service delivery standards.
+**Epic Goal:** Implement comprehensive monitoring, backup/recovery, system administration, and operational tools required for managing multiple client implementations as a professional managed service. This epic leverages the enhanced permission system from Epic 1 to deliver personalized operational experiences, intelligent routing based on user expertise, and permission-aware reporting. This ensures the platform can operate reliably at scale with 99.9% uptime guarantees and professional service delivery standards.
+
+**Permission System Integration:** This epic enhances operational efficiency by tailoring monitoring, alerting, and support systems to individual user permissions and agent expertise areas, reducing noise and improving response relevance.
 
 ## Story 4.1: System Monitoring and Alerting
 
@@ -18,6 +20,9 @@ so that I can proactively maintain 99.9% uptime and quickly resolve any service 
 6. **SLA Tracking:** Uptime calculation and SLA compliance reporting per client instance
 7. **Incident Management:** Automated incident creation and escalation procedures
 8. **Integration:** Integration with external monitoring tools (Datadog, New Relic, etc.)
+9. **Personalized Alerts:** Users receive notifications relevant to their assigned agents and responsibilities
+10. **Alert Filtering:** Monitoring dashboard shows metrics for user's accessible agents only
+11. **Expertise Routing:** Critical alerts routed to users with relevant agent expertise
 
 ## Story 4.2: Backup and Recovery System
 
@@ -35,6 +40,8 @@ so that I can guarantee data protection and rapid recovery from any failures.
 6. **Cross-Region Storage:** Backup storage in geographically separate locations for disaster recovery
 7. **Recovery Testing:** Regular automated testing of backup restoration processes
 8. **Client Reporting:** Backup status reporting and recovery capability demonstrations to clients
+9. **Permission-Aware Backup Reports:** Backup reports filtered by user's system access and agent permissions
+10. **Role-Based Recovery Access:** Recovery operations restricted based on user permissions and expertise areas
 
 ## Story 4.3: Security Management and Compliance
 
@@ -52,6 +59,9 @@ so that all client instances maintain enterprise-grade security standards and re
 6. **Incident Response:** Security incident detection, containment, and response procedures
 7. **Penetration Testing:** Regular security testing and vulnerability assessment reporting
 8. **Compliance Reporting:** Automated compliance reporting and certification management
+9. **Permission Audit Reports:** Regular reports on user permission usage and compliance
+10. **Access Pattern Analysis:** Monitoring and reporting on user access patterns across agents
+11. **Permission Compliance Validation:** Automated checks ensuring permission configurations meet security standards
 
 ## Story 4.4: Performance Optimization and Scaling
 
@@ -69,6 +79,8 @@ so that all client instances maintain optimal performance as usage grows.
 6. **Capacity Planning:** Predictive analysis and recommendations for resource upgrades
 7. **Performance Reporting:** Client-specific performance reports and optimization recommendations
 8. **SLA Management:** Performance SLA tracking and proactive optimization to meet targets
+9. **Agent-Specific Performance Metrics:** Performance tracking segmented by agent usage and user activity
+10. **Permission-Based Performance Insights:** Performance reports tailored to user's accessible system areas
 
 ## Story 4.5: Service Desk and Client Support
 
@@ -86,3 +98,7 @@ so that I can provide professional managed service support and maintain high cli
 6. **Support Analytics:** Reporting on support metrics, response times, and client satisfaction
 7. **Remote Access:** Secure remote access capabilities for troubleshooting client instances
 8. **Training Resources:** Client training materials, video tutorials, and onboarding documentation
+9. **Intelligent Routing:** Support tickets automatically assigned based on user's agent expertise
+10. **Expertise Matching:** System suggests best-qualified users for specific issue types
+11. **Permission-Aware Support:** Support interface adapts to user's system access level
+12. **Specialized Training Materials:** Training resources adapted to different user permission levels and agent access

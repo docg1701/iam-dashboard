@@ -16,6 +16,7 @@ The platform implements **minimal but critical** standards for AI agents to ensu
 - **File Organization:** Maximum 500 lines per file, functions under 50 lines - split larger files into modules
 - **Testing Requirements:** 80% minimum code coverage - no exceptions for any module or agent
 - **Language Consistency:** All code, comments, and technical content in English - UI content in Portuguese (Brazil)
+- **Type Safety:** Never use `Any` type annotations - always use specific types. Create proper TypeScript interfaces or Pydantic models instead
 
 ### Naming Conventions
 

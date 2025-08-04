@@ -5,11 +5,10 @@ import json
 import re
 from datetime import datetime
 from enum import Enum
-from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlmodel import Field, SQLModel, JSON, Column
+from sqlmodel import JSON, Column, Field, SQLModel
 
 
 class AuditAction(str, Enum):
@@ -47,12 +46,12 @@ class AuditLog(SQLModel, table=True):
     action: AuditAction = Field(description="Type of action performed")
 
     # Data change tracking
-    old_values: dict[str, Any] | None = Field(
+    old_values: dict[str, object] | None = Field(
         default=None,
         sa_column=Column(JSON),
         description="Previous values before modification (JSON)",
     )
-    new_values: dict[str, Any] | None = Field(
+    new_values: dict[str, object] | None = Field(
         default=None, sa_column=Column(JSON), description="New values after modification (JSON)"
     )
 
@@ -121,10 +120,10 @@ class AuditLogCreate(SQLModel):
     table_name: str = Field(max_length=100, description="Name of the table being audited")
     record_id: str = Field(max_length=100, description="ID of the record being audited")
     action: AuditAction = Field(description="Action being performed")
-    old_values: dict[str, Any] | None = Field(
+    old_values: dict[str, object] | None = Field(
         default=None, description="Previous values (for UPDATE/DELETE)"
     )
-    new_values: dict[str, Any] | None = Field(
+    new_values: dict[str, object] | None = Field(
         default=None, description="New values (for CREATE/UPDATE)"
     )
     user_id: UUID = Field(description="User performing the action")
@@ -139,8 +138,8 @@ class AuditLogRead(SQLModel):
     table_name: str = Field(description="Table that was modified")
     record_id: str = Field(description="Record that was modified")
     action: AuditAction = Field(description="Action performed")
-    old_values: dict[str, Any] | None = Field(default=None, description="Previous values")
-    new_values: dict[str, Any] | None = Field(default=None, description="New values")
+    old_values: dict[str, object] | None = Field(default=None, description="Previous values")
+    new_values: dict[str, object] | None = Field(default=None, description="New values")
     user_id: UUID = Field(description="User who performed action")
     ip_address: str = Field(description="IP address")
     user_agent: str = Field(description="User agent")

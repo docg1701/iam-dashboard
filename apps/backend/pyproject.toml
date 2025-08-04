@@ -36,8 +36,10 @@ dev = [
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.2.1",
     "ruff>=0.12.7",
+    "types-passlib>=1.7.7.20250602",
     "types-qrcode>=8.2.0.20250506",
 ]
+
 
 # Ruff configuration
 [tool.ruff]
@@ -119,6 +121,7 @@ ignore_missing_imports = true
 # Pytest configuration
 [tool.pytest.ini_options]
 minversion = "8.0"
+asyncio_mode = "auto"
 addopts = [
     "--strict-markers",
     "--strict-config",

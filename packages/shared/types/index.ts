@@ -33,12 +33,62 @@ export type ClientStatus = z.infer<typeof ClientStatusSchema>
 export interface Client {
   client_id: string
   full_name: string
+  ssn: string // Format: XXX-XX-XXXX
+  birth_date: string // ISO 8601 date format
+  status: ClientStatus
+  notes?: string | null
+  created_by: string // User ID reference
+  updated_by: string // User ID reference
+  created_at: string // ISO 8601 timestamp
+  updated_at: string // ISO 8601 timestamp
+}
+
+export interface ClientCreate {
+  full_name: string
   ssn: string
   birth_date: string
+  notes?: string | null
+}
+
+export interface ClientUpdate {
+  full_name?: string
+  ssn?: string
+  birth_date?: string
+  notes?: string | null
+  status?: ClientStatus
+}
+
+export interface ClientResponse {
+  client_id: string
+  full_name: string
+  ssn: string // Will be masked for security (e.g., XXX-XX-1234)
+  birth_date: string
   status: ClientStatus
+  notes?: string | null
+  created_by: string
+  updated_by: string
   created_at: string
   updated_at: string
-  created_by: string
+}
+
+export interface ClientListItem {
+  client_id: string
+  full_name: string
+  ssn: string // Masked
+  status: ClientStatus
+  created_at: string
+}
+
+export interface ClientErrorResponse {
+  detail: string
+  field_errors?: Record<string, string[]>
+}
+
+export interface ClientFormData {
+  full_name: string
+  ssn: string
+  birth_date: string
+  notes?: string | null
 }
 
 // API Response Types
@@ -103,7 +153,22 @@ export const ClientCreateSchema = z.object({
   full_name: z.string().min(2).max(255),
   ssn: z.string().regex(/^\d{3}-\d{2}-\d{4}$/, 'SSN must be in format XXX-XX-XXXX'),
   birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
-  status: ClientStatusSchema.default('active')
+  notes: z.string().optional()
+})
+
+export const ClientUpdateSchema = z.object({
+  full_name: z.string().min(2).max(255).optional(),
+  ssn: z.string().regex(/^\d{3}-\d{2}-\d{4}$/, 'SSN must be in format XXX-XX-XXXX').optional(),
+  birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional(),
+  notes: z.string().optional(),
+  status: ClientStatusSchema.optional()
+})
+
+export const ClientFormDataSchema = z.object({
+  full_name: z.string().min(2).max(255),
+  ssn: z.string().regex(/^\d{3}-\d{2}-\d{4}$/, 'SSN must be in format XXX-XX-XXXX'),
+  birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  notes: z.string().optional()
 })
 
 export const UserCreateSchema = z.object({
@@ -113,12 +178,4 @@ export const UserCreateSchema = z.object({
   password: z.string().min(8).max(128)
 })
 
-// Export schemas for runtime validation
-export {
-  UserRoleSchema,
-  UserStatusSchema,
-  ClientStatusSchema,
-  AgentTypeSchema,
-  ClientCreateSchema,
-  UserCreateSchema
-}
+// Schemas are already exported above inline with their definitions
