@@ -1,6 +1,6 @@
 # Database Schema
 
-**Complete PostgreSQL 16.x + pgvector schema with proper indexing, constraints, and relationships optimized for the multi-agent architecture**
+**Complete PostgreSQL >=17.5 + pgvector schema with proper indexing, constraints, and relationships optimized for the multi-agent architecture**
 
 > ๐ **Quick Navigation**: [Permission Tables](./permissions-architecture.md#database-architecture) | [Migration Guide](./developer-reference.md#database-operations) | [Data Models](./data-models.md) | [Backend Architecture](./backend-architecture.md#database-architecture)
 

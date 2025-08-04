@@ -790,7 +790,7 @@ sequenceDiagram
 
 ## 9. Database Schema
 
-Complete PostgreSQL 16.x + pgvector schema with proper indexing, constraints, and relationships optimized for the multi-agent architecture:
+Complete PostgreSQL >=17.5 + pgvector schema with proper indexing, constraints, and relationships optimized for the multi-agent architecture:
 
 ```sql
 -- Enable required extensions
@@ -1379,7 +1379,7 @@ services:
       retries: 3
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: iam-dashboard-db
     restart: unless-stopped
     environment:

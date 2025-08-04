@@ -68,7 +68,7 @@ services:
       retries: 3
 
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: iam-dashboard-db
     restart: unless-stopped
     environment:
