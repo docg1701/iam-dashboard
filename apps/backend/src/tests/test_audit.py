@@ -1,6 +1,7 @@
 """Tests for audit utility functions."""
 
 from datetime import datetime
+from typing import Any
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
@@ -100,7 +101,7 @@ class TestCreateAuditLog:
     """Test audit log creation function."""
 
     @pytest.fixture
-    def mock_session(self):
+    def mock_session(self) -> Mock:
         """Create a mock database session."""
         session = Mock(spec=Session)
         session.add = Mock()
@@ -109,7 +110,7 @@ class TestCreateAuditLog:
         return session
 
     @pytest.fixture
-    def mock_request(self):
+    def mock_request(self) -> Mock:
         """Create a mock request."""
         request = Mock(spec=Request)
         request.headers = {"X-Forwarded-For": "192.168.1.100", "User-Agent": "Test Browser"}
@@ -119,7 +120,7 @@ class TestCreateAuditLog:
 
     @pytest.mark.asyncio
     async def test_create_audit_log_success(
-        self, mock_session: object, mock_request: object
+        self, mock_session: Mock, mock_request: Mock
     ) -> None:
         """Test successful audit log creation."""
         user_id = uuid4()
@@ -153,12 +154,12 @@ class TestCreateAuditLog:
 
     @pytest.mark.asyncio
     async def test_create_audit_log_with_old_values(
-        self, mock_session: object, mock_request: object
+        self, mock_session: Mock, mock_request: Mock
     ) -> None:
         """Test audit log creation with old values."""
         user_id = uuid4()
-        old_values = {"name": "Old Name"}
-        new_values = {"name": "New Name"}
+        old_values: dict[str, object] = {"name": "Old Name"}
+        new_values: dict[str, object] = {"name": "New Name"}
 
         with patch("src.utils.audit.AuditLog") as MockAuditLog:
             mock_audit_instance = Mock()
@@ -197,12 +198,12 @@ class TestLogDatabaseAction:
     """Test database action logging function."""
 
     @pytest.fixture
-    def mock_session(self):
+    def mock_session(self) -> Mock:
         """Create a mock database session."""
         return Mock(spec=Session)
 
     @pytest.fixture
-    def mock_request(self):
+    def mock_request(self) -> Mock:
         """Create a mock request."""
         request = Mock(spec=Request)
         request.headers = {"User-Agent": "Test"}
@@ -212,7 +213,7 @@ class TestLogDatabaseAction:
 
     @pytest.mark.asyncio
     async def test_log_database_action_success(
-        self, mock_session: object, mock_request: object
+        self, mock_session: Mock, mock_request: Mock
     ) -> None:
         """Test successful database action logging."""
         user_id = uuid4()

@@ -1,6 +1,7 @@
 """Tests for authentication API endpoints."""
 
 from datetime import datetime
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -8,7 +9,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from src.core.security import TokenData, auth_service
+from src.core.security import SessionData, TokenData, auth_service
 from src.models.user import User, UserRole
 
 
@@ -207,14 +208,16 @@ class TestAuth2FA:
         session_id = "temp_session_123"
 
         # Mock temporary session
-        def mock_get_temp_session(session_id: str):
-            class TempSession:
-                user_email = "test2fa@example.com"
-                user_id = str(user.user_id)
-                user_role = "user"
-            return TempSession()
+        def mock_get_temp_session(session_id: str) -> SessionData:
+            return SessionData(
+                user_email="test2fa@example.com",
+                user_id=str(user.user_id),
+                user_role="user",
+                created_at=datetime.utcnow().isoformat(),
+                last_activity=datetime.utcnow().isoformat(),
+            )
 
-        def mock_revoke_temp_session(session_id: str):
+        def mock_revoke_temp_session(session_id: str) -> None:
             pass
 
         # Mock TOTP verification
@@ -222,8 +225,8 @@ class TestAuth2FA:
             return code == "123456"
 
         import src.api.v1.auth as auth_module  # noqa: PLC0415
-        monkeypatch.setattr(auth_module.auth_service, "get_temp_session", mock_get_temp_session)
-        monkeypatch.setattr(auth_module.auth_service, "revoke_temp_session", mock_revoke_temp_session)
+        monkeypatch.setattr(auth_service, "get_temp_session", mock_get_temp_session)
+        monkeypatch.setattr(auth_service, "revoke_temp_session", mock_revoke_temp_session)
         monkeypatch.setattr(auth_module.totp_service, "verify_totp", mock_verify_totp)
 
         # Verify 2FA
@@ -242,11 +245,11 @@ class TestAuth2FA:
     def test_verify_2fa_invalid_session(self, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test 2FA verification with invalid session."""
         # Mock invalid session
-        def mock_get_temp_session(session_id: str):
+        def mock_get_temp_session(session_id: str) -> SessionData | None:
             return None
 
         import src.api.v1.auth as auth_module  # noqa: PLC0415
-        monkeypatch.setattr(auth_module.auth_service, "get_temp_session", mock_get_temp_session)
+        monkeypatch.setattr(auth_service, "get_temp_session", mock_get_temp_session)
 
         # Verify 2FA
         response = client.post("/api/v1/auth/2fa/verify", json={
@@ -272,19 +275,21 @@ class TestAuth2FA:
         test_session.commit()
 
         # Mock temporary session
-        def mock_get_temp_session(session_id: str):
-            class TempSession:
-                user_email = "test2fa@example.com"
-                user_id = str(user.user_id)
-                user_role = "user"
-            return TempSession()
+        def mock_get_temp_session(session_id: str) -> SessionData:
+            return SessionData(
+                user_email="test2fa@example.com",
+                user_id=str(user.user_id),
+                user_role="user",
+                created_at=datetime.utcnow().isoformat(),
+                last_activity=datetime.utcnow().isoformat(),
+            )
 
         # Mock TOTP verification to fail
         def mock_verify_totp(secret: str, code: str) -> bool:
             return False
 
         import src.api.v1.auth as auth_module  # noqa: PLC0415
-        monkeypatch.setattr(auth_module.auth_service, "get_temp_session", mock_get_temp_session)
+        monkeypatch.setattr(auth_service, "get_temp_session", mock_get_temp_session)
         monkeypatch.setattr(auth_module.totp_service, "verify_totp", mock_verify_totp)
 
         # Verify 2FA with wrong code (use 6-digit code to pass schema validation)
@@ -311,7 +316,7 @@ class TestAuth2FA:
         test_session.commit()
 
         # Mock TOTP setup
-        def mock_setup_totp(email: str):
+        def mock_setup_totp(email: str) -> Any:
             class SetupData:
                 secret = "NEW_TOTP_SECRET"
                 qr_code_url = "https://example.com/qr"
@@ -363,7 +368,7 @@ class TestAuthTokens:
     def test_refresh_token_success(self, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test successful token refresh."""
         # Mock token verification
-        def mock_verify_token(token: str):
+        def mock_verify_token(token: str) -> TokenData:
             return TokenData(
                 user_id=uuid4(),
                 email="test@example.com",
@@ -373,7 +378,7 @@ class TestAuthTokens:
             )
 
         import src.api.v1.auth as auth_module  # noqa: PLC0415
-        monkeypatch.setattr(auth_module.auth_service, "verify_token", mock_verify_token)
+        monkeypatch.setattr(auth_service, "verify_token", mock_verify_token)
 
         # Refresh token request
         response = client.post("/api/v1/auth/refresh", headers={
@@ -389,15 +394,15 @@ class TestAuthTokens:
     def test_logout_success(self, client: TestClient, monkeypatch: pytest.MonkeyPatch, auth_headers: dict[str, str]) -> None:
         """Test successful logout."""
         # Mock blacklist and session revocation
-        def mock_blacklist_token(jti: str, exp_timestamp: int):
+        def mock_blacklist_token(jti: str, exp_timestamp: int) -> None:
             pass
 
-        def mock_revoke_session(session_id: str):
+        def mock_revoke_session(session_id: str) -> None:
             pass
 
         import src.api.v1.auth as auth_module  # noqa: PLC0415
-        monkeypatch.setattr(auth_module.auth_service, "blacklist_token", mock_blacklist_token)
-        monkeypatch.setattr(auth_module.auth_service, "revoke_session", mock_revoke_session)
+        monkeypatch.setattr(auth_service, "blacklist_token", mock_blacklist_token)
+        monkeypatch.setattr(auth_service, "revoke_session", mock_revoke_session)
 
         # Logout request with authentication header
         response = client.post("/api/v1/auth/logout", headers=auth_headers)
@@ -410,15 +415,15 @@ class TestAuthTokens:
     def test_logout_with_exception(self, client: TestClient, monkeypatch: pytest.MonkeyPatch, auth_headers: dict[str, str]) -> None:
         """Test logout with exception during cleanup."""
         # Mock functions that raise exceptions
-        def mock_blacklist_token(jti: str, exp_timestamp: int):
+        def mock_blacklist_token(jti: str, exp_timestamp: int) -> None:
             raise Exception("Redis connection failed")
 
-        def mock_revoke_session(session_id: str):
+        def mock_revoke_session(session_id: str) -> None:
             raise Exception("Session revocation failed")
 
         import src.api.v1.auth as auth_module  # noqa: PLC0415
-        monkeypatch.setattr(auth_module.auth_service, "blacklist_token", mock_blacklist_token)
-        monkeypatch.setattr(auth_module.auth_service, "revoke_session", mock_revoke_session)
+        monkeypatch.setattr(auth_service, "blacklist_token", mock_blacklist_token)
+        monkeypatch.setattr(auth_service, "revoke_session", mock_revoke_session)
 
         # Logout should still succeed despite exceptions
         response = client.post("/api/v1/auth/logout", headers=auth_headers)
@@ -452,25 +457,40 @@ class TestAuthTokens:
         assert data["is_active"] is True
         assert "created_at" in data
 
-    def test_get_current_user_not_found(self, client: TestClient) -> None:
+    def test_get_current_user_not_found(self, client: TestClient, test_session: Session) -> None:
         """Test getting current user when user not found in database."""
-        # Mock get_current_user_token to return non-existent user ID
-        def mock_get_current_user():
-            return TokenData(
-                user_id=uuid4(),  # Non-existent user ID
-                email="nonexistent@example.com",
-                role="user",
-                session_id="test_session",
-                jti="test_jti",
-            )
-
-        # This test relies on the dependency override in conftest.py
-        # We need to temporarily override it for this specific test
-        response = client.get("/api/v1/auth/me")
-
-        # Since we're using the mock user from conftest.py, this will succeed
-        # But if we had a real non-existent user, it would return 404
-        assert response.status_code in {status.HTTP_200_OK, status.HTTP_404_NOT_FOUND}
+        from src.core import security  # noqa: PLC0415
+        from src.main import app  # noqa: PLC0415
+        
+        # Create a non-existent user token data
+        nonexistent_user_token = TokenData(
+            user_id=uuid4(),  # Non-existent user ID
+            email="nonexistent@example.com",
+            role="user", 
+            session_id="test_session",
+            jti="test_jti",
+        )
+        
+        def mock_get_nonexistent_user() -> TokenData:
+            return nonexistent_user_token
+        
+        # Temporarily override the authentication dependency for this test
+        app.dependency_overrides[security.get_current_user_token] = mock_get_nonexistent_user
+        app.dependency_overrides[security.require_authenticated] = mock_get_nonexistent_user
+        
+        try:
+            # Make request with authentication header
+            response = client.get("/api/v1/auth/me", headers={"Authorization": "Bearer mock_token"})
+            
+            # Should return 404 because user doesn't exist in database
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            # The middleware might convert the error message to a generic one
+            error_detail = response.json()["detail"]
+            assert "not found" in error_detail.lower() or "user not found" in error_detail.lower()
+            
+        finally:
+            # Restore original overrides (the conftest.py will handle this, but be safe)
+            pass
 
 
 class TestAuthHelpers:

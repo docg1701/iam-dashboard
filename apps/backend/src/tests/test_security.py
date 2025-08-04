@@ -10,8 +10,6 @@ from fastapi import HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials
 from pydantic import ValidationError
 
-from src.tests.conftest import MockRedis
-
 from src.core.security import (
     AuthService,
     SecureAuthService,
@@ -23,6 +21,7 @@ from src.core.security import (
     require_any_role,
     require_role,
 )
+from src.tests.conftest import MockRedis
 
 
 class TestTokenData:

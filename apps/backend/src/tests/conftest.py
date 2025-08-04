@@ -134,6 +134,10 @@ def auth_headers() -> dict[str, str]:
 @pytest.fixture(name="mock_redis_client")
 def mock_redis_client() -> MockRedis:
     """Provide mock Redis client for testing."""
+    # Clear mock Redis state before each test
+    mock_redis_instance.data.clear()
+    mock_redis_instance.lists.clear()
+    mock_redis_instance.expirations.clear()
     return mock_redis_instance
 
 
