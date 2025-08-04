@@ -48,8 +48,8 @@ const userCreateSchema = z.object({
       "Senha deve conter ao menos uma letra minúscula, maiúscula, número e caractere especial"
     ),
   confirmPassword: z.string(),
-  role: z.enum(["sysadmin", "admin", "user"]).refine((val) => val, {
-    message: "Selecione um role"
+  role: z.enum(["sysadmin", "admin", "user"], {
+    errorMessage: "Selecione um role"
   })
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Senhas não coincidem",
@@ -70,6 +70,8 @@ export function UserCreateForm({ onSuccess, onCancel }: UserCreateFormProps) {
 
   const form = useForm<UserCreateFormData>({
     resolver: zodResolver(userCreateSchema),
+    mode: "onSubmit",
+    reValidateMode: "onChange",
     defaultValues: {
       email: "",
       full_name: "",
