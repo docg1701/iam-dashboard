@@ -139,7 +139,7 @@ The permission system introduces specialized components for managing and display
 - **Purpose**: Template management interface for standardized permission sets
 - **Props**: `templates: PermissionTemplate[]`, `onTemplateAction: Function`
 - **Features**: Create template, edit template, apply to users, delete template
-- **Categories**: System templates (read-only), Custom templates, Organizational templates
+- **Categories**: System templates (read-only), Custom templates
 - **Usage tracking**: Template application count, last used date
 - **Validation**: Permission conflict detection, template naming constraints
 

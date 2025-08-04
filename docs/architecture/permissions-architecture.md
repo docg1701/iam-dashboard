@@ -1180,7 +1180,7 @@ The permission template system addresses the critical administrative challenge o
 - **Consistent Access Patterns**: Eliminate permission inconsistencies across similar job roles
 - **Scalable Permission Management**: Support organizational growth without proportional administrative overhead
 - **Reduced Configuration Errors**: Pre-validated permission combinations prevent security gaps and access issues
-- **Organizational Standardization**: Enable consistent role definitions across multiple client implementations
+- **Standardized Role Definitions**: Enable consistent role definitions and permission patterns
 
 ### Template Definition
 
@@ -1191,7 +1191,6 @@ interface PermissionTemplate {
   description: string
   permissions: UserPermissions
   is_system_template: boolean
-  template_category: 'system' | 'custom' | 'organizational'
   usage_count: number
   last_applied: string
   created_by_user_id: string
@@ -1204,7 +1203,7 @@ const SYSTEM_TEMPLATES: PermissionTemplate[] = [
   {
     template_name: "Client Specialist",
     description: "Full client management access for customer service representatives",
-    template_category: "system",
+    is_system_template: true,
     permissions: {
       client_management: {
         create: true,
@@ -1218,7 +1217,7 @@ const SYSTEM_TEMPLATES: PermissionTemplate[] = [
   {
     template_name: "Report Analyst", 
     description: "Analysis and reporting access with read-only client data",
-    template_category: "system",
+    is_system_template: true,
     permissions: {
       client_management: {
         create: false,
@@ -1238,7 +1237,7 @@ const SYSTEM_TEMPLATES: PermissionTemplate[] = [
   {
     template_name: "Document Processor",
     description: "PDF processing and client data reading for document workflows",
-    template_category: "system",
+    is_system_template: true,
     permissions: {
       client_management: {
         create: false,
@@ -1258,7 +1257,7 @@ const SYSTEM_TEMPLATES: PermissionTemplate[] = [
   {
     template_name: "Audio Specialist",
     description: "Audio recording and transcription with client access",
-    template_category: "system",
+    is_system_template: true,
     permissions: {
       client_management: {
         create: false,
