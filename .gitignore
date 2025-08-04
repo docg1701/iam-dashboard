@@ -119,6 +119,7 @@ pdf/
 .bmad-infrastructure-devops/
 .claude/
 .gemini/
+.qwen/
 .nicegui/
 .roomodes
 
