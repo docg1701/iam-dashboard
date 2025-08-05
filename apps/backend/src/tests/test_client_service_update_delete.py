@@ -6,7 +6,7 @@ functionality in the ClientService class.
 """
 
 from datetime import date, datetime
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 from uuid import uuid4
 
 import pytest
@@ -14,8 +14,9 @@ from fastapi import Request
 from sqlmodel import Session
 
 from src.core.exceptions import ConflictError, NotFoundError
-from src.models.client import Client, ClientStatus, ClientUpdate
+from src.models.client import Client, ClientStatus
 from src.models.user import User, UserRole
+from src.schemas.clients import ClientUpdate
 from src.services.client_service import ClientService
 
 
@@ -75,7 +76,10 @@ class TestClientServiceUpdate:
         assert result.updated_at is not None
 
         # Verify in database
-        db_client = test_session.query(Client).filter(Client.client_id == client_id).first()
+        from sqlmodel import select
+
+        db_client = test_session.exec(select(Client).where(Client.client_id == client_id)).first()
+        assert db_client is not None
         assert db_client.full_name == "Updated Name"
         assert db_client.notes == "Updated notes"
 
@@ -173,7 +177,7 @@ class TestClientServiceUpdate:
     @patch("src.services.client_service.log_database_action")
     @pytest.mark.asyncio
     async def test_update_client_audit_logging(
-        self, mock_log_action, test_session: Session
+        self, mock_log_action: MagicMock, test_session: Session
     ) -> None:
         """Test that audit logging is called during client update."""
         # Create test user
@@ -274,7 +278,9 @@ class TestClientServiceDelete:
         assert result is True
 
         # Verify client is archived (soft deleted)
-        db_client = test_session.query(Client).filter(Client.client_id == client_id).first()
+        from sqlmodel import select
+
+        db_client = test_session.exec(select(Client).where(Client.client_id == client_id)).first()
         assert db_client is not None
         assert db_client.status == ClientStatus.ARCHIVED
         assert db_client.updated_by == user.user_id
@@ -314,7 +320,7 @@ class TestClientServiceDelete:
     @patch("src.services.client_service.log_database_action")
     @pytest.mark.asyncio
     async def test_delete_client_audit_logging(
-        self, mock_log_action, test_session: Session
+        self, mock_log_action: MagicMock, test_session: Session
     ) -> None:
         """Test that audit logging is called during client deletion."""
         # Create test user

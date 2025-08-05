@@ -18,7 +18,6 @@ from src.core.password_security import (
 class TestPasswordSecurityService:
     """Test password security service functionality."""
 
-
     @pytest.fixture
     def password_security_service_instance(
         self, mock_redis_client: Any, monkeypatch: pytest.MonkeyPatch

@@ -52,7 +52,11 @@ class TestClientServiceEdgeCases:
 
         # Mock IntegrityError without "ssn" in the message
         with patch.object(
-            test_session, "commit", side_effect=IntegrityError("other constraint", None, None)
+            test_session,
+            "commit",
+            side_effect=IntegrityError(
+                "other constraint", {}, SQLAlchemyError("other constraint violation")
+            ),
         ):
             with pytest.raises(DatabaseError) as exc_info:
                 await service.create_client(client_data, user.user_id, mock_request)
@@ -372,11 +376,12 @@ class TestClientServiceUpdate:
         update_data = ClientUpdate(ssn="987-65-4321")
 
         # Mock IntegrityError with "ssn" in the message
-        mock_error = IntegrityError("ssn constraint", None, None)
-        mock_error.orig = "ssn constraint violation"
-        with patch.object(
-            test_session, "commit", side_effect=mock_error
-        ):
+        from sqlalchemy.exc import SQLAlchemyError
+
+        orig_exception = SQLAlchemyError("ssn constraint violation")
+        mock_error = IntegrityError("ssn constraint", {}, orig_exception)
+        mock_error.orig = orig_exception
+        with patch.object(test_session, "commit", side_effect=mock_error):
             with pytest.raises(ConflictError) as exc_info:
                 await service.update_client(
                     client.client_id, update_data, user.user_id, mock_request
@@ -421,7 +426,11 @@ class TestClientServiceUpdate:
 
         # Mock IntegrityError without "ssn" in the message
         with patch.object(
-            test_session, "commit", side_effect=IntegrityError("other constraint", None, None)
+            test_session,
+            "commit",
+            side_effect=IntegrityError(
+                "other constraint", {}, SQLAlchemyError("other constraint violation")
+            ),
         ):
             with pytest.raises(DatabaseError) as exc_info:
                 await service.update_client(

@@ -6,10 +6,12 @@ operations including creation, updates, role validation, and audit logging.
 """
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from fastapi import Request
 from pydantic import ValidationError as PydanticValidationError
+from sqlalchemy import desc, func, text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import Session, and_, select
 
@@ -208,23 +210,20 @@ class UserService:
             if user_data.role and user_data.role != existing_user.role:
                 await self._validate_role_assignment(updated_by_user_id, user_data.role)
 
-            # Update fields
-            update_data = {}
+            # Update fields directly on the user object
             if user_data.email:
-                update_data["email"] = user_data.email
+                existing_user.email = user_data.email
             if user_data.role:
-                update_data["role"] = user_data.role
+                existing_user.role = user_data.role
             if user_data.is_active is not None:
-                update_data["is_active"] = user_data.is_active
+                existing_user.is_active = user_data.is_active
             if user_data.password:
-                update_data["password_hash"] = self.auth_service.get_password_hash(user_data.password)
+                existing_user.password_hash = self.auth_service.get_password_hash(
+                    user_data.password
+                )
 
             # Add updated timestamp
-            update_data["updated_at"] = datetime.utcnow()
-
-            # Apply updates
-            for field, value in update_data.items():
-                setattr(existing_user, field, value)
+            existing_user.updated_at = datetime.utcnow()
 
             self.session.commit()
             self.session.refresh(existing_user)
@@ -374,10 +373,10 @@ class UserService:
             query = select(User)
 
             # Apply filters
-            conditions = []
+            conditions: list[Any] = []
 
             if search_params.query:
-                conditions.append(User.email.icontains(search_params.query))
+                conditions.append(func.lower(User.email).contains(search_params.query.lower()))
 
             if search_params.role:
                 conditions.append(User.role == search_params.role)
@@ -389,12 +388,15 @@ class UserService:
                 query = query.where(and_(*conditions))
 
             # Get total count
-            count_query = select(User.user_id).where(query.whereclause) if conditions else select(User.user_id)
+            if conditions:
+                count_query = select(User.user_id).where(and_(*conditions))
+            else:
+                count_query = select(User.user_id)
             total_count = len(self.session.exec(count_query).all())
 
             # Apply pagination and ordering
             offset = (page - 1) * per_page
-            query = query.order_by(User.created_at.desc()).offset(offset).limit(per_page)
+            query = query.order_by(desc(text("created_at"))).offset(offset).limit(per_page)
 
             # Execute query
             users = self.session.exec(query).all()
@@ -454,7 +456,9 @@ class UserService:
                 original_error=e,
             ) from e
 
-    async def _check_email_uniqueness(self, email: str, exclude_user_id: UUID | None = None) -> None:
+    async def _check_email_uniqueness(
+        self, email: str, exclude_user_id: UUID | None = None
+    ) -> None:
         """Check if email is unique in the database.
 
         Args:
@@ -485,7 +489,9 @@ class UserService:
                 original_error=e,
             ) from e
 
-    async def _validate_role_assignment(self, assigning_user_id: UUID, target_role: UserRole) -> None:
+    async def _validate_role_assignment(
+        self, assigning_user_id: UUID, target_role: UserRole
+    ) -> None:
         """Validate that user has permission to assign the target role.
 
         Args:

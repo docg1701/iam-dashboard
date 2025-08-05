@@ -218,9 +218,7 @@ class TestClearDatabase:
     @patch("src.utils.seed_data.Session")
     @patch("builtins.print")
     @pytest.mark.asyncio
-    async def test_clear_database_success(
-        self, mock_print: Mock, mock_session_class: Mock
-    ) -> None:
+    async def test_clear_database_success(self, mock_print: Mock, mock_session_class: Mock) -> None:
         """Test successful database clearing."""
         mock_session = Mock()
         mock_connection = Mock()

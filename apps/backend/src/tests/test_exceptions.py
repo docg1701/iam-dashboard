@@ -128,7 +128,7 @@ def test_dashboard_exception_to_http_validation_error() -> None:
 
     assert isinstance(http_exc, HTTPException)
     assert http_exc.status_code == 400
-    detail = cast(dict[str, object], http_exc.detail)
+    detail = cast("dict[str, object]", http_exc.detail)
     assert isinstance(detail, dict)
     assert detail["message"] == "Invalid input"
     assert detail["error_code"] == "VALIDATION_001"
@@ -142,7 +142,7 @@ def test_dashboard_exception_to_http_authentication_error() -> None:
 
     assert isinstance(http_exc, HTTPException)
     assert http_exc.status_code == 401
-    detail = cast(dict[str, object], http_exc.detail)
+    detail = cast("dict[str, object]", http_exc.detail)
     assert isinstance(detail, dict)
     assert detail["message"] == "Invalid credentials"
     assert detail["error_code"] == "AUTH_001"
@@ -155,7 +155,7 @@ def test_dashboard_exception_to_http_authorization_error() -> None:
 
     assert isinstance(http_exc, HTTPException)
     assert http_exc.status_code == 403
-    detail = cast(dict[str, object], http_exc.detail)
+    detail = cast("dict[str, object]", http_exc.detail)
     assert isinstance(detail, dict)
     assert detail["message"] == "Access denied"
     assert detail["error_code"] == "AUTHZ_001"
@@ -168,7 +168,7 @@ def test_dashboard_exception_to_http_not_found_error() -> None:
 
     assert isinstance(http_exc, HTTPException)
     assert http_exc.status_code == 404
-    detail = cast(dict[str, object], http_exc.detail)
+    detail = cast("dict[str, object]", http_exc.detail)
     assert isinstance(detail, dict)
     assert detail["message"] == "Resource not found"
     assert detail["error_code"] == "NOT_FOUND_001"
@@ -181,7 +181,7 @@ def test_dashboard_exception_to_http_conflict_error() -> None:
 
     assert isinstance(http_exc, HTTPException)
     assert http_exc.status_code == 409
-    detail = cast(dict[str, object], http_exc.detail)
+    detail = cast("dict[str, object]", http_exc.detail)
     assert isinstance(detail, dict)
     assert detail["message"] == "Resource conflict"
     assert detail["error_code"] == "CONFLICT_001"
@@ -195,7 +195,7 @@ def test_dashboard_exception_to_http_database_error() -> None:
 
     assert isinstance(http_exc, HTTPException)
     assert http_exc.status_code == 500
-    detail = cast(dict[str, object], http_exc.detail)
+    detail = cast("dict[str, object]", http_exc.detail)
     assert isinstance(detail, dict)
     assert detail["message"] == "Internal server error"
     assert detail["error_code"] == "DB_001"
@@ -208,7 +208,7 @@ def test_dashboard_exception_to_http_file_processing_error() -> None:
 
     assert isinstance(http_exc, HTTPException)
     assert http_exc.status_code == 500
-    detail = cast(dict[str, object], http_exc.detail)
+    detail = cast("dict[str, object]", http_exc.detail)
     assert isinstance(detail, dict)
     assert detail["message"] == "Internal server error"
     assert detail["error_code"] == "FILE_001"
@@ -221,7 +221,7 @@ def test_dashboard_exception_to_http_external_service_error() -> None:
 
     assert isinstance(http_exc, HTTPException)
     assert http_exc.status_code == 500
-    detail = cast(dict[str, object], http_exc.detail)
+    detail = cast("dict[str, object]", http_exc.detail)
     assert isinstance(detail, dict)
     assert detail["message"] == "Internal server error"
     assert detail["error_code"] == "EXT_001"
@@ -234,7 +234,7 @@ def test_dashboard_exception_to_http_unknown_error() -> None:
 
     assert isinstance(http_exc, HTTPException)
     assert http_exc.status_code == 500
-    detail = cast(dict[str, object], http_exc.detail)
+    detail = cast("dict[str, object]", http_exc.detail)
     assert isinstance(detail, dict)
     assert detail["message"] == "An unexpected error occurred"
     assert detail["error_code"] == "INTERNAL_ERROR"

@@ -26,8 +26,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # Startup
     await init_db()
     yield
-    # Shutdown
-    pass
+    # Shutdown - cleanup database connections
+    from .core.database import close_db_connections
+
+    close_db_connections()
 
 
 # Create FastAPI application instance

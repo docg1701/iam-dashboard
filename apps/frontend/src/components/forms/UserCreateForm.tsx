@@ -49,7 +49,7 @@ const userCreateSchema = z.object({
     ),
   confirmPassword: z.string(),
   role: z.enum(["sysadmin", "admin", "user"], {
-    errorMessage: "Selecione um role"
+    message: "Selecione um role"
   })
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Senhas não coincidem",

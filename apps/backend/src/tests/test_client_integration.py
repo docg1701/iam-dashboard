@@ -40,14 +40,14 @@ class TestClientServiceIntegration:
         service = ClientService(test_session)
 
         # Mock request object (simplified for testing)
+        class MockClient:
+            def __init__(self) -> None:
+                self.host = "127.0.0.1"
+
         class MockRequest:
-            def __init__(self):
+            def __init__(self) -> None:
                 self.client = MockClient()
                 self.headers = {"user-agent": "test-agent"}
-
-        class MockClient:
-            def __init__(self):
-                self.host = "127.0.0.1"
 
         mock_request = MockRequest()
 
@@ -64,7 +64,9 @@ class TestClientServiceIntegration:
             # Mock the audit logging to avoid issues
             with unittest.mock.patch("src.services.client_service.log_database_action"):
                 created_client = await service.create_client(
-                    client_data, user.user_id, mock_request
+                    client_data,
+                    user.user_id,
+                    mock_request,  # type: ignore[arg-type]
                 )
 
                 # Verify creation
@@ -76,7 +78,9 @@ class TestClientServiceIntegration:
 
                 # Test retrieval
                 retrieved_client = await service.get_client_by_id(
-                    created_client.client_id, user.user_id, mock_request
+                    created_client.client_id,
+                    user.user_id,
+                    mock_request,  # type: ignore[arg-type]
                 )
 
                 # Verify retrieval

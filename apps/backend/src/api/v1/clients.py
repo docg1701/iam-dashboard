@@ -12,7 +12,7 @@ from sqlmodel import Session
 
 from src.core.database import get_session
 from src.core.exceptions import DashboardException, dashboard_exception_to_http
-from src.core.security import TokenData, get_current_user_token
+from src.core.security import TokenData, require_client_management_access
 from src.schemas.clients import (
     ClientCreate,
     ClientListItem,
@@ -33,7 +33,7 @@ async def list_clients(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     session: Session = Depends(get_session),
-    token_data: TokenData = Depends(get_current_user_token),
+    token_data: TokenData = require_client_management_access("read"),
 ) -> PaginatedResponse[ClientListItem]:
     """
     List clients with optional search and pagination.
@@ -109,7 +109,7 @@ async def create_client(
     client_data: ClientCreate,
     request: Request,
     session: Session = Depends(get_session),
-    token_data: TokenData = Depends(get_current_user_token),
+    token_data: TokenData = require_client_management_access("create"),
 ) -> ClientResponse:
     """
     Create a new client with comprehensive validation and audit logging.
@@ -177,7 +177,7 @@ async def get_client(
     client_id: UUID,
     request: Request,
     session: Session = Depends(get_session),
-    token_data: TokenData = Depends(get_current_user_token),
+    token_data: TokenData = require_client_management_access("read"),
 ) -> ClientResponse:
     """
     Get client by ID with audit logging.
@@ -239,7 +239,7 @@ async def update_client(
     client_data: ClientUpdate,
     request: Request,
     session: Session = Depends(get_session),
-    token_data: TokenData = Depends(get_current_user_token),
+    token_data: TokenData = require_client_management_access("update"),
 ) -> ClientResponse:
     """
     Update client information with comprehensive validation and audit logging.
@@ -310,7 +310,7 @@ async def delete_client(
     client_id: UUID,
     request: Request,
     session: Session = Depends(get_session),
-    token_data: TokenData = Depends(get_current_user_token),
+    token_data: TokenData = require_client_management_access("delete"),
 ) -> SuccessResponse:
     """
     Delete client (soft delete by archiving) with audit logging.

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from sqlmodel import Session
 
 from src.core.database import get_session
-from src.core.security import TokenData, require_role
+from src.core.security import TokenData, require_role_with_fallback
 from src.schemas.common import PaginatedResponse, PaginationInfo, SuccessResponse
 from src.schemas.users import (
     UserCreateRequest,
@@ -32,7 +32,7 @@ async def list_users(
     params: UserSearchParams = Depends(),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
-    token_data: TokenData = Depends(require_role("admin")),
+    token_data: TokenData = Depends(require_role_with_fallback("admin")),
     session: Session = Depends(get_session),
 ) -> PaginatedResponse[UserListItem]:
     """
@@ -80,7 +80,7 @@ async def list_users(
 async def create_user(
     request: Request,
     user_data: UserCreateRequest,
-    token_data: TokenData = Depends(require_role("sysadmin")),
+    token_data: TokenData = Depends(require_role_with_fallback("sysadmin")),
     session: Session = Depends(get_session),
 ) -> UserResponse:
     """
@@ -112,7 +112,7 @@ async def create_user(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: UUID,
-    token_data: TokenData = Depends(require_role("user")),
+    token_data: TokenData = Depends(require_role_with_fallback("user")),
     session: Session = Depends(get_session),
 ) -> UserResponse:
     """
@@ -144,7 +144,7 @@ async def update_user(
     user_id: UUID,
     user_data: UserUpdateRequest,
     request: Request,
-    token_data: TokenData = Depends(require_role("user")),
+    token_data: TokenData = Depends(require_role_with_fallback("user")),
     session: Session = Depends(get_session),
 ) -> UserResponse:
     """
@@ -179,7 +179,7 @@ async def update_user(
 async def delete_user(
     user_id: UUID,
     request: Request,
-    token_data: TokenData = Depends(require_role("sysadmin")),
+    token_data: TokenData = Depends(require_role_with_fallback("sysadmin")),
     session: Session = Depends(get_session),
 ) -> SuccessResponse:
     """

@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The Multi-Agent IAM Dashboard PRD has been comprehensively updated to integrate the enhanced user permission system identified during Epic 1 requirements analysis ([FR16-FR18](./requirements.md#fr16-enhanced-user-roles-with-agent-permissions)). The original restrictive 3-role system has been transformed into a flexible, agent-based permission model that enables 90% of employees to effectively use the system while maintaining security boundaries.
+The Multi-Agent IAM Dashboard PRD has been comprehensively updated to integrate the enhanced user permission system identified during Epic 1 requirements analysis ([FR16-FR18](./requirements.md#functional)). The original restrictive 3-role system has been transformed into a flexible, agent-based permission model that enables 90% of employees to effectively use the system while maintaining security boundaries.
 
 ## Key Changes Made
 

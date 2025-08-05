@@ -38,7 +38,7 @@ const userEditSchema = z.object({
     .min(2, "Nome deve ter pelo menos 2 caracteres")
     .max(255, "Nome deve ter no máximo 255 caracteres"),
   role: z.enum(["sysadmin", "admin", "user"], {
-    errorMessage: "Selecione um role"
+    message: "Selecione um role"
   })
 })
 

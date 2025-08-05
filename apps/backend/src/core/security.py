@@ -9,6 +9,7 @@ import contextlib
 import secrets
 from collections.abc import Callable
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 import jwt
@@ -17,8 +18,12 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 from pydantic import BaseModel
+from sqlmodel import Session, select
 
 from .config import settings
+
+if TYPE_CHECKING:
+    from src.models.user import User
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -547,6 +552,71 @@ def has_permission(token_data: TokenData, required_permission: str) -> bool:
     return required_permission in user_permissions
 
 
+def _get_current_user_from_token(
+    token_data: TokenData,
+    session,
+) -> "User":
+    """
+    Internal function to get current user from token data and database session.
+
+    Args:
+        token_data: Decoded token data
+        session: Database session
+
+    Returns:
+        User: Full user model instance from database
+
+    Raises:
+        HTTPException: If user is not found or inactive
+    """
+    # Import here to avoid circular imports
+    from src.models.user import User
+
+    # Query user from database
+    user = session.exec(select(User).where(User.user_id == token_data.user_id)).first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="User account is deactivated"
+        )
+
+    return user
+
+
+# Create the actual dependency function
+def _create_get_current_user_dependency():
+    """Create a dependency function for getting current user."""
+    from .database import get_session
+
+    def get_current_user_impl(
+        token_data: TokenData = Depends(get_current_user_token),
+        session: Session = Depends(get_session),
+    ) -> "User":
+        """
+        Dependency to get current user from JWT token and database.
+
+        Args:
+            token_data: Decoded token data
+            session: Database session
+
+        Returns:
+            User: Full user model instance from database
+
+        Raises:
+            HTTPException: If user is not found or inactive
+        """
+        return _get_current_user_from_token(token_data, session)
+
+    return get_current_user_impl
+
+
+# Create the dependency
+get_current_user = _create_get_current_user_dependency()
+
+
 def require_permission(required_permission: str) -> Callable[[], TokenData]:
     """
     Dependency factory for permission-based access control.
@@ -567,3 +637,181 @@ def require_permission(required_permission: str) -> Callable[[], TokenData]:
         return token_data
 
     return check_permission
+
+
+# Enhanced permission checking with new permission system integration
+async def check_user_agent_permission(
+    user_id: UUID, agent_name: str, operation: str, session=None
+) -> bool:
+    """
+    Check if user has permission for a specific agent operation.
+    Integrates with the new permission system while maintaining role-based fallbacks.
+
+    Args:
+        user_id: User ID to check permissions for
+        agent_name: Agent name (client_management, pdf_processing, etc.)
+        operation: Operation to check (create, read, update, delete)
+        session: Database session (optional)
+
+    Returns:
+        bool: True if user has permission
+    """
+    from src.models.permissions import AgentName
+    from src.services.permission_service import PermissionService
+
+    try:
+        # Validate agent name
+        agent_enum = AgentName(agent_name)
+
+        # Use the permission service to check
+        permission_service = PermissionService()
+        try:
+            has_permission = await permission_service.check_user_permission(
+                user_id, agent_enum, operation
+            )
+            return has_permission
+        finally:
+            await permission_service.close()
+    except Exception:
+        # Fallback to role-based check if permission system fails
+        if session:
+            from sqlmodel import select
+
+            from src.models.user import User
+
+            user = session.exec(select(User).where(User.user_id == user_id)).first()
+            if user:
+                # Sysadmin bypass
+                if user.role.value == "SYSADMIN":
+                    return True
+
+                # Admin role inheritance for client_management and reports_analysis
+                if user.role.value == "ADMIN" and agent_name in [
+                    "client_management",
+                    "reports_analysis",
+                ]:
+                    return True
+
+        return False
+
+
+def require_agent_permission(agent_name: str, operation: str) -> Callable:
+    """
+    Enhanced dependency factory that integrates new permission system with role-based fallback.
+
+    Args:
+        agent_name: Agent name to check permissions for
+        operation: Operation to check (create, read, update, delete)
+
+    Returns:
+        Dependency function that checks user permission
+    """
+    from sqlmodel import Session
+
+    from .database import get_session
+
+    async def check_permission(
+        token_data: TokenData = Depends(get_current_user_token),
+        session: Session = Depends(get_session),
+    ) -> TokenData:
+        # Check if user has permission using the new system
+        has_permission = await check_user_agent_permission(
+            token_data.user_id, agent_name, operation, session
+        )
+
+        if not has_permission:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient permissions for {agent_name} {operation}",
+            )
+
+        return token_data
+
+    return Depends(check_permission)
+
+
+def require_client_management_access(operation: str = "read") -> Callable:
+    """
+    Dependency to require client management access with backward compatibility.
+
+    Args:
+        operation: Operation to check (create, read, update, delete)
+
+    Returns:
+        Dependency function
+    """
+    return require_agent_permission("client_management", operation)
+
+
+def require_pdf_processing_access(operation: str = "read") -> Callable:
+    """
+    Dependency to require PDF processing access.
+
+    Args:
+        operation: Operation to check (create, read, update, delete)
+
+    Returns:
+        Dependency function
+    """
+    return require_agent_permission("pdf_processing", operation)
+
+
+def require_reports_analysis_access(operation: str = "read") -> Callable:
+    """
+    Dependency to require reports analysis access.
+
+    Args:
+        operation: Operation to check (create, read, update, delete)
+
+    Returns:
+        Dependency function
+    """
+    return require_agent_permission("reports_analysis", operation)
+
+
+def require_audio_recording_access(operation: str = "read") -> Callable:
+    """
+    Dependency to require audio recording access.
+
+    Args:
+        operation: Operation to check (create, read, update, delete)
+
+    Returns:
+        Dependency function
+    """
+    return require_agent_permission("audio_recording", operation)
+
+
+# Backward compatibility wrappers for existing role-based dependencies
+def require_role_with_fallback(required_role: str) -> Callable[[TokenData], TokenData]:
+    """
+    Enhanced role checker that maintains backward compatibility.
+
+    This function preserves the existing role-based access control while
+    preparing for migration to the new permission system.
+
+    Args:
+        required_role: Required user role
+
+    Returns:
+        Dependency function that checks user role
+    """
+
+    def check_role(token_data: TokenData) -> TokenData:
+        # Sysadmin always has access
+        if token_data.role == "sysadmin":
+            return token_data
+
+        # Check the specific role requirement
+        if token_data.role == required_role:
+            return token_data
+
+        # Admin can access user-level endpoints (backward compatibility)
+        if required_role == "user" and token_data.role == "admin":
+            return token_data
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions"
+        )
+
+    return check_role

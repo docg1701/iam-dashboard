@@ -135,6 +135,12 @@ export function useToast() {
   return context
 }
 
+// Simple toast function for direct usage
+export function toast(options: Omit<ToastProps, 'id'>) {
+  // This is a simple implementation - in production you'd want to use a proper toast manager
+  console.log('Toast:', options)
+}
+
 function ToastContainer({ 
   toasts, 
   onRemove 

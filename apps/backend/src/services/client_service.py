@@ -10,6 +10,7 @@ from uuid import UUID
 
 from fastapi import Request
 from pydantic import ValidationError as PydanticValidationError
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import Session, select
 
@@ -343,7 +344,7 @@ class ClientService:
         per_page: int,
         user_id: UUID,
         request: Request,
-    ) -> tuple[list[Client], dict]:
+    ) -> tuple[list[Client], dict[str, object]]:
         """List clients with search, filtering, and pagination.
 
         Args:
@@ -365,10 +366,12 @@ class ClientService:
 
             # Apply filters if provided
             if hasattr(search_params, "full_name") and search_params.full_name:
-                statement = statement.where(Client.full_name.ilike(f"%{search_params.full_name}%"))
+                statement = statement.where(
+                    func.lower(Client.full_name).contains(search_params.full_name.lower())
+                )
 
             if hasattr(search_params, "status") and search_params.status:
-                statement = statement.where(Client.status == search_params.status)
+                statement = statement.where(Client.status == search_params.status.value)
 
             # Calculate total count for pagination
             total_statement = statement
@@ -385,7 +388,7 @@ class ClientService:
 
             # Calculate pagination info
             total_pages = (total_count + per_page - 1) // per_page
-            pagination_info = {
+            pagination_info: dict[str, object] = {
                 "page": page,
                 "per_page": per_page,
                 "total_count": total_count,

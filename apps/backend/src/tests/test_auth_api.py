@@ -31,10 +31,9 @@ class TestAuthLogin:
         test_session.commit()
 
         # Login request
-        response = client.post("/api/v1/auth/login", json={
-            "email": "test@example.com",
-            "password": password
-        })
+        response = client.post(
+            "/api/v1/auth/login", json={"email": "test@example.com", "password": password}
+        )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -46,7 +45,9 @@ class TestAuthLogin:
         assert data["user"]["email"] == "test@example.com"
         assert data["user"]["role"] == "user"
 
-    def test_login_success_with_2fa_required(self, client: TestClient, test_session: Session) -> None:
+    def test_login_success_with_2fa_required(
+        self, client: TestClient, test_session: Session
+    ) -> None:
         """Test login with 2FA enabled - should return session_id."""
         # Create test user with 2FA enabled
         password = "Test123!@#"
@@ -62,10 +63,9 @@ class TestAuthLogin:
         test_session.commit()
 
         # Login request
-        response = client.post("/api/v1/auth/login", json={
-            "email": "test2fa@example.com",
-            "password": password
-        })
+        response = client.post(
+            "/api/v1/auth/login", json={"email": "test2fa@example.com", "password": password}
+        )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -77,10 +77,10 @@ class TestAuthLogin:
 
     def test_login_invalid_email(self, client: TestClient) -> None:
         """Test login with non-existent email."""
-        response = client.post("/api/v1/auth/login", json={
-            "email": "nonexistent@example.com",
-            "password": "wrongpassword"
-        })
+        response = client.post(
+            "/api/v1/auth/login",
+            json={"email": "nonexistent@example.com", "password": "wrongpassword"},
+        )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid email or password" in response.json()["detail"]
@@ -98,10 +98,9 @@ class TestAuthLogin:
         test_session.commit()
 
         # Login with wrong password
-        response = client.post("/api/v1/auth/login", json={
-            "email": "test@example.com",
-            "password": "wrong_password"
-        })
+        response = client.post(
+            "/api/v1/auth/login", json={"email": "test@example.com", "password": "wrong_password"}
+        )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid email or password" in response.json()["detail"]
@@ -120,15 +119,16 @@ class TestAuthLogin:
         test_session.commit()
 
         # Login request
-        response = client.post("/api/v1/auth/login", json={
-            "email": "inactive@example.com",
-            "password": password
-        })
+        response = client.post(
+            "/api/v1/auth/login", json={"email": "inactive@example.com", "password": password}
+        )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
         assert "Account is deactivated" in response.json()["detail"]
 
-    def test_login_account_locked(self, client: TestClient, test_session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_login_account_locked(
+        self, client: TestClient, test_session: Session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test login with locked account."""
         # Create test user
         password = "Test123!@#"
@@ -146,13 +146,15 @@ class TestAuthLogin:
             return True
 
         import src.api.v1.auth as auth_module  # noqa: PLC0415
-        monkeypatch.setattr(auth_module.password_security_service, "is_account_locked", mock_is_account_locked)
+
+        monkeypatch.setattr(
+            auth_module.password_security_service, "is_account_locked", mock_is_account_locked
+        )
 
         # Login request
-        response = client.post("/api/v1/auth/login", json={
-            "email": "locked@example.com",
-            "password": password
-        })
+        response = client.post(
+            "/api/v1/auth/login", json={"email": "locked@example.com", "password": password}
+        )
 
         assert response.status_code == status.HTTP_423_LOCKED
         assert "Account is temporarily locked" in response.json()["detail"]
@@ -174,10 +176,9 @@ class TestAuthLogin:
         _user_id = user.user_id
 
         # Login request
-        response = client.post("/api/v1/auth/login", json={
-            "email": "timestamp@example.com",
-            "password": password
-        })
+        response = client.post(
+            "/api/v1/auth/login", json={"email": "timestamp@example.com", "password": password}
+        )
 
         assert response.status_code == status.HTTP_200_OK
 
@@ -190,7 +191,9 @@ class TestAuthLogin:
 class TestAuth2FA:
     """Test 2FA authentication endpoints."""
 
-    def test_verify_2fa_success(self, client: TestClient, test_session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_verify_2fa_success(
+        self, client: TestClient, test_session: Session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test successful 2FA verification."""
         # Create test user with 2FA
         user = User(
@@ -225,15 +228,15 @@ class TestAuth2FA:
             return code == "123456"
 
         import src.api.v1.auth as auth_module  # noqa: PLC0415
+
         monkeypatch.setattr(auth_service, "get_temp_session", mock_get_temp_session)
         monkeypatch.setattr(auth_service, "revoke_temp_session", mock_revoke_temp_session)
         monkeypatch.setattr(auth_module.totp_service, "verify_totp", mock_verify_totp)
 
         # Verify 2FA
-        response = client.post("/api/v1/auth/2fa/verify", json={
-            "session_id": session_id,
-            "totp_code": "123456"
-        })
+        response = client.post(
+            "/api/v1/auth/2fa/verify", json={"session_id": session_id, "totp_code": "123456"}
+        )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -242,25 +245,28 @@ class TestAuth2FA:
         assert data["requires_2fa"] is False
         assert data["user"]["email"] == "test2fa@example.com"
 
-    def test_verify_2fa_invalid_session(self, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_verify_2fa_invalid_session(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test 2FA verification with invalid session."""
+
         # Mock invalid session
         def mock_get_temp_session(session_id: str) -> SessionData | None:
             return None
 
-        import src.api.v1.auth as auth_module  # noqa: PLC0415
         monkeypatch.setattr(auth_service, "get_temp_session", mock_get_temp_session)
 
         # Verify 2FA
-        response = client.post("/api/v1/auth/2fa/verify", json={
-            "session_id": "invalid_session",
-            "totp_code": "123456"
-        })
+        response = client.post(
+            "/api/v1/auth/2fa/verify", json={"session_id": "invalid_session", "totp_code": "123456"}
+        )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid or expired session" in response.json()["detail"]
 
-    def test_verify_2fa_invalid_code(self, client: TestClient, test_session: Session, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_verify_2fa_invalid_code(
+        self, client: TestClient, test_session: Session, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test 2FA verification with invalid TOTP code."""
         # Create test user with 2FA
         user = User(
@@ -289,19 +295,27 @@ class TestAuth2FA:
             return False
 
         import src.api.v1.auth as auth_module  # noqa: PLC0415
+
         monkeypatch.setattr(auth_service, "get_temp_session", mock_get_temp_session)
         monkeypatch.setattr(auth_module.totp_service, "verify_totp", mock_verify_totp)
 
         # Verify 2FA with wrong code (use 6-digit code to pass schema validation)
-        response = client.post("/api/v1/auth/2fa/verify", json={
-            "session_id": "temp_session_123",
-            "totp_code": "000000"
-        })
+        response = client.post(
+            "/api/v1/auth/2fa/verify",
+            json={"session_id": "temp_session_123", "totp_code": "000000"},
+        )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid 2FA code" in response.json()["detail"]
 
-    def test_setup_2fa_success(self, client: TestClient, test_session: Session, monkeypatch: pytest.MonkeyPatch, auth_headers: dict[str, str], mock_user: TokenData) -> None:
+    def test_setup_2fa_success(
+        self,
+        client: TestClient,
+        test_session: Session,
+        monkeypatch: pytest.MonkeyPatch,
+        auth_headers: dict[str, str],
+        mock_user: TokenData,
+    ) -> None:
         """Test successful 2FA setup."""
         # Create test user matching the mock_user email
         user = User(
@@ -321,9 +335,11 @@ class TestAuth2FA:
                 secret = "NEW_TOTP_SECRET"
                 qr_code_url = "https://example.com/qr"
                 backup_codes = ["code1", "code2", "code3"]
+
             return SetupData()
 
         import src.api.v1.auth as auth_module  # noqa: PLC0415
+
         monkeypatch.setattr(auth_module.totp_service, "setup_totp", mock_setup_totp)
 
         # Setup 2FA with authentication header
@@ -340,7 +356,13 @@ class TestAuth2FA:
         assert user.totp_enabled is True
         assert user.totp_secret == "NEW_TOTP_SECRET"
 
-    def test_setup_2fa_already_enabled(self, client: TestClient, test_session: Session, auth_headers: dict[str, str], mock_user: TokenData) -> None:
+    def test_setup_2fa_already_enabled(
+        self,
+        client: TestClient,
+        test_session: Session,
+        auth_headers: dict[str, str],
+        mock_user: TokenData,
+    ) -> None:
         """Test 2FA setup when already enabled."""
         # Create test user with 2FA already enabled, matching mock user
         user = User(
@@ -365,8 +387,11 @@ class TestAuth2FA:
 class TestAuthTokens:
     """Test token-related authentication endpoints."""
 
-    def test_refresh_token_success(self, client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_refresh_token_success(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test successful token refresh."""
+
         # Mock token verification
         def mock_verify_token(token: str) -> TokenData:
             return TokenData(
@@ -377,13 +402,12 @@ class TestAuthTokens:
                 jti="old_jti",
             )
 
-        import src.api.v1.auth as auth_module  # noqa: PLC0415
         monkeypatch.setattr(auth_service, "verify_token", mock_verify_token)
 
         # Refresh token request
-        response = client.post("/api/v1/auth/refresh", headers={
-            "Authorization": "Bearer old_token"
-        })
+        response = client.post(
+            "/api/v1/auth/refresh", headers={"Authorization": "Bearer old_token"}
+        )
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -391,8 +415,11 @@ class TestAuthTokens:
         assert data["token_type"] == "bearer"
         assert "expires_in" in data
 
-    def test_logout_success(self, client: TestClient, monkeypatch: pytest.MonkeyPatch, auth_headers: dict[str, str]) -> None:
+    def test_logout_success(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, auth_headers: dict[str, str]
+    ) -> None:
         """Test successful logout."""
+
         # Mock blacklist and session revocation
         def mock_blacklist_token(jti: str, exp_timestamp: int) -> None:
             pass
@@ -400,7 +427,6 @@ class TestAuthTokens:
         def mock_revoke_session(session_id: str) -> None:
             pass
 
-        import src.api.v1.auth as auth_module  # noqa: PLC0415
         monkeypatch.setattr(auth_service, "blacklist_token", mock_blacklist_token)
         monkeypatch.setattr(auth_service, "revoke_session", mock_revoke_session)
 
@@ -412,8 +438,11 @@ class TestAuthTokens:
         assert data["success"] is True
         assert "Logged out successfully" in data["message"]
 
-    def test_logout_with_exception(self, client: TestClient, monkeypatch: pytest.MonkeyPatch, auth_headers: dict[str, str]) -> None:
+    def test_logout_with_exception(
+        self, client: TestClient, monkeypatch: pytest.MonkeyPatch, auth_headers: dict[str, str]
+    ) -> None:
         """Test logout with exception during cleanup."""
+
         # Mock functions that raise exceptions
         def mock_blacklist_token(jti: str, exp_timestamp: int) -> None:
             raise Exception("Redis connection failed")
@@ -421,7 +450,6 @@ class TestAuthTokens:
         def mock_revoke_session(session_id: str) -> None:
             raise Exception("Session revocation failed")
 
-        import src.api.v1.auth as auth_module  # noqa: PLC0415
         monkeypatch.setattr(auth_service, "blacklist_token", mock_blacklist_token)
         monkeypatch.setattr(auth_service, "revoke_session", mock_revoke_session)
 
@@ -432,7 +460,13 @@ class TestAuthTokens:
         data = response.json()
         assert data["success"] is True
 
-    def test_get_current_user_success(self, client: TestClient, test_session: Session, auth_headers: dict[str, str], mock_user: TokenData) -> None:
+    def test_get_current_user_success(
+        self,
+        client: TestClient,
+        test_session: Session,
+        auth_headers: dict[str, str],
+        mock_user: TokenData,
+    ) -> None:
         """Test getting current user information."""
         # Create test user matching mock user
         user = User(
@@ -457,37 +491,37 @@ class TestAuthTokens:
         assert data["is_active"] is True
         assert "created_at" in data
 
-    def test_get_current_user_not_found(self, client: TestClient, test_session: Session) -> None:
+    def test_get_current_user_not_found(self, client: TestClient) -> None:
         """Test getting current user when user not found in database."""
         from src.core import security  # noqa: PLC0415
         from src.main import app  # noqa: PLC0415
-        
+
         # Create a non-existent user token data
         nonexistent_user_token = TokenData(
             user_id=uuid4(),  # Non-existent user ID
             email="nonexistent@example.com",
-            role="user", 
+            role="user",
             session_id="test_session",
             jti="test_jti",
         )
-        
+
         def mock_get_nonexistent_user() -> TokenData:
             return nonexistent_user_token
-        
+
         # Temporarily override the authentication dependency for this test
         app.dependency_overrides[security.get_current_user_token] = mock_get_nonexistent_user
         app.dependency_overrides[security.require_authenticated] = mock_get_nonexistent_user
-        
+
         try:
             # Make request with authentication header
             response = client.get("/api/v1/auth/me", headers={"Authorization": "Bearer mock_token"})
-            
+
             # Should return 404 because user doesn't exist in database
             assert response.status_code == status.HTTP_404_NOT_FOUND
             # The middleware might convert the error message to a generic one
             error_detail = response.json()["detail"]
             assert "not found" in error_detail.lower() or "user not found" in error_detail.lower()
-            
+
         finally:
             # Restore original overrides (the conftest.py will handle this, but be safe)
             pass
@@ -510,9 +544,10 @@ class TestAuthHelpers:
         test_session.commit()
 
         # Login with X-Forwarded-For header
-        response = client.post("/api/v1/auth/login",
+        response = client.post(
+            "/api/v1/auth/login",
             json={"email": "ip@example.com", "password": password},
-            headers={"X-Forwarded-For": "192.168.1.100, 10.0.0.1"}
+            headers={"X-Forwarded-For": "192.168.1.100, 10.0.0.1"},
         )
 
         # Should extract first IP from X-Forwarded-For
@@ -532,9 +567,10 @@ class TestAuthHelpers:
         test_session.commit()
 
         # Login with X-Real-IP header
-        response = client.post("/api/v1/auth/login",
+        response = client.post(
+            "/api/v1/auth/login",
             json={"email": "realip@example.com", "password": password},
-            headers={"X-Real-IP": "192.168.1.200"}
+            headers={"X-Real-IP": "192.168.1.200"},
         )
 
         assert response.status_code == status.HTTP_200_OK
@@ -553,8 +589,8 @@ class TestAuthHelpers:
         test_session.commit()
 
         # Login without proxy headers (should use direct IP)
-        response = client.post("/api/v1/auth/login",
-            json={"email": "fallback@example.com", "password": password}
+        response = client.post(
+            "/api/v1/auth/login", json={"email": "fallback@example.com", "password": password}
         )
 
         assert response.status_code == status.HTTP_200_OK

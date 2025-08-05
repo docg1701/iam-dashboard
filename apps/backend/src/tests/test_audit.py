@@ -1,7 +1,6 @@
 """Tests for audit utility functions."""
 
 from datetime import datetime
-from typing import Any
 from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
@@ -119,9 +118,7 @@ class TestCreateAuditLog:
         return request
 
     @pytest.mark.asyncio
-    async def test_create_audit_log_success(
-        self, mock_session: Mock, mock_request: Mock
-    ) -> None:
+    async def test_create_audit_log_success(self, mock_session: Mock, mock_request: Mock) -> None:
         """Test successful audit log creation."""
         user_id = uuid4()
 

@@ -8,9 +8,15 @@ import factory
 from factory.faker import Faker
 from faker import Faker as FakerInstance
 
-from ..models.audit import AuditAction, AuditLog
-from ..models.client import Client, ClientStatus
-from ..models.user import User, UserRole
+from src.models.audit import AuditAction, AuditLog
+from src.models.client import Client, ClientStatus
+from src.models.permissions import (
+    AgentName,
+    PermissionAuditLog,
+    PermissionTemplate,
+    UserAgentPermission,
+)
+from src.models.user import User, UserRole
 
 fake = FakerInstance()
 
@@ -385,3 +391,316 @@ def create_seed_clients(admin_user_id: UUID) -> list[Client]:
     ]
 
     return clients
+
+
+# Permission factories
+
+
+class UserAgentPermissionFactory(factory.Factory):  # type: ignore[misc,name-defined]
+    """Factory for creating UserAgentPermission instances."""
+
+    class Meta:
+        model = UserAgentPermission
+
+    # Core fields
+    user_id = factory.LazyFunction(lambda: UUID(fake.uuid4()))  # type: ignore[attr-defined,no-untyped-call]
+    agent_name = factory.Iterator([
+        AgentName.CLIENT_MANAGEMENT,
+        AgentName.PDF_PROCESSING,
+        AgentName.REPORTS_ANALYSIS,
+        AgentName.AUDIO_RECORDING,
+    ])  # type: ignore[attr-defined,no-untyped-call]
+    permissions = factory.LazyAttribute(  # type: ignore[attr-defined,no-untyped-call]
+        lambda obj: generate_agent_permissions(obj.agent_name)
+    )
+
+    # Audit fields
+    created_by_user_id = factory.LazyFunction(lambda: UUID(fake.uuid4()))  # type: ignore[attr-defined,no-untyped-call]
+    created_at = Faker("date_time_this_year")  # type: ignore[no-untyped-call]
+    updated_at = None
+
+
+class PermissionTemplateFactory(factory.Factory):  # type: ignore[misc,name-defined]
+    """Factory for creating PermissionTemplate instances."""
+
+    class Meta:
+        model = PermissionTemplate
+
+    # Core fields
+    template_name = factory.LazyAttribute(lambda obj: f"{fake.word().title()} Template")  # type: ignore[attr-defined,no-untyped-call]
+    description = Faker("sentence")  # type: ignore[no-untyped-call]
+    permissions = factory.LazyFunction(lambda: generate_template_permissions())  # type: ignore[attr-defined,no-untyped-call]
+
+    # Metadata
+    is_system_template = False
+    created_by_user_id = factory.LazyFunction(lambda: UUID(fake.uuid4()))  # type: ignore[attr-defined,no-untyped-call]
+    created_at = Faker("date_time_this_year")  # type: ignore[no-untyped-call]
+    updated_at = None
+
+
+class PermissionAuditLogFactory(factory.Factory):  # type: ignore[misc,name-defined]
+    """Factory for creating PermissionAuditLog instances."""
+
+    class Meta:
+        model = PermissionAuditLog
+
+    # Core fields
+    user_id = factory.LazyFunction(lambda: UUID(fake.uuid4()))  # type: ignore[attr-defined,no-untyped-call]
+    agent_name = factory.Iterator([
+        AgentName.CLIENT_MANAGEMENT,
+        AgentName.PDF_PROCESSING,
+        AgentName.REPORTS_ANALYSIS,
+        AgentName.AUDIO_RECORDING,
+    ])  # type: ignore[attr-defined,no-untyped-call]
+    action = factory.Iterator(["CREATE", "UPDATE", "DELETE", "BULK_CREATE", "BULK_UPDATE"])  # type: ignore[attr-defined,no-untyped-call]
+
+    # Permission data
+    old_permissions = None
+    new_permissions = factory.LazyAttribute(  # type: ignore[attr-defined,no-untyped-call]
+        lambda obj: generate_agent_permissions(obj.agent_name)
+    )
+
+    # Audit metadata
+    changed_by_user_id = factory.LazyFunction(lambda: UUID(fake.uuid4()))  # type: ignore[attr-defined,no-untyped-call]
+    change_reason = factory.Iterator([
+        "Initial permission assignment",
+        "Role change update",
+        "Security audit adjustment",
+        "User request modification",
+        None,
+    ])  # type: ignore[attr-defined,no-untyped-call]
+
+    # Timestamps
+    created_at = Faker("date_time_this_year")  # type: ignore[no-untyped-call]
+
+    @factory.post_generation  # type: ignore[attr-defined,misc]
+    def set_old_permissions_for_updates(
+        obj: Any, _create: bool, _extracted: Any, **_kwargs: Any
+    ) -> None:
+        """Set old_permissions for UPDATE and DELETE actions if not explicitly provided."""
+        action_val = obj.action if isinstance(obj.action, str) else obj.action
+        if action_val in ["UPDATE", "DELETE", "BULK_UPDATE"] and obj.old_permissions is None:
+            obj.old_permissions = generate_agent_permissions(obj.agent_name, minimal=True)
+
+
+def generate_agent_permissions(agent_name: AgentName, minimal: bool = False) -> dict[str, bool]:
+    """Generate realistic permission structure based on agent and role."""
+    if minimal:
+        # Minimal permissions for testing old_permissions
+        return {
+            "create": False,
+            "read": True,
+            "update": False,
+            "delete": False,
+        }
+
+    # Generate varied permissions based on agent type
+    if agent_name == AgentName.CLIENT_MANAGEMENT:
+        return {
+            "create": fake.boolean(chance_of_getting_true=80),
+            "read": True,  # Almost always true for client management
+            "update": fake.boolean(chance_of_getting_true=70),
+            "delete": fake.boolean(chance_of_getting_true=30),
+        }
+    elif agent_name == AgentName.PDF_PROCESSING:
+        return {
+            "create": fake.boolean(chance_of_getting_true=60),
+            "read": fake.boolean(chance_of_getting_true=90),
+            "update": fake.boolean(chance_of_getting_true=40),
+            "delete": fake.boolean(chance_of_getting_true=20),
+        }
+    elif agent_name == AgentName.REPORTS_ANALYSIS:
+        return {
+            "create": fake.boolean(chance_of_getting_true=70),
+            "read": fake.boolean(chance_of_getting_true=95),
+            "update": fake.boolean(chance_of_getting_true=50),
+            "delete": fake.boolean(chance_of_getting_true=25),
+        }
+    else:  # AUDIO_RECORDING
+        return {
+            "create": fake.boolean(chance_of_getting_true=50),
+            "read": fake.boolean(chance_of_getting_true=85),
+            "update": fake.boolean(chance_of_getting_true=35),
+            "delete": fake.boolean(chance_of_getting_true=15),
+        }
+
+
+def generate_template_permissions() -> dict[str, dict[str, bool]]:
+    """Generate complete template permissions for all agents."""
+    return {agent.value: generate_agent_permissions(agent) for agent in AgentName}
+
+
+# System template factories
+
+
+class SystemPermissionTemplateFactory(PermissionTemplateFactory):
+    """Factory for system permission templates."""
+
+    is_system_template = True
+    template_name = factory.Iterator([
+        "Administrator Template",
+        "Manager Template",
+        "User Template",
+        "Read-Only Template",
+        "Agent Specialist Template",
+    ])  # type: ignore[attr-defined,no-untyped-call]
+    description = factory.LazyAttribute(  # type: ignore[attr-defined,no-untyped-call,assignment]
+        lambda obj: f"System template for {obj.template_name.lower()}"
+    )
+
+
+class FullAccessPermissionFactory(UserAgentPermissionFactory):
+    """Factory for full access permissions."""
+
+    permissions = {  # type: ignore[assignment]
+        "create": True,
+        "read": True,
+        "update": True,
+        "delete": True,
+    }
+
+
+class ReadOnlyPermissionFactory(UserAgentPermissionFactory):
+    """Factory for read-only permissions."""
+
+    permissions = {  # type: ignore[assignment]
+        "create": False,
+        "read": True,
+        "update": False,
+        "delete": False,
+    }
+
+
+class NoAccessPermissionFactory(UserAgentPermissionFactory):
+    """Factory for no access permissions."""
+
+    permissions = {  # type: ignore[assignment]
+        "create": False,
+        "read": False,
+        "update": False,
+        "delete": False,
+    }
+
+
+# Convenience functions for permission testing
+
+
+def create_test_permission(
+    user_id: UUID | None = None,
+    agent_name: AgentName = AgentName.CLIENT_MANAGEMENT,
+    permissions: dict[str, bool] | None = None,
+    **kwargs: Any,
+) -> UserAgentPermission:
+    """Create a test permission with specified parameters."""
+    data = {"agent_name": agent_name, **kwargs}
+
+    if user_id:
+        data["user_id"] = user_id
+    if permissions:
+        data["permissions"] = permissions
+
+    return UserAgentPermissionFactory(**data)
+
+
+def create_test_template(
+    template_name: str | None = None,
+    permissions: dict[str, dict[str, bool]] | None = None,
+    is_system: bool = False,
+    **kwargs: Any,
+) -> PermissionTemplate:
+    """Create a test permission template."""
+    factory_class = SystemPermissionTemplateFactory if is_system else PermissionTemplateFactory
+    data = kwargs
+
+    if template_name:
+        data["template_name"] = template_name
+    if permissions:
+        data["permissions"] = permissions
+
+    return factory_class(**data)
+
+
+def create_test_permission_audit_log(
+    user_id: UUID | None = None,
+    agent_name: AgentName = AgentName.CLIENT_MANAGEMENT,
+    action: str = "CREATE",
+    **kwargs: Any,
+) -> PermissionAuditLog:
+    """Create a test permission audit log."""
+    data = {"agent_name": agent_name, "action": action, **kwargs}
+
+    if user_id:
+        data["user_id"] = user_id
+
+    return PermissionAuditLogFactory(**data)
+
+
+def create_user_with_permissions(
+    user_role: UserRole = UserRole.ADMIN,
+    agent_permissions: dict[AgentName, dict[str, bool]] | None = None,
+) -> tuple[User, list[UserAgentPermission]]:
+    """Create a user with specific agent permissions."""
+    user = create_test_user(role=user_role)
+    permissions = []
+
+    if agent_permissions:
+        for agent_name, perms in agent_permissions.items():
+            permission = create_test_permission(
+                user_id=user.user_id,
+                agent_name=agent_name,
+                permissions=perms,
+                created_by_user_id=user.user_id,
+            )
+            permissions.append(permission)
+    else:
+        # Create default permissions for all agents
+        for agent_name in AgentName:
+            permission = create_test_permission(
+                user_id=user.user_id,
+                agent_name=agent_name,
+                created_by_user_id=user.user_id,
+            )
+            permissions.append(permission)
+
+    return user, permissions
+
+
+def create_permission_audit_trail(
+    user_id: UUID, agent_name: AgentName, changed_by_user_id: UUID | None = None
+) -> list[PermissionAuditLog]:
+    """Create a complete permission audit trail."""
+    if not changed_by_user_id:
+        changed_by_user_id = UUID(fake.uuid4())
+
+    base_time = fake.date_time_this_month()
+
+    logs = [
+        # CREATE
+        create_test_permission_audit_log(
+            user_id=user_id,
+            agent_name=agent_name,
+            action="CREATE",
+            changed_by_user_id=changed_by_user_id,
+            created_at=base_time,
+            old_permissions=None,
+        ),
+        # UPDATE
+        create_test_permission_audit_log(
+            user_id=user_id,
+            agent_name=agent_name,
+            action="UPDATE",
+            changed_by_user_id=changed_by_user_id,
+            created_at=base_time + timedelta(days=1),
+        ),
+        # DELETE
+        create_test_permission_audit_log(
+            user_id=user_id,
+            agent_name=agent_name,
+            action="DELETE",
+            changed_by_user_id=changed_by_user_id,
+            created_at=base_time + timedelta(days=2),
+            new_permissions=None,
+        ),
+    ]
+
+    return logs

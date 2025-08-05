@@ -465,12 +465,14 @@ class TestSessionData:
 class TestSecureAuthService:
     """Test SecureAuthService enhanced functionality."""
 
-
     @pytest.fixture
-    def secure_auth_service(self, mock_redis_client: MockRedis, monkeypatch: pytest.MonkeyPatch) -> SecureAuthService:
+    def secure_auth_service(
+        self, mock_redis_client: MockRedis, monkeypatch: pytest.MonkeyPatch
+    ) -> SecureAuthService:
         """Create SecureAuthService instance for testing."""
         # Mock the auth_service redis client
         import src.core.security as security_module  # noqa: PLC0415
+
         monkeypatch.setattr(security_module.auth_service, "redis_client", mock_redis_client)
         return SecureAuthService()
 
@@ -780,10 +782,10 @@ class TestSecureAuthService:
         service = SecureAuthService()
 
         # Mock Redis to fail for certain operations
-        def failing_operation(*args: object, **kwargs: object) -> None:
+        def failing_setex(key: str, _time: int, value: str) -> bool:
             raise Exception("Redis connection failed")
 
-        mock_redis_client.setex = failing_operation
+        mock_redis_client.setex = failing_setex  # type: ignore[method-assign]
 
         # Service should handle Redis failures gracefully for non-critical operations
         # This test verifies that the service doesn't crash completely
