@@ -4,89 +4,20 @@ Pytest configuration and fixtures for testing.
 This module provides shared fixtures and configuration for all tests.
 """
 
+import os
 from collections.abc import Callable, Generator
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-import redis
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlmodel import Session, SQLModel, StaticPool, create_engine
 
 from src.core.database import get_session
 
-
-# Mock Redis before importing main app
-class MockRedis:
-    """Mock Redis client for testing."""
-
-    def __init__(self) -> None:
-        self.data: dict[str, str] = {}
-        self.lists: dict[str, list[str]] = {}
-        self.expirations: dict[str, float] = {}
-
-    def ping(self) -> bool:
-        return True
-
-    def setex(self, key: str, _time: int, value: str) -> bool:
-        self.data[key] = value
-        return True
-
-    def get(self, key: str) -> str | None:
-        return self.data.get(key)
-
-    def delete(self, key: str) -> bool:
-        if key in self.data:
-            del self.data[key]
-        if key in self.lists:
-            del self.lists[key]
-        return True
-
-    def exists(self, key: str) -> bool:
-        return key in self.data
-
-    def incr(self, key: str) -> int:
-        if key in self.data:
-            self.data[key] = str(int(self.data[key]) + 1)
-        else:
-            self.data[key] = "1"
-        return int(self.data[key])
-
-    def lpush(self, key: str, value: str) -> int:
-        if key not in self.lists:
-            self.lists[key] = []
-        self.lists[key].insert(0, value)
-        return len(self.lists[key])
-
-    def lrange(self, key: str, start: int, end: int) -> list[str]:
-        if key not in self.lists:
-            return []
-        items = self.lists[key]
-        if end == -1:
-            return items[start:]
-        return items[start : end + 1]
-
-    def ltrim(self, key: str, start: int, end: int) -> bool:
-        if key in self.lists:
-            items = self.lists[key]
-            self.lists[key] = items[start : end + 1]
-        return True
-
-    def expire(self, _key: str, _time: int) -> bool:
-        return True
-
-
-# Global mock Redis instance
-mock_redis_instance = MockRedis()
-
-
-def mock_redis_from_url(*args: object, **kwargs: object) -> MockRedis:
-    """Mock redis.from_url function."""
-    return mock_redis_instance
-
-
-# Apply Redis mocking globally
-redis.from_url = mock_redis_from_url
+# Set testing environment before any imports
+os.environ["ENVIRONMENT"] = "testing"
 
 # Now import the app after mocking Redis
 from src.core.security import TokenData  # noqa: E402
@@ -121,8 +52,11 @@ def test_engine() -> Generator[Engine]:
             new_table = table.tometadata(test_metadata)
             # Remove PostgreSQL-specific constraints
             new_table.constraints = {
-                constraint for constraint in new_table.constraints
-                if not (hasattr(constraint, "name") and constraint.name == "permissions_jsonb_structure")
+                constraint
+                for constraint in new_table.constraints
+                if not (
+                    hasattr(constraint, "name") and constraint.name == "permissions_jsonb_structure"
+                )
             }
         else:
             # Copy other tables as-is
@@ -219,13 +153,15 @@ def auth_headers() -> dict[str, str]:
 
 
 @pytest.fixture(name="mock_redis_client")
-def mock_redis_client() -> MockRedis:
+def mock_redis_client() -> MagicMock:
     """Provide mock Redis client for testing."""
-    # Clear mock Redis state before each test
-    mock_redis_instance.data.clear()
-    mock_redis_instance.lists.clear()
-    mock_redis_instance.expirations.clear()
-    return mock_redis_instance
+    mock = MagicMock()
+    mock.get = AsyncMock(return_value=None)
+    mock.setex = AsyncMock(return_value=True)
+    mock.delete = AsyncMock(return_value=0)
+    mock.keys = AsyncMock(return_value=[])
+    mock.close = AsyncMock()
+    return mock
 
 
 @pytest.fixture(name="client")
@@ -245,6 +181,9 @@ def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]
     # Override database session
     app.dependency_overrides[get_session] = get_test_session
 
+    # Note: PermissionService dependency is NOT overridden here
+    # Individual tests can override it with their own mock services
+
     # Override authentication dependencies using dependency overrides
     app.dependency_overrides[security.get_current_user_token] = get_mock_user
     app.dependency_overrides[security.require_authenticated] = get_mock_user
@@ -262,7 +201,7 @@ def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]
             role=UserRole.ADMIN,
             is_active=True,
             password_hash="mock_hash",
-            full_name="Test Admin User"
+            full_name="Test Admin User",
         )
 
     app.dependency_overrides[get_current_user] = mock_current_user
@@ -282,6 +221,7 @@ def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]
     def mock_require_agent_permission(agent_name: str, operation: str) -> Callable:
         def dependency() -> TokenData:
             return get_mock_user()
+
         return dependency
 
     original_require_agent_permission = security.require_agent_permission

@@ -24,6 +24,16 @@ from src.tests.factories import (
 class TestPermissionAPI:
     """Tests for permission API endpoints."""
 
+    @pytest.fixture(autouse=True)
+    def setup_mock_service(self, client: TestClient, mock_permission_service: MagicMock) -> None:
+        """Automatically setup mock permission service for all tests."""
+        from src.api.v1.permissions import get_permission_service
+        
+        def get_mock_permission_service():
+            return mock_permission_service
+
+        client.app.dependency_overrides[get_permission_service] = get_mock_permission_service
+
     @pytest.fixture
     def mock_permission_service(self) -> MagicMock:
         """Create a mock permission service."""
@@ -89,11 +99,10 @@ class TestPermissionAPI:
         user_id = regular_user.user_id
         mock_permission_service.check_user_permission.return_value = True
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.get(
-                f"/api/v1/permissions/check?user_id={user_id}&agent_name=client_management&operation=create",
-                headers=auth_headers,
-            )
+        response = client.get(
+            f"/api/v1/permissions/check?user_id={user_id}&agent_name=client_management&operation=create",
+            headers=auth_headers,
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -147,7 +156,7 @@ class TestPermissionAPI:
         client: TestClient,
         mock_permission_service: MagicMock,
         auth_headers: dict[str, str],
-        sysadmin_user: TokenData,
+        sysadmin_user: TokenData,  # noqa: ARG002  # Fixture for auth setup
     ) -> None:
         """Test successful user permissions retrieval."""
         user_id = uuid4()
@@ -157,11 +166,10 @@ class TestPermissionAPI:
         }
         mock_permission_service.get_user_permissions.return_value = expected_permissions
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.get(
-                f"/api/v1/permissions/user/{user_id}",
-                headers=auth_headers,
-            )
+        response = client.get(
+            f"/api/v1/permissions/user/{user_id}",
+            headers=auth_headers,
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -176,21 +184,45 @@ class TestPermissionAPI:
         regular_user: TokenData,
     ) -> None:
         """Test user permissions retrieval without proper authorization."""
+        from src.core.permissions import get_current_user
+        from src.models.user import User, UserRole
+
         user_id = uuid4()
 
+        # Create a regular user (not admin) for the test
+        def mock_regular_user() -> User:
+            return User(
+                user_id=regular_user.user_id,
+                email=regular_user.email,
+                role=UserRole.USER,  # Regular user, not admin
+                is_active=True,
+                password_hash="mock_hash",
+                full_name="Test Regular User",
+            )
+
+        # Mock the PermissionService to avoid Redis connection issues
+        mock_service = MagicMock()
+        mock_service.get_user_permissions = AsyncMock(return_value={})
+        mock_service.close = AsyncMock()
+
         # Override with regular user who shouldn't have access
-        with patch("src.core.security.get_current_user_token", return_value=regular_user):
+        client.app.dependency_overrides[get_current_user] = mock_regular_user
+        try:
             response = client.get(f"/api/v1/permissions/user/{user_id}")
 
-        # Should get 403 due to role-based access control
-        assert response.status_code == 403
+            # Should get 403 due to role-based access control
+            assert response.status_code == 403
+        finally:
+            # Clean up the override after test
+            if get_current_user in client.app.dependency_overrides:
+                del client.app.dependency_overrides[get_current_user]
 
     def test_assign_permission_success(
         self,
         client: TestClient,
         mock_permission_service: MagicMock,
         auth_headers: dict[str, str],
-        sysadmin_user: TokenData,
+        sysadmin_user: TokenData,  # noqa: ARG002  # Fixture for auth setup
     ) -> None:
         """Test successful permission assignment."""
         user_id = uuid4()
@@ -209,8 +241,7 @@ class TestPermissionAPI:
         )
         mock_permission_service.assign_permission.return_value = created_permission
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.post(
+        response = client.post(
                 "/api/v1/permissions/assign",
                 headers=auth_headers,
                 json=permission_data,
@@ -259,7 +290,7 @@ class TestPermissionAPI:
         client: TestClient,
         mock_permission_service: MagicMock,
         auth_headers: dict[str, str],
-        sysadmin_user: TokenData,
+        sysadmin_user: TokenData,  # noqa: ARG002  # Fixture for auth setup
     ) -> None:
         """Test successful permission revocation."""
         user_id = uuid4()
@@ -268,8 +299,7 @@ class TestPermissionAPI:
 
         mock_permission_service.revoke_permission.return_value = True
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.delete(
+        response = client.delete(
                 f"/api/v1/permissions/user/{user_id}/agent/{agent_name}",
                 headers=auth_headers,
                 params={"change_reason": change_reason},
@@ -291,7 +321,7 @@ class TestPermissionAPI:
         client: TestClient,
         mock_permission_service: MagicMock,
         auth_headers: dict[str, str],
-        sysadmin_user: TokenData,
+        sysadmin_user: TokenData,  # noqa: ARG002  # Fixture for auth setup
     ) -> None:
         """Test revoking non-existent permission."""
         user_id = uuid4()
@@ -299,8 +329,7 @@ class TestPermissionAPI:
 
         mock_permission_service.revoke_permission.return_value = False
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.delete(
+        response = client.delete(
                 f"/api/v1/permissions/user/{user_id}/agent/{agent_name}",
                 headers=auth_headers,
             )
@@ -314,7 +343,7 @@ class TestPermissionAPI:
         client: TestClient,
         mock_permission_service: MagicMock,
         auth_headers: dict[str, str],
-        sysadmin_user: TokenData,
+        sysadmin_user: TokenData,  # noqa: ARG002  # Fixture for auth setup
     ) -> None:
         """Test successful bulk permission assignment."""
         user_ids = [uuid4(), uuid4()]
@@ -349,8 +378,7 @@ class TestPermissionAPI:
         }
         mock_permission_service.bulk_assign_permissions.return_value = mock_result
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.post(
+        response = client.post(
                 "/api/v1/permissions/bulk-assign",
                 headers=auth_headers,
                 json=bulk_data,
@@ -395,7 +423,7 @@ class TestPermissionAPI:
         client: TestClient,
         mock_permission_service: MagicMock,
         auth_headers: dict[str, str],
-        sysadmin_user: TokenData,
+        sysadmin_user: TokenData,  # noqa: ARG002  # Fixture for auth setup
     ) -> None:
         """Test successful template application."""
         template_id = uuid4()
@@ -412,8 +440,7 @@ class TestPermissionAPI:
         }
         mock_permission_service.apply_template_to_users.return_value = mock_result
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.post(
+        response = client.post(
                 f"/api/v1/permissions/templates/{template_id}/apply",
                 headers=auth_headers,
                 json=apply_data,
@@ -442,8 +469,7 @@ class TestPermissionAPI:
         templates = [create_test_template() for _ in range(3)]
         mock_permission_service.list_templates.return_value = (templates, 3)
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.get(
+        response = client.get(
                 "/api/v1/permissions/templates",
                 headers=auth_headers,
                 params={"page": 1, "page_size": 10},
@@ -470,8 +496,7 @@ class TestPermissionAPI:
         system_templates = [create_test_template(is_system=True) for _ in range(2)]
         mock_permission_service.list_templates.return_value = (system_templates, 2)
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.get(
+        response = client.get(
                 "/api/v1/permissions/templates",
                 headers=auth_headers,
                 params={"system_only": True},
@@ -490,7 +515,7 @@ class TestPermissionAPI:
         client: TestClient,
         mock_permission_service: MagicMock,
         auth_headers: dict[str, str],
-        sysadmin_user: TokenData,
+        sysadmin_user: TokenData,  # noqa: ARG002  # Fixture for auth setup
     ) -> None:
         """Test successful template creation."""
         template_data = {
@@ -517,8 +542,7 @@ class TestPermissionAPI:
         )
         mock_permission_service.create_template.return_value = created_template
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.post(
+        response = client.post(
                 "/api/v1/permissions/templates",
                 headers=auth_headers,
                 json=template_data,
@@ -562,7 +586,7 @@ class TestPermissionAPI:
         client: TestClient,
         mock_permission_service: MagicMock,
         auth_headers: dict[str, str],
-        sysadmin_user: TokenData,
+        sysadmin_user: TokenData,  # noqa: ARG002  # Fixture for auth setup
     ) -> None:
         """Test successful template update."""
         template_id = uuid4()
@@ -577,8 +601,7 @@ class TestPermissionAPI:
         updated_template.template_id = template_id
         mock_permission_service.update_template.return_value = updated_template
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.put(
+        response = client.put(
                 f"/api/v1/permissions/templates/{template_id}",
                 headers=auth_headers,
                 json=update_data,
@@ -601,7 +624,7 @@ class TestPermissionAPI:
         client: TestClient,
         mock_permission_service: MagicMock,
         auth_headers: dict[str, str],
-        sysadmin_user: TokenData,
+        sysadmin_user: TokenData,  # noqa: ARG002  # Fixture for auth setup
     ) -> None:
         """Test updating non-existent template."""
         template_id = uuid4()
@@ -609,8 +632,7 @@ class TestPermissionAPI:
 
         mock_permission_service.update_template.return_value = None
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.put(
+        response = client.put(
                 f"/api/v1/permissions/templates/{template_id}",
                 headers=auth_headers,
                 json=update_data,
@@ -631,8 +653,7 @@ class TestPermissionAPI:
 
         mock_permission_service.delete_template.return_value = True
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.delete(
+        response = client.delete(
                 f"/api/v1/permissions/templates/{template_id}",
                 headers=auth_headers,
             )
@@ -654,8 +675,7 @@ class TestPermissionAPI:
 
         mock_permission_service.delete_template.return_value = False
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.delete(
+        response = client.delete(
                 f"/api/v1/permissions/templates/{template_id}",
                 headers=auth_headers,
             )
@@ -676,8 +696,7 @@ class TestPermissionAPI:
         audit_logs = [create_test_permission_audit_log() for _ in range(5)]
         mock_permission_service.get_audit_log.return_value = (audit_logs, 5)
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.get(
+        response = client.get(
                 "/api/v1/permissions/audit",
                 headers=auth_headers,
                 params={
@@ -713,8 +732,7 @@ class TestPermissionAPI:
         audit_logs = [create_test_permission_audit_log(user_id=user_id)]
         mock_permission_service.get_audit_log.return_value = (audit_logs, 1)
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.get(
+        response = client.get(
                 "/api/v1/permissions/audit",
                 headers=auth_headers,
                 params={
@@ -757,8 +775,7 @@ class TestPermissionAPI:
         }
         mock_permission_service.get_permission_stats.return_value = expected_stats
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.get(
+        response = client.get(
                 "/api/v1/permissions/stats",
                 headers=auth_headers,
             )
@@ -843,8 +860,7 @@ class TestPermissionAPI:
         user_id = uuid4()
         mock_permission_service.get_user_permissions.side_effect = NotFoundError("User not found")
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
-            response = client.get(
+        response = client.get(
                 f"/api/v1/permissions/user/{user_id}",
                 headers=auth_headers,
             )
@@ -863,9 +879,8 @@ class TestPermissionAPI:
         """Test pagination parameter validation."""
         mock_permission_service.list_templates.return_value = ([], 0)
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
             # Test invalid page number
-            response = client.get(
+        response = client.get(
                 "/api/v1/permissions/templates",
                 headers=auth_headers,
                 params={"page": 0},  # Invalid - should be >= 1
@@ -873,9 +888,8 @@ class TestPermissionAPI:
 
         assert response.status_code == 422
 
-        with patch("src.api.v1.permissions.PermissionService", return_value=mock_permission_service):
             # Test invalid page size
-            response = client.get(
+        response = client.get(
                 "/api/v1/permissions/templates",
                 headers=auth_headers,
                 params={"page_size": 0},  # Invalid - should be >= 1

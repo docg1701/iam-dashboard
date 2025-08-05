@@ -424,7 +424,7 @@ class TestPermissionTemplate:
             "client_management",
             "pdf_processing",
             "reports_analysis",
-            "audio_recording"
+            "audio_recording",
         }
         assert set(template.permissions.keys()) == expected_agents
 
@@ -550,7 +550,7 @@ class TestPermissionAuditLog:
             "ix_permission_audit_action",
             "ix_permission_audit_changed_by",
             "ix_permission_audit_created_at",
-            "ix_permission_audit_user_agent"
+            "ix_permission_audit_user_agent",
         ]
         for index_name in expected_indexes:
             assert index_name in table_args_str

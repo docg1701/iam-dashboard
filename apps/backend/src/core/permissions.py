@@ -4,6 +4,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 from functools import wraps
+from typing import Any
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, status
@@ -85,7 +86,7 @@ class PermissionChecker:
             await permission_service.close()
 
 
-def require_permission(agent_name: AgentName, operation: str) -> Callable:
+def require_permission(agent_name: AgentName, operation: str) -> Any:
     """
     Decorator to require specific permission for an endpoint.
 
@@ -105,82 +106,82 @@ def require_permission(agent_name: AgentName, operation: str) -> Callable:
     return Depends(PermissionChecker(agent_name, operation))
 
 
-def require_client_management_create() -> Callable:
+def require_client_management_create() -> Any:
     """Require client management create permission."""
     return require_permission(AgentName.CLIENT_MANAGEMENT, "create")
 
 
-def require_client_management_read() -> Callable:
+def require_client_management_read() -> Any:
     """Require client management read permission."""
     return require_permission(AgentName.CLIENT_MANAGEMENT, "read")
 
 
-def require_client_management_update() -> Callable:
+def require_client_management_update() -> Any:
     """Require client management update permission."""
     return require_permission(AgentName.CLIENT_MANAGEMENT, "update")
 
 
-def require_client_management_delete() -> Callable:
+def require_client_management_delete() -> Any:
     """Require client management delete permission."""
     return require_permission(AgentName.CLIENT_MANAGEMENT, "delete")
 
 
-def require_pdf_processing_create() -> Callable:
+def require_pdf_processing_create() -> Any:
     """Require PDF processing create permission."""
     return require_permission(AgentName.PDF_PROCESSING, "create")
 
 
-def require_pdf_processing_read() -> Callable:
+def require_pdf_processing_read() -> Any:
     """Require PDF processing read permission."""
     return require_permission(AgentName.PDF_PROCESSING, "read")
 
 
-def require_pdf_processing_update() -> Callable:
+def require_pdf_processing_update() -> Any:
     """Require PDF processing update permission."""
     return require_permission(AgentName.PDF_PROCESSING, "update")
 
 
-def require_pdf_processing_delete() -> Callable:
+def require_pdf_processing_delete() -> Any:
     """Require PDF processing delete permission."""
     return require_permission(AgentName.PDF_PROCESSING, "delete")
 
 
-def require_reports_analysis_create() -> Callable:
+def require_reports_analysis_create() -> Any:
     """Require reports analysis create permission."""
     return require_permission(AgentName.REPORTS_ANALYSIS, "create")
 
 
-def require_reports_analysis_read() -> Callable:
+def require_reports_analysis_read() -> Any:
     """Require reports analysis read permission."""
     return require_permission(AgentName.REPORTS_ANALYSIS, "read")
 
 
-def require_reports_analysis_update() -> Callable:
+def require_reports_analysis_update() -> Any:
     """Require reports analysis update permission."""
     return require_permission(AgentName.REPORTS_ANALYSIS, "update")
 
 
-def require_reports_analysis_delete() -> Callable:
+def require_reports_analysis_delete() -> Any:
     """Require reports analysis delete permission."""
     return require_permission(AgentName.REPORTS_ANALYSIS, "delete")
 
 
-def require_audio_recording_create() -> Callable:
+def require_audio_recording_create() -> Any:
     """Require audio recording create permission."""
     return require_permission(AgentName.AUDIO_RECORDING, "create")
 
 
-def require_audio_recording_read() -> Callable:
+def require_audio_recording_read() -> Any:
     """Require audio recording read permission."""
     return require_permission(AgentName.AUDIO_RECORDING, "read")
 
 
-def require_audio_recording_update() -> Callable:
+def require_audio_recording_update() -> Any:
     """Require audio recording update permission."""
     return require_permission(AgentName.AUDIO_RECORDING, "update")
 
 
-def require_audio_recording_delete() -> Callable:
+def require_audio_recording_delete() -> Any:
     """Require audio recording delete permission."""
     return require_permission(AgentName.AUDIO_RECORDING, "delete")
 
@@ -215,7 +216,7 @@ class PermissionMiddleware:
                 await request.state.permission_service.close()
 
 
-def check_user_permission_sync(user_id: UUID, agent_name: AgentName, operation: str) -> Callable:
+def check_user_permission_sync(user_id: UUID, agent_name: AgentName, operation: str) -> bool:
     """
     Synchronous permission checker for use in non-async contexts.
 
@@ -234,6 +235,7 @@ def check_user_permission_sync(user_id: UUID, agent_name: AgentName, operation: 
 
     def checker() -> bool:
         """Check permission synchronously (requires running event loop)."""
+
         async def _check():
             service = PermissionService()
             try:
@@ -278,7 +280,7 @@ def permission_required(agent_name: AgentName, operation: str):
             pass
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         async def wrapper(*args, **kwargs):
             # Extract user_id from function arguments
@@ -349,7 +351,7 @@ async def check_sysadmin_only(user: User) -> bool:
     return user.role == UserRole.SYSADMIN
 
 
-def require_admin_or_sysadmin() -> Callable:
+def require_admin_or_sysadmin() -> Any:
     """
     Dependency to require admin or sysadmin role.
 
@@ -368,7 +370,7 @@ def require_admin_or_sysadmin() -> Callable:
     return Depends(check_role)
 
 
-def require_sysadmin_only() -> Callable:
+def require_sysadmin_only() -> Any:
     """
     Dependency to require sysadmin role.
 

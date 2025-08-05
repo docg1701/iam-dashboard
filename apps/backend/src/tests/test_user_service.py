@@ -526,9 +526,8 @@ class TestUserServiceIntegration:
 
         # Verify in database
         from sqlmodel import select
-        db_user = test_session.exec(
-            select(User).where(User.user_id == result.user_id)
-        ).first()
+
+        db_user = test_session.exec(select(User).where(User.user_id == result.user_id)).first()
         assert db_user is not None
         assert db_user.email == user_data.email
 
@@ -652,7 +651,9 @@ class TestUserServiceIntegration:
         assert test_user.email == "updated@example.com"
 
     @pytest.mark.asyncio
-    async def test_update_user_integration_sysadmin_change_role(self, test_session: Session) -> None:
+    async def test_update_user_integration_sysadmin_change_role(
+        self, test_session: Session
+    ) -> None:
         """Test sysadmin can change another user's role."""
         # Create sysadmin and regular user
         sysadmin = UserFactory(role=UserRole.SYSADMIN)
@@ -734,6 +735,7 @@ class TestUserServiceIntegration:
 
         # Search parameters
         from src.schemas.users import UserSearchParams
+
         search_params = UserSearchParams()
 
         # List users
@@ -765,6 +767,7 @@ class TestUserServiceIntegration:
 
         # Search for active users only
         from src.schemas.users import UserSearchParams
+
         search_params = UserSearchParams(is_active=True)
 
         result_items, total_count = await user_service.list_users(
@@ -824,6 +827,7 @@ class TestUserServiceIntegration:
 
         # Search parameters
         from src.schemas.users import UserSearchParams
+
         search_params = UserSearchParams()
 
         # Get first page (2 items per page)
@@ -984,7 +988,9 @@ class TestUserServicePrivateMethods:
         assert exc_info.value.error_code == "PERMISSION_DENIED"
 
     @pytest.mark.asyncio
-    async def test_validate_user_update_permissions_self_allowed(self, test_session: Session) -> None:
+    async def test_validate_user_update_permissions_self_allowed(
+        self, test_session: Session
+    ) -> None:
         """Test user update permission validation for self updates."""
         # Create regular user
         user = UserFactory(role=UserRole.USER)
@@ -1005,7 +1011,9 @@ class TestUserServicePrivateMethods:
             pytest.fail("User should be able to update their own email and password")
 
     @pytest.mark.asyncio
-    async def test_validate_user_update_permissions_self_role_denied(self, test_session: Session) -> None:
+    async def test_validate_user_update_permissions_self_role_denied(
+        self, test_session: Session
+    ) -> None:
         """Test user update permission validation for self role change."""
         # Create regular user
         user = UserFactory(role=UserRole.USER)
@@ -1027,7 +1035,9 @@ class TestUserServicePrivateMethods:
         assert exc_info.value.error_code == "SELF_MODIFICATION_DENIED"
 
     @pytest.mark.asyncio
-    async def test_validate_user_update_permissions_other_user_sysadmin(self, test_session: Session) -> None:
+    async def test_validate_user_update_permissions_other_user_sysadmin(
+        self, test_session: Session
+    ) -> None:
         """Test sysadmin can update other users."""
         # Create sysadmin and regular user
         sysadmin = UserFactory(role=UserRole.SYSADMIN)
@@ -1049,7 +1059,9 @@ class TestUserServicePrivateMethods:
             pytest.fail("Sysadmin should be able to update other users")
 
     @pytest.mark.asyncio
-    async def test_validate_user_update_permissions_other_user_non_sysadmin(self, test_session: Session) -> None:
+    async def test_validate_user_update_permissions_other_user_non_sysadmin(
+        self, test_session: Session
+    ) -> None:
         """Test non-sysadmin cannot update other users."""
         # Create admin and regular user
         admin = UserFactory(role=UserRole.ADMIN)
@@ -1185,6 +1197,7 @@ class TestUserServiceErrorHandling:
 
         # Mock session exec to raise SQLAlchemy error
         from src.schemas.users import UserSearchParams
+
         search_params = UserSearchParams()
 
         with patch.object(test_session, "exec", side_effect=SQLAlchemyError("Database error")):

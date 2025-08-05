@@ -561,6 +561,7 @@ class TestClientServiceUpdate:
 
         # Update data
         from src.schemas.clients import ClientUpdate
+
         update_data = ClientUpdate(
             full_name="Updated Name",
             notes="Updated notes",
@@ -601,6 +602,7 @@ class TestClientServiceUpdate:
 
         # Update data
         from src.schemas.clients import ClientUpdate
+
         update_data = ClientUpdate(full_name="Updated Name")
 
         # Try to update non-existent client
@@ -663,6 +665,7 @@ class TestClientServiceUpdate:
 
         # Try to update client2's SSN to match client1's SSN
         from src.schemas.clients import ClientUpdate
+
         update_data = ClientUpdate(ssn="111-11-1111")
 
         with pytest.raises(ConflictError) as exc_info:
@@ -711,6 +714,7 @@ class TestClientServiceUpdate:
 
         # Update only birth_date
         from src.schemas.clients import ClientUpdate
+
         update_data = ClientUpdate(birth_date=date(1985, 6, 15))
 
         result = await service.update_client(client_id, update_data, user.user_id, mock_request)
@@ -763,6 +767,7 @@ class TestClientServiceUpdate:
 
         # Update data
         from src.schemas.clients import ClientUpdate
+
         update_data = ClientUpdate(full_name="Updated Name")
 
         # Update client
@@ -829,9 +834,8 @@ class TestClientServiceDelete:
 
         # Verify client is soft-deleted (archived)
         from sqlmodel import select
-        db_client = test_session.exec(
-            select(Client).where(Client.client_id == client_id)
-        ).first()
+
+        db_client = test_session.exec(select(Client).where(Client.client_id == client_id)).first()
         assert db_client is not None
         assert db_client.status == "archived"
         assert db_client.updated_by == user.user_id
@@ -946,9 +950,9 @@ class TestClientServiceList:
         for i in range(5):
             client = Client(
                 client_id=uuid4(),
-                full_name=f"Test Client {i+1}",
+                full_name=f"Test Client {i + 1}",
                 ssn=f"12{i}-45-678{i}",
-                birth_date=date(1990, 1, i+1),
+                birth_date=date(1990, 1, i + 1),
                 status="active",
                 created_by=user.user_id,
                 updated_by=user.user_id,
@@ -969,6 +973,7 @@ class TestClientServiceList:
 
         # Search parameters
         from src.schemas.clients import ClientSearchParams
+
         search_params = ClientSearchParams()
 
         # List clients with pagination
@@ -1046,6 +1051,7 @@ class TestClientServiceList:
 
         # Search for clients with "John" in name
         from src.schemas.clients import ClientSearchParams
+
         search_params = ClientSearchParams(full_name="john")
 
         result_clients, pagination_info = await service.list_clients(
@@ -1112,6 +1118,7 @@ class TestClientServiceList:
 
         # Search for active clients only
         from src.schemas.clients import ClientSearchParams
+
         search_params = ClientSearchParams(status=ClientStatus.ACTIVE)
 
         result_clients, pagination_info = await service.list_clients(
@@ -1149,6 +1156,7 @@ class TestClientServiceList:
 
         # Search parameters
         from src.schemas.clients import ClientSearchParams
+
         search_params = ClientSearchParams()
 
         # List clients (no clients exist)
@@ -1191,6 +1199,7 @@ class TestClientServiceList:
 
         # Search parameters
         from src.schemas.clients import ClientSearchParams
+
         search_params = ClientSearchParams()
 
         # List clients
@@ -1354,6 +1363,7 @@ class TestClientServiceErrorHandlingExtended:
 
         # Update data
         from src.schemas.clients import ClientUpdate
+
         update_data = ClientUpdate(full_name="Updated Name")
 
         # Mock session to raise SQLAlchemy error
@@ -1431,6 +1441,7 @@ class TestClientServiceErrorHandlingExtended:
 
         # Search parameters
         from src.schemas.clients import ClientSearchParams
+
         search_params = ClientSearchParams()
 
         # Mock session to raise SQLAlchemy error

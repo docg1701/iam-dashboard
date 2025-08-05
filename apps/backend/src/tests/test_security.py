@@ -2,6 +2,7 @@
 
 import time
 from datetime import datetime, timedelta
+from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
 import jwt
@@ -21,7 +22,8 @@ from src.core.security import (
     require_any_role,
     require_role,
 )
-from src.tests.conftest import MockRedis
+
+# MagicMock no longer needed - AuthService handles testing mode internally
 
 
 class TestTokenData:
@@ -467,7 +469,7 @@ class TestSecureAuthService:
 
     @pytest.fixture
     def secure_auth_service(
-        self, mock_redis_client: MockRedis, monkeypatch: pytest.MonkeyPatch
+        self, mock_redis_client: MagicMock, monkeypatch: pytest.MonkeyPatch
     ) -> SecureAuthService:
         """Create SecureAuthService instance for testing."""
         # Mock the auth_service redis client
@@ -485,7 +487,7 @@ class TestSecureAuthService:
         assert secure_auth_service.redis_client is not None
 
     def test_create_access_token_with_session(
-        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
     ) -> None:
         """Test JWT creation with Redis session tracking."""
         user_id = uuid4()
@@ -572,7 +574,7 @@ class TestSecureAuthService:
         assert verified_data.jti is not None
 
     def test_verify_token_invalid_session(
-        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
     ) -> None:
         """Test token verification with invalid session."""
         user_id = uuid4()
@@ -595,7 +597,7 @@ class TestSecureAuthService:
         assert "Invalid session" in exc_info.value.detail
 
     def test_verify_token_blacklisted(
-        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
     ) -> None:
         """Test token verification with blacklisted token."""
         user_id = uuid4()
@@ -673,7 +675,7 @@ class TestSecureAuthService:
         assert "Invalid token type" in exc_info.value.detail
 
     def test_refresh_access_token_blacklisted(
-        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
     ) -> None:
         """Test refresh token that is blacklisted."""
         user_id = uuid4()
@@ -697,7 +699,7 @@ class TestSecureAuthService:
         assert "Refresh token has been revoked" in exc_info.value.detail
 
     def test_blacklist_token(
-        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
     ) -> None:
         """Test token blacklisting functionality."""
         jti = "test_jti_123"
@@ -713,7 +715,7 @@ class TestSecureAuthService:
         assert f"blacklist:{jti}" in mock_redis_client.data
 
     def test_blacklist_token_expired(
-        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
     ) -> None:
         """Test blacklisting already expired token."""
         jti = "expired_jti"
@@ -726,7 +728,7 @@ class TestSecureAuthService:
         assert f"blacklist:{jti}" not in mock_redis_client.data
 
     def test_revoke_session(
-        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
     ) -> None:
         """Test session revocation."""
         user_id = uuid4()
@@ -748,7 +750,7 @@ class TestSecureAuthService:
         assert session_key not in mock_redis_client.data
 
     def test_validate_session_updates_activity(
-        self, secure_auth_service: SecureAuthService, mock_redis_client: MockRedis
+        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
     ) -> None:
         """Test that session validation updates last activity."""
         user_id = uuid4()
@@ -776,7 +778,7 @@ class TestSecureAuthService:
 
         assert updated_session.last_activity >= initial_session.last_activity
 
-    def test_redis_connection_failure_graceful_handling(self, mock_redis_client: MockRedis) -> None:
+    def test_redis_connection_failure_graceful_handling(self, mock_redis_client: MagicMock) -> None:
         """Test that Redis failures are handled gracefully in most operations."""
         # Create service with mocked Redis that can fail
         service = SecureAuthService()

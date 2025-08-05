@@ -404,12 +404,14 @@ class UserAgentPermissionFactory(factory.Factory):  # type: ignore[misc,name-def
 
     # Core fields
     user_id = factory.LazyFunction(lambda: UUID(fake.uuid4()))  # type: ignore[attr-defined,no-untyped-call]
-    agent_name = factory.Iterator([
-        AgentName.CLIENT_MANAGEMENT,
-        AgentName.PDF_PROCESSING,
-        AgentName.REPORTS_ANALYSIS,
-        AgentName.AUDIO_RECORDING,
-    ])  # type: ignore[attr-defined,no-untyped-call]
+    agent_name = factory.Iterator(
+        [
+            AgentName.CLIENT_MANAGEMENT,
+            AgentName.PDF_PROCESSING,
+            AgentName.REPORTS_ANALYSIS,
+            AgentName.AUDIO_RECORDING,
+        ]
+    )  # type: ignore[attr-defined]
     permissions = factory.LazyAttribute(  # type: ignore[attr-defined,no-untyped-call]
         lambda obj: generate_agent_permissions(obj.agent_name)
     )
@@ -427,7 +429,7 @@ class PermissionTemplateFactory(factory.Factory):  # type: ignore[misc,name-defi
         model = PermissionTemplate
 
     # Core fields
-    template_name = factory.LazyAttribute(lambda obj: f"{fake.word().title()} Template")  # type: ignore[attr-defined,no-untyped-call]
+    template_name = factory.LazyAttribute(lambda _: f"{fake.word().title()} Template")  # type: ignore[attr-defined,no-untyped-call]
     description = Faker("sentence")  # type: ignore[no-untyped-call]
     permissions = factory.LazyFunction(lambda: generate_template_permissions())  # type: ignore[attr-defined,no-untyped-call]
 
@@ -446,12 +448,14 @@ class PermissionAuditLogFactory(factory.Factory):  # type: ignore[misc,name-defi
 
     # Core fields
     user_id = factory.LazyFunction(lambda: UUID(fake.uuid4()))  # type: ignore[attr-defined,no-untyped-call]
-    agent_name = factory.Iterator([
-        AgentName.CLIENT_MANAGEMENT,
-        AgentName.PDF_PROCESSING,
-        AgentName.REPORTS_ANALYSIS,
-        AgentName.AUDIO_RECORDING,
-    ])  # type: ignore[attr-defined,no-untyped-call]
+    agent_name = factory.Iterator(
+        [
+            AgentName.CLIENT_MANAGEMENT,
+            AgentName.PDF_PROCESSING,
+            AgentName.REPORTS_ANALYSIS,
+            AgentName.AUDIO_RECORDING,
+        ]
+    )  # type: ignore[attr-defined]
     action = factory.Iterator(["CREATE", "UPDATE", "DELETE", "BULK_CREATE", "BULK_UPDATE"])  # type: ignore[attr-defined,no-untyped-call]
 
     # Permission data
@@ -462,13 +466,15 @@ class PermissionAuditLogFactory(factory.Factory):  # type: ignore[misc,name-defi
 
     # Audit metadata
     changed_by_user_id = factory.LazyFunction(lambda: UUID(fake.uuid4()))  # type: ignore[attr-defined,no-untyped-call]
-    change_reason = factory.Iterator([
-        "Initial permission assignment",
-        "Role change update",
-        "Security audit adjustment",
-        "User request modification",
-        None,
-    ])  # type: ignore[attr-defined,no-untyped-call]
+    change_reason = factory.Iterator(
+        [
+            "Initial permission assignment",
+            "Role change update",
+            "Security audit adjustment",
+            "User request modification",
+            None,
+        ]
+    )  # type: ignore[attr-defined]
 
     # Timestamps
     created_at = Faker("date_time_this_year")  # type: ignore[no-untyped-call]
@@ -537,13 +543,15 @@ class SystemPermissionTemplateFactory(PermissionTemplateFactory):
     """Factory for system permission templates."""
 
     is_system_template = True
-    template_name = factory.Iterator([
-        "Administrator Template",
-        "Manager Template",
-        "User Template",
-        "Read-Only Template",
-        "Agent Specialist Template",
-    ])  # type: ignore[attr-defined,no-untyped-call]
+    template_name = factory.Iterator(
+        [
+            "Administrator Template",
+            "Manager Template",
+            "User Template",
+            "Read-Only Template",
+            "Agent Specialist Template",
+        ]
+    )  # type: ignore[attr-defined]
     description = factory.LazyAttribute(  # type: ignore[attr-defined,no-untyped-call,assignment]
         lambda obj: f"System template for {obj.template_name.lower()}"
     )

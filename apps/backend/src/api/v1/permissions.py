@@ -2,11 +2,13 @@
 
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlmodel import Session
 
+from src.core.database import get_session
 from src.core.exceptions import AuthorizationError, ValidationError
 from src.core.permissions import require_admin_or_sysadmin
 from src.models.permissions import AgentName
@@ -35,19 +37,24 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/permissions", tags=["permissions"])
 
 
+def get_permission_service(session: Annotated[Session, Depends(get_session)]) -> PermissionService:
+    """Create PermissionService with database session dependency."""
+    return PermissionService(session=session)
+
+
 @router.get("/check", response_model=PermissionCheckResponse)
 async def check_user_permission(
     user_id: UUID = Query(description="User ID to check"),
     agent_name: AgentName = Query(description="Agent name"),
     operation: str = Query(description="Operation to check"),
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> PermissionCheckResponse:
     """Check if a user has a specific permission."""
     logger.info(
         f"Checking permission for user {user_id}, agent {agent_name}, operation {operation}"
     )
 
-    service: PermissionService = PermissionService()
     try:
         granted = await service.check_user_permission(user_id, agent_name, operation)
         return PermissionCheckResponse(
@@ -65,11 +72,11 @@ async def check_user_permission(
 async def get_user_permissions(
     user_id: UUID,
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> UserPermissionMatrixResponse:
     """Get complete permission matrix for a user."""
     logger.info(f"Getting permissions for user {user_id}")
 
-    service: PermissionService = PermissionService()
     try:
         permissions = await service.get_user_permissions(user_id)
         return UserPermissionMatrixResponse(user_id=user_id, permissions=permissions)
@@ -85,11 +92,10 @@ async def get_user_permissions(
 async def assign_user_permission(
     request: UserPermissionAssignRequest,
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> UserPermissionResponse:
     """Assign permissions to a user."""
     logger.info(f"Assigning permissions to user {request.user_id} for agent {request.agent_name}")
-
-    service: PermissionService = PermissionService()
     try:
         permission = await service.assign_permission(
             user_id=request.user_id,
@@ -113,11 +119,11 @@ async def update_user_permission(
     agent_name: AgentName,
     request: UserPermissionUpdateRequest,
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> UserPermissionResponse:
     """Update permissions for a user and agent."""
     logger.info(f"Updating permissions for user {user_id} and agent {agent_name}")
 
-    service: PermissionService = PermissionService()
     try:
         permission = await service.assign_permission(
             user_id=user_id,
@@ -141,11 +147,11 @@ async def revoke_user_permission(
     agent_name: AgentName,
     change_reason: str = Query(default=None, description="Reason for revoking permission"),
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> dict[str, str]:
     """Revoke permissions for a user and agent."""
     logger.info(f"Revoking permissions for user {user_id} and agent {agent_name}")
 
-    service: PermissionService = PermissionService()
     try:
         await service.revoke_permission(
             user_id=user_id,
@@ -166,13 +172,13 @@ async def revoke_user_permission(
 async def bulk_assign_permissions(
     request: BulkPermissionAssignRequest,
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> BulkOperationResponse:
     """Bulk assign permissions to multiple users."""
     logger.info(
         f"Bulk assigning permissions to {len(request.user_ids)} users for agent {request.agent_name}"
     )
 
-    service: PermissionService = PermissionService()
     try:
         agent_permissions = {request.agent_name: request.permissions}
         result = await service.bulk_assign_permissions(
@@ -201,11 +207,11 @@ async def bulk_assign_permissions(
 async def bulk_apply_template(
     request: BulkTemplateApplyRequest,
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> BulkOperationResponse:
     """Apply a permission template to multiple users."""
     logger.info(f"Applying template {request.template_id} to {len(request.user_ids)} users")
 
-    service: PermissionService = PermissionService()
     try:
         result = await service.apply_template_to_users(
             template_id=request.template_id,
@@ -232,11 +238,11 @@ async def list_permission_templates(
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     system_only: bool = Query(default=False, description="Show only system templates"),
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> PaginatedPermissionTemplatesResponse:
     """List permission templates with pagination."""
     logger.info(f"Listing permission templates - page {page}, size {page_size}")
 
-    service: PermissionService = PermissionService()
     try:
         templates, total = await service.list_templates(
             page=page, page_size=page_size, system_only=system_only
@@ -257,11 +263,11 @@ async def list_permission_templates(
 async def create_permission_template(
     request: PermissionTemplateCreateRequest,
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> PermissionTemplateResponse:
     """Create a new permission template."""
     logger.info(f"Creating permission template: {request.template_name}")
 
-    service: PermissionService = PermissionService()
     try:
         template = await service.create_template(
             template_name=request.template_name,
@@ -281,11 +287,11 @@ async def update_permission_template(
     template_id: UUID,
     request: PermissionTemplateUpdateRequest,
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> PermissionTemplateResponse:
     """Update a permission template."""
     logger.info(f"Updating permission template: {template_id}")
 
-    service: PermissionService = PermissionService()
     try:
         template = await service.update_template(
             template_id=template_id,
@@ -308,11 +314,11 @@ async def update_permission_template(
 async def delete_permission_template(
     template_id: UUID,
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> dict[str, str]:
     """Delete a permission template."""
     logger.info(f"Deleting permission template: {template_id}")
 
-    service: PermissionService = PermissionService()
     try:
         success = await service.delete_template(template_id)
         if not success:
@@ -331,11 +337,11 @@ async def get_permission_audit_log(
     page: int = Query(default=1, ge=1, description="Page number"),
     page_size: int = Query(default=50, ge=1, le=100, description="Items per page"),
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> PaginatedPermissionAuditResponse:
     """Get permission audit log with filtering and pagination."""
     logger.info(f"Getting permission audit log - page {page}, size {page_size}")
 
-    service: PermissionService = PermissionService()
     try:
         audit_entries, total = await service.get_audit_log(
             user_id=user_id, agent_name=agent_name, action=action, page=page, page_size=page_size
@@ -355,11 +361,11 @@ async def get_permission_audit_log(
 @router.get("/stats", response_model=PermissionStatsResponse)
 async def get_permission_statistics(
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> PermissionStatsResponse:
     """Get permission system statistics."""
     logger.info("Getting permission statistics")
 
-    service: PermissionService = PermissionService()
     try:
         stats = await service.get_permission_stats()
         return PermissionStatsResponse(**stats)
@@ -371,6 +377,7 @@ async def get_permission_statistics(
 async def validate_permissions(
     permissions: dict[str, Any],
     current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
 ) -> PermissionValidationResponse:
     """Validate permission structure."""
     logger.info("Validating permission structure")

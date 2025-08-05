@@ -257,7 +257,9 @@ class UserAgentPermissionCreate(UserAgentPermissionBase):
 class UserAgentPermissionUpdate(SQLModel):
     """Schema for updating user agent permissions."""
 
-    permissions: dict[str, Any] | None = Field(default=None, description="Updated permissions structure")
+    permissions: dict[str, Any] | None = Field(
+        default=None, description="Updated permissions structure"
+    )
 
     @field_validator("permissions")
     @classmethod

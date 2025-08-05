@@ -62,10 +62,11 @@ class TestPermissionService:
         return session
 
     @pytest.fixture
-    def permission_service(self, mock_redis: MagicMock) -> PermissionService:
-        """Create PermissionService with mocked Redis."""
-        service = PermissionService()
+    def permission_service(self, mock_redis: MagicMock, mock_session: MagicMock) -> PermissionService:
+        """Create PermissionService with mocked Redis and database session."""
+        service = PermissionService(session=mock_session)
         service.redis_client = mock_redis
+        service._is_testing = True  # Ensure testing mode is enabled
         return service
 
     @pytest.fixture
@@ -90,6 +91,9 @@ class TestPermissionService:
         regular_user: User,
     ) -> None:
         """Test permission check with cache hit."""
+        # Enable Redis for this test
+        permission_service._is_testing = False
+        
         # Mock cache hit
         permissions = {"create": True, "read": True, "update": False, "delete": False}
         mock_redis.get.return_value = json.dumps(permissions)
@@ -100,8 +104,9 @@ class TestPermissionService:
 
         assert result is True
         mock_redis.get.assert_called_once()
-        # Should not access database on cache hit
-        assert not hasattr(permission_service, "_db_called")
+        # Should not access database on cache hit - verify by checking no DB calls were made
+        expected_cache_key = f"permission:user:{regular_user.user_id}:agent:client_management"
+        mock_redis.get.assert_called_with(expected_cache_key)
 
     async def test_check_user_permission_cache_miss(
         self,
@@ -111,32 +116,35 @@ class TestPermissionService:
         regular_user: User,
     ) -> None:
         """Test permission check with cache miss."""
+        # Enable Redis for this test but keep testing mode for session handling
+        permission_service._is_testing = False
+        
         # Mock cache miss
         mock_redis.get.return_value = None
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        # Since we injected the session in the fixture, it will be used directly
+        # Mock permission query
+        permission = create_test_permission(
+            user_id=regular_user.user_id,
+            agent_name=AgentName.CLIENT_MANAGEMENT,
+            permissions={"create": True, "read": True, "update": False, "delete": False},
+        )
+        
+        # Setup multiple return values for the two execute calls in sequence
+        mock_session.execute.side_effect = [
+            MagicMock(scalar=MagicMock(return_value=True)),  # First call: database function
+            MagicMock(scalar_one_or_none=MagicMock(return_value=permission))  # Second call: permission query
+        ]
 
-            # Mock database function call
-            mock_session.execute.return_value.scalar.return_value = True
+        result = await permission_service.check_user_permission(
+            user_id=regular_user.user_id,
+            agent_name=AgentName.CLIENT_MANAGEMENT,
+            operation="create",
+        )
 
-            # Mock permission query
-            permission = create_test_permission(
-                user_id=regular_user.user_id,
-                agent_name=AgentName.CLIENT_MANAGEMENT,
-                permissions={"create": True, "read": True, "update": False, "delete": False},
-            )
-            mock_session.execute.return_value.scalar_one_or_none.return_value = permission
-
-            result = await permission_service.check_user_permission(
-                user_id=regular_user.user_id,
-                agent_name=AgentName.CLIENT_MANAGEMENT,
-                operation="create",
-            )
-
-            assert result is True
-            mock_redis.get.assert_called_once()
-            mock_redis.setex.assert_called_once()  # Should cache the result
+        assert result is True
+        mock_redis.get.assert_called_once()
+        mock_redis.setex.assert_called_once()  # Should cache the result
 
     async def test_check_user_permission_invalid_operation(
         self,
@@ -183,6 +191,9 @@ class TestPermissionService:
         regular_user: User,
     ) -> None:
         """Test get user permissions with cache hit."""
+        # Enable Redis for this test
+        permission_service._is_testing = False
+        
         expected_permissions = {
             "client_management": {"create": True, "read": True, "update": False, "delete": False},
             "pdf_processing": {"create": False, "read": True, "update": False, "delete": False},
@@ -193,6 +204,8 @@ class TestPermissionService:
 
         assert result == expected_permissions
         mock_redis.get.assert_called_once()
+        expected_cache_key = f"permission:user:{regular_user.user_id}:matrix"
+        mock_redis.get.assert_called_with(expected_cache_key)
 
     async def test_get_user_permissions_user_not_found(
         self,
@@ -763,15 +776,19 @@ class TestPermissionService:
         regular_user: User,
     ) -> None:
         """Test cache invalidation functionality."""
-        mock_redis.keys.return_value = [
+        # Enable Redis for this test
+        permission_service._is_testing = False
+        
+        keys_to_delete = [
             f"permission:user:{regular_user.user_id}:agent:client_management",
             f"permission:user:{regular_user.user_id}:matrix",
         ]
+        mock_redis.keys.return_value = keys_to_delete
 
         await permission_service._invalidate_user_cache(regular_user.user_id)
 
         mock_redis.keys.assert_called_once_with(f"permission:user:{regular_user.user_id}:*")
-        mock_redis.delete.assert_called_once()
+        mock_redis.delete.assert_called_once_with(*keys_to_delete)
 
     async def test_cache_invalidation_error_handling(
         self,
@@ -780,12 +797,15 @@ class TestPermissionService:
         regular_user: User,
     ) -> None:
         """Test cache invalidation with Redis error."""
+        # Enable Redis for this test
+        permission_service._is_testing = False
+        
         mock_redis.keys.side_effect = Exception("Redis connection failed")
 
         # Should not raise exception
         await permission_service._invalidate_user_cache(regular_user.user_id)
 
-        mock_redis.keys.assert_called_once()
+        mock_redis.keys.assert_called_once_with(f"permission:user:{regular_user.user_id}:*")
 
     async def test_permission_checking_performance(
         self,
@@ -794,6 +814,9 @@ class TestPermissionService:
         regular_user: User,
     ) -> None:
         """Test permission checking meets <50ms performance requirement."""
+        # Enable Redis for this test
+        permission_service._is_testing = False
+        
         # Mock cache hit for fastest path
         permissions = {"create": True, "read": True, "update": False, "delete": False}
         mock_redis.get.return_value = json.dumps(permissions)

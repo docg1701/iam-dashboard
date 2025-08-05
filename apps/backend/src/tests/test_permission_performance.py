@@ -446,7 +446,7 @@ class TestPermissionPerformance:
         self,
         fast_permission_service: PermissionService,
         mock_redis: MagicMock,
-        mock_fast_session: MagicMock,
+        mock_fast_session: MagicMock,  # noqa: ARG002  # Mock fixture not used in this test
     ) -> None:
         """Test that memory usage remains reasonable with large permission matrices."""
         import json
