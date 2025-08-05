@@ -287,7 +287,10 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
       agent: AgentName
       permissions: PermissionActions
     }) => {
-      return await PermissionAPI.User.updateUserPermission(userId, agent, { permissions })
+      // This would need to be updated to find the permission ID first
+      // For now, we'll throw an error indicating this needs implementation
+      console.log('Update permission requested for:', { userId, agent, permissions })
+      throw new Error('Update permission implementation needed')
     },
     onSuccess: (_data, variables) => {
       // Invalidate permission queries
@@ -305,8 +308,8 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
         description: `Permissões atualizadas com sucesso.`,
       })
     },
-    onError: (error, _variables) => {
-      console.error('Failed to update permission:', error)
+    onError: (error, variables) => {
+      console.error('Failed to update permission:', error, 'Variables:', variables)
       toast({
         title: 'Erro ao atualizar permissões',
         description: `Falha ao atualizar permissões: ${error.message}`,

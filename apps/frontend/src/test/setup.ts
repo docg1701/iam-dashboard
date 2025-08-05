@@ -1,6 +1,7 @@
 import { expect, vi } from 'vitest'
 import * as matchers from '@testing-library/jest-dom/matchers'
 import { setupGlobalMocks, createMockPermissionAPI, createMockAuthStore, createMockApiClient } from '@/__tests__/mocks/api'
+import React from 'react'
 
 // Extend Vitest's expect with jest-dom matchers
 expect.extend(matchers)
@@ -114,21 +115,84 @@ vi.mock('next/navigation', () => ({
 
 // Mock Lucide React icons to avoid rendering issues
 vi.mock('lucide-react', () => {
-  const MockIcon = (props: any) => {
-    const testId = props['data-testid'] || 'mock-icon'
-    return { 
-      $$typeof: Symbol.for('react.element'),
-      type: 'div',
-      props: { ...props, 'data-testid': testId }
-    }
+  const MockIcon = ({ className, ...props }: Record<string, unknown>) => 
+    React.createElement('div', {
+      'data-testid': props['data-testid'] || 'lucide-icon',
+      className: className || 'lucide-icon',
+      ...props
+    }, props.children || 'Icon')
+  
+  // Create a comprehensive list of commonly used Lucide icons
+  const icons = {
+    // Basic icons
+    Plus: MockIcon,
+    Minus: MockIcon,
+    X: MockIcon,
+    Check: MockIcon,
+    ChevronDown: MockIcon,
+    ChevronUp: MockIcon,
+    ChevronLeft: MockIcon,
+    ChevronRight: MockIcon,
+    
+    // UI icons
+    Search: MockIcon,
+    Filter: MockIcon,
+    Settings: MockIcon,
+    MoreHorizontal: MockIcon,
+    Eye: MockIcon,
+    EyeOff: MockIcon,
+    Edit: MockIcon,
+    Trash: MockIcon,
+    Copy: MockIcon,
+    Download: MockIcon,
+    Upload: MockIcon,
+    Refresh: MockIcon,
+    RefreshCw: MockIcon,
+    
+    // User/Admin icons
+    User: MockIcon,
+    Users: MockIcon,
+    Shield: MockIcon,
+    Key: MockIcon,
+    Lock: MockIcon,
+    Unlock: MockIcon,
+    
+    // Status icons
+    AlertTriangle: MockIcon,
+    CheckCircle: MockIcon,
+    XCircle: MockIcon,
+    Info: MockIcon,
+    Warning: MockIcon,
+    
+    // Navigation icons
+    ArrowLeft: MockIcon,
+    ArrowRight: MockIcon,
+    ArrowUp: MockIcon,
+    ArrowDown: MockIcon,
+    
+    // Content icons
+    Calendar: MockIcon,
+    Clock: MockIcon,
+    History: MockIcon,
+    Activity: MockIcon,
+    
+    // Layout icons
+    Layout: MockIcon,
+    Grid: MockIcon,
+    List: MockIcon,
+    Table: MockIcon,
+    
+    // Fallback for any unknown icons
+    default: MockIcon,
   }
   
-  return new Proxy({}, {
+  return new Proxy(icons, {
     get: (target, prop) => {
-      if (typeof prop === 'string') {
-        return MockIcon
+      if (typeof prop === 'string' && prop in target) {
+        return target[prop as keyof typeof target]
       }
-      return target[prop as keyof typeof target]
+      // Return MockIcon for any unknown icon
+      return MockIcon
     }
   })
 })

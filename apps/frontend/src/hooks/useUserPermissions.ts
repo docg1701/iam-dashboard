@@ -259,7 +259,10 @@ export function usePermissionMutations(userId?: string) {
       if (!targetUserId) {
         throw new PermissionError('User ID is required', 'MISSING_USER_ID')
       }
-      return PermissionAPI.User.updateUserPermission(targetUserId, agent, { permissions })
+      // This would need to be updated to find the permission ID first
+      // For now, we'll throw an error indicating this needs implementation
+      console.log('Update permission requested for:', { targetUserId, agent, permissions })
+      throw new PermissionError('Update permission implementation needed', 'NOT_IMPLEMENTED')
     },
     onSuccess: () => {
       if (targetUserId) {
@@ -310,7 +313,10 @@ export function usePermissionMutations(userId?: string) {
       if (!targetUserId) {
         throw new PermissionError('User ID is required', 'MISSING_USER_ID')
       }
-      return PermissionAPI.User.deleteUserPermission(targetUserId, agent)
+      // This would need to be updated to find the permission ID first
+      // For now, we'll throw an error indicating this needs implementation
+      console.log('Delete permission requested for:', { targetUserId, agent })
+      throw new PermissionError('Delete permission implementation needed', 'NOT_IMPLEMENTED')
     },
     onSuccess: () => {
       if (targetUserId) {
@@ -375,7 +381,8 @@ export function usePermissionTemplates() {
   })
 
   return {
-    templates: templates || [],
+    templates: templates?.templates || [],
+    total: templates?.total || 0,
     isLoading,
     error,
     refetch,

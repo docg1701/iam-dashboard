@@ -65,7 +65,8 @@ export const AdminPermissionExample: React.FC = () => {
 
 
   // Handle bulk operations
-  const handleBulkAction = (userIds: string[], _action: string) => {
+  const handleBulkAction = (userIds: string[], action: string) => {
+    console.log('Bulk action:', action, 'for users:', userIds)
     setSelectedUsers(userIds)
     setBulkDialogOpen(true)
   }
