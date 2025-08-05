@@ -283,7 +283,7 @@ def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]
         def dependency() -> TokenData:
             return get_mock_user()
         return dependency
-    
+
     original_require_agent_permission = security.require_agent_permission
     security.require_agent_permission = mock_require_agent_permission
 
@@ -293,7 +293,7 @@ def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]
     ) -> bool:
         # Always return True for tests
         return True
-    
+
     original_check_user_agent_permission = security.check_user_agent_permission
     security.check_user_agent_permission = mock_check_user_agent_permission
 
