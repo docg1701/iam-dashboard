@@ -17,6 +17,29 @@ This file provides comprehensive guidance to Claude Code when working on this fu
 - **User Interface (UI) content MUST be in Portuguese (Brazil)** for ease of use
 - **Only user-facing labels, messages, and interface text should be in Portuguese**
 
+### Backend Testing Directives
+- **CRITICAL: Mock only external dependencies - NEVER mock internal business logic**
+- **Follow Test Pyramid: 60-75% Unit Tests, 20-30% Integration Tests, 5-10% E2E Tests**
+- **Unit Tests**: Mock external APIs, file systems, Redis/cache, time/random - Test real business logic
+- **Integration Tests**: Use real database sessions, real services, real permission logic - Mock only external systems
+- **E2E Tests**: No internal mocks - test complete workflows with real authentication and database
+- **NEVER mock**: PermissionService logic, authentication flows, database operations (in integration), business rules
+- **ALWAYS mock**: External HTTP calls, SMTP servers, file I/O, third-party libraries, time/UUID generation
+- **Authentication**: Unit tests can mock auth, Integration/E2E tests must use real auth flow
+- **Database**: Unit tests use mocked data, Integration tests use real database transactions
+- **Permission System**: Must have comprehensive integration tests with real role hierarchy and permission checks
+- **Test Categories**: Clearly separate test files by category (unit/, integration/, e2e/) with appropriate mocking strategy
+- **Golden Rule**: "Mock the boundaries, not the behavior" - Mock system edges, test internal logic
+
+### Frontend Testing Directives
+- **NEVER mock internal frontend code, components, hooks, or utilities in tests**
+- **ONLY mock external APIs** (fetch calls, third-party services, etc.)
+- **Use real component rendering** and actual data flows in tests
+- **Mock external dependencies only**: API endpoints, browser APIs, third-party libraries
+- **Test actual behavior**, not implementation details
+- **When testing components, use real providers and contexts** - never mock them
+- **Integration tests must use actual component interactions** without internal mocks
+
 ## 🛠️ MCP (Model Context Protocol) Tools
 
 ### MCP Context7 - Documentation & Code Search

@@ -140,8 +140,10 @@ filterwarnings = [
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
-    "unit: marks tests as unit tests",
+    "unit: marks tests as unit tests (mock external dependencies)",
+    "integration: marks tests as integration tests (real database, mock external services)",
+    "e2e: marks tests as end-to-end tests (complete workflows, minimal mocking)",
+    "performance: marks tests as performance/benchmark tests",
 ]
 
 # Coverage configuration

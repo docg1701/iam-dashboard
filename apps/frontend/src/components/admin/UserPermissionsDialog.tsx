@@ -17,6 +17,7 @@ import {
   getPermissionsForLevel,
   PERMISSION_LEVELS,
   PERMISSION_LEVEL_NAMES,
+  DEFAULT_PERMISSIONS,
 } from '@/types/permissions'
 import { useUserPermissions, usePermissionMutations, usePermissionAudit } from '@/hooks/useUserPermissions'
 import { PermissionGuard, UpdatePermissionGuard } from '@/components/common/PermissionGuard'
@@ -487,7 +488,7 @@ export const UserPermissionsDialog: React.FC<UserPermissionsDialogProps> = ({
                     <UpdatePermissionGuard key={agentValue} agent={AgentName.CLIENT_MANAGEMENT}>
                       <AgentPermissionEditor
                         agent={agentValue}
-                        permissions={formData.permissions[agentValue]}
+                        permissions={formData.permissions[agentValue] || DEFAULT_PERMISSIONS}
                         onChange={handlePermissionChange}
                         disabled={isSaving}
                       />

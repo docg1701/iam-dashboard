@@ -3,6 +3,7 @@
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 import type { AuthState, User, LoginFormData, TwoFactorFormData } from "@/types/auth"
+import * as authAPI from "@/lib/api/auth"
 
 interface AuthActions {
   // Auth actions
@@ -25,8 +26,6 @@ interface AuthActions {
 }
 
 type AuthStore = AuthState & AuthActions
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 // Role hierarchy for permission checking
 const ROLE_HIERARCHY = {
@@ -51,32 +50,30 @@ const useAuthStore = create<AuthStore>()(
         set({ isLoading: true })
         
         try {
-          const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(credentials),
-          })
-
-          if (!response.ok) {
-            const error = await response.json()
-            throw new Error(error.detail || 'Login failed')
-          }
-
-          const data = await response.json()
+          const data = await authAPI.login(credentials)
 
           if (data.requires_2fa) {
             set({ 
               requires2FA: true, 
-              tempToken: data.session_id,
+              tempToken: data.temp_token,
               isLoading: false 
             })
-            return { requires_2fa: true, temp_token: data.session_id }
+            return { requires_2fa: true, temp_token: data.temp_token }
           } else {
-            // Direct login without 2FA
+            // Direct login without 2FA - transform API response to match User interface
+            const user: User | null = data.user ? {
+              user_id: data.user.user_id,
+              email: data.user.email,
+              role: data.user.role,
+              is_active: true, // Default to active if login succeeds
+              totp_enabled: false, // Since we didn't require 2FA
+              created_at: new Date().toISOString(), // Default values
+              updated_at: new Date().toISOString(),
+              full_name: data.user.full_name, // Add missing full_name
+            } : null
+            
             set({
-              user: data.user,
+              user,
               token: data.access_token,
               isAuthenticated: true,
               isLoading: false,
@@ -95,26 +92,25 @@ const useAuthStore = create<AuthStore>()(
         set({ isLoading: true })
         
         try {
-          const response = await fetch(`${API_BASE_URL}/api/v1/auth/2fa/verify`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              session_id: tempToken,
-              totp_code: data.totp_code,
-            }),
+          const result = await authAPI.verify2FA({
+            temp_token: tempToken,
+            totp_code: data.totp_code,
           })
 
-          if (!response.ok) {
-            const error = await response.json()
-            throw new Error(error.detail || '2FA verification failed')
+          // Transform API response to match User interface
+          const user: User = {
+            user_id: result.user.user_id,
+            email: result.user.email,
+            role: result.user.role,
+            is_active: true, // Default to active if 2FA succeeds
+            totp_enabled: true, // User has 2FA enabled since they just verified
+            created_at: new Date().toISOString(), // Default values
+            updated_at: new Date().toISOString(),
+            full_name: result.user.full_name,
           }
 
-          const result = await response.json()
-
           set({
-            user: result.user,
+            user,
             token: result.access_token,
             isAuthenticated: true,
             isLoading: false,
@@ -132,13 +128,7 @@ const useAuthStore = create<AuthStore>()(
         
         if (token) {
           try {
-            await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-              },
-            })
+            await authAPI.logout()
           } catch (error) {
             console.error('Logout API call failed:', error)
             // Continue with local logout even if API call fails
@@ -164,23 +154,10 @@ const useAuthStore = create<AuthStore>()(
         }
 
         try {
-          const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json',
-            },
-          })
-
-          if (!response.ok) {
-            throw new Error('Token refresh failed')
-          }
-
-          const data = await response.json()
+          const data = await authAPI.refreshToken(token)
 
           set({
             token: data.access_token,
-            user: data.user,
             isAuthenticated: true,
           })
         } catch (error) {

@@ -6,7 +6,7 @@ This module provides shared fixtures and configuration for all tests.
 
 import os
 from collections.abc import Callable, Generator
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
@@ -23,7 +23,7 @@ os.environ["ENVIRONMENT"] = "testing"
 
 # Now import the app after mocking Redis
 from src.core import security  # noqa: E402
-from src.core.security import TokenData, get_current_user  # noqa: E402
+from src.core.security import TokenData, auth_service, get_current_user  # noqa: E402
 from src.main import app  # noqa: E402
 from src.models import audit, permissions  # noqa: F401, E402
 from src.models import client as client_models  # noqa: F401, E402
@@ -136,21 +136,27 @@ def authenticated_user_token_data() -> TokenData:
 
 
 @pytest.fixture(name="authenticated_sysadmin_headers")
-def authenticated_sysadmin_headers() -> dict[str, str]:
-    """Create sysadmin authentication headers for testing."""
-    return {"Authorization": "Bearer sysadmin_mock_token"}
+def authenticated_sysadmin_headers(sysadmin_auth_token: str) -> dict[str, str]:
+    """Create sysadmin authentication headers with real JWT token."""
+    return {"Authorization": f"Bearer {sysadmin_auth_token}"}
 
 
 @pytest.fixture(name="authenticated_admin_headers")
-def authenticated_admin_headers() -> dict[str, str]:
-    """Create admin authentication headers for testing."""
-    return {"Authorization": "Bearer admin_mock_token"}
+def authenticated_admin_headers(admin_auth_token: str) -> dict[str, str]:
+    """Create admin authentication headers with real JWT token."""
+    return {"Authorization": f"Bearer {admin_auth_token}"}
 
 
 @pytest.fixture(name="auth_headers")
-def auth_headers() -> dict[str, str]:
-    """Create authentication headers for testing."""
-    return {"Authorization": "Bearer mock_token"}
+def auth_headers(admin_auth_token: str) -> dict[str, str]:
+    """Create authentication headers with real JWT token."""
+    return {"Authorization": f"Bearer {admin_auth_token}"}
+
+
+@pytest.fixture(name="user_auth_headers")
+def user_auth_headers(user_auth_token: str) -> dict[str, str]:
+    """Create regular user authentication headers with real JWT token."""
+    return {"Authorization": f"Bearer {user_auth_token}"}
 
 
 @pytest.fixture(name="mock_redis_client")
@@ -238,145 +244,172 @@ def mock_redis_client() -> MagicMock:
     return mock
 
 
+@pytest.fixture(name="test_user")
+def test_user(test_session: Session) -> User:
+    """Create a test user in the database for authentication tests."""
+    user = User(
+        user_id=uuid4(),
+        email="test@example.com",
+        role=UserRole.ADMIN,
+        is_active=True,
+        password_hash=auth_service.get_password_hash("password123"),
+        full_name="Test Admin User",
+    )
+    test_session.add(user)
+    test_session.commit()
+    test_session.refresh(user)
+    return user
+
+
+@pytest.fixture(name="test_sysadmin")
+def test_sysadmin(test_session: Session) -> User:
+    """Create a test sysadmin user in the database."""
+    user = User(
+        user_id=uuid4(),
+        email="sysadmin@example.com",
+        role=UserRole.SYSADMIN,
+        is_active=True,
+        password_hash=auth_service.get_password_hash("password123"),
+        full_name="Test Sysadmin User",
+    )
+    test_session.add(user)
+    test_session.commit()
+    test_session.refresh(user)
+    return user
+
+
+@pytest.fixture(name="test_regular_user")
+def test_regular_user(test_session: Session) -> User:
+    """Create a test regular user in the database."""
+    user = User(
+        user_id=uuid4(),
+        email="user@example.com",
+        role=UserRole.USER,
+        is_active=True,
+        password_hash=auth_service.get_password_hash("password123"),
+        full_name="Test Regular User",
+    )
+    test_session.add(user)
+    test_session.commit()
+    test_session.refresh(user)
+    return user
+
+
+@pytest.fixture(name="admin_auth_token")
+def admin_auth_token(test_user: User) -> str:
+    """Create a real JWT token for admin user authentication."""
+    token_response = auth_service.create_access_token(
+        user_id=test_user.user_id,
+        user_role=test_user.role.value,
+        user_email=test_user.email,
+    )
+    return token_response.access_token
+
+
+@pytest.fixture(name="sysadmin_auth_token")
+def sysadmin_auth_token(test_sysadmin: User) -> str:
+    """Create a real JWT token for sysadmin user authentication."""
+    token_response = auth_service.create_access_token(
+        user_id=test_sysadmin.user_id,
+        user_role=test_sysadmin.role.value,
+        user_email=test_sysadmin.email,
+    )
+    return token_response.access_token
+
+
+@pytest.fixture(name="user_auth_token")
+def user_auth_token(test_regular_user: User) -> str:
+    """Create a real JWT token for regular user authentication."""
+    token_response = auth_service.create_access_token(
+        user_id=test_regular_user.user_id,
+        user_role=test_regular_user.role.value,
+        user_email=test_regular_user.email,
+    )
+    return token_response.access_token
+
+
 @pytest.fixture(name="client")
-def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]:
-    """Create test client with test database and mocked authentication."""
+def client(test_session: Session) -> Generator[TestClient]:
+    """Create test client with test database session only."""
     def get_test_session() -> Session:
         return test_session
-
-    def get_mock_user(credentials: Any = None) -> TokenData:
-        # If credentials are provided, extract token and return appropriate user
-        if credentials and hasattr(credentials, "credentials"):
-            token = credentials.credentials
-            if token == "sysadmin_mock_token":
-                return TokenData(
-                    user_id=uuid4(),
-                    email="sysadmin@example.com",
-                    role=UserRole.SYSADMIN.value,
-                    session_id="sysadmin_session",
-                    jti="sysadmin_jti",
-                )
-            elif token == "admin_mock_token":
-                return TokenData(
-                    user_id=uuid4(),
-                    email="admin@example.com",
-                    role=UserRole.ADMIN.value,
-                    session_id="admin_session",
-                    jti="admin_jti",
-                )
-        return mock_user
 
     # Clear any existing overrides
     app.dependency_overrides.clear()
 
-    # Override database session
+    # Override database session ONLY - no business logic overrides
     app.dependency_overrides[get_session] = get_test_session
-
-    # Note: PermissionService dependency is NOT overridden here
-    # Individual tests can override it with their own mock services
-
-    # Override authentication dependencies using dependency overrides
-    app.dependency_overrides[security.get_current_user_token] = get_mock_user
-    app.dependency_overrides[security.require_authenticated] = get_mock_user
-    app.dependency_overrides[security.require_admin_or_above] = get_mock_user
-
-    # Mock get_current_user to return admin user
-    def mock_current_user() -> User:
-        """Mock current user as admin for tests."""
-        return User(
-            user_id=mock_user.user_id,
-            email=f"{mock_user.user_id}@example.com",
-            role=UserRole.ADMIN,
-            is_active=True,
-            password_hash="mock_hash",
-            full_name="Test Admin User",
-        )
-
-    app.dependency_overrides[get_current_user] = mock_current_user
-
-    # For require_any_role, we need to override the actual dependency
-    def mock_require_any_role(required_roles: list[str]) -> Callable[[TokenData], TokenData]:
-        def dependency(token_data: TokenData) -> TokenData:
-            return get_mock_user()
-
-        return dependency
-
-    # Store original function
-    original_require_any_role = security.require_any_role
-    security.require_any_role = mock_require_any_role
-
-    # Mock permission-based dependencies
-    def mock_require_agent_permission(agent_name: str, operation: str) -> Callable[[], TokenData]:
-        def dependency() -> TokenData:
-            return get_mock_user()
-
-        return dependency
-
-    original_require_agent_permission = security.require_agent_permission
-    security.require_agent_permission = mock_require_agent_permission
-
-    # Mock the core permission check function
-    async def mock_check_user_agent_permission(
-        user_id: UUID, agent_name: str, operation: str, session: Any = None
-    ) -> bool:
-        # Always return True for tests
-        return True
-
-    original_check_user_agent_permission = security.check_user_agent_permission
-    security.check_user_agent_permission = mock_check_user_agent_permission
-
-    # Mock auth service for middleware compatibility
-    original_verify_token = security.auth_service.verify_token
-
-    def mock_verify_token(token: str, check_session: bool = True) -> TokenData:
-        # Handle different mock tokens for different user types
-        if token == "sysadmin_mock_token":
-            return TokenData(
-                user_id=uuid4(),
-                email="sysadmin@example.com",
-                role=UserRole.SYSADMIN.value,
-                session_id="sysadmin_session",
-                jti="sysadmin_jti",
-            )
-        elif token == "admin_mock_token":
-            return TokenData(
-                user_id=uuid4(),
-                email="admin@example.com",
-                role=UserRole.ADMIN.value,
-                session_id="admin_session",
-                jti="admin_jti",
-            )
-        else:
-            return mock_user
-
-    security.auth_service.verify_token = mock_verify_token  # type: ignore[method-assign]
 
     client = TestClient(app)
     yield client
 
-    # Restore original functions
-    security.require_any_role = original_require_any_role
-    security.require_agent_permission = original_require_agent_permission
-    security.check_user_agent_permission = original_check_user_agent_permission
-    security.auth_service.verify_token = original_verify_token  # type: ignore[method-assign]
+    # Clean up
     app.dependency_overrides.clear()
 
 
-@pytest.fixture(name="mock_permission_service")
-def mock_permission_service() -> MagicMock:
-    """Create a mock PermissionService for testing."""
+@pytest.fixture(name="mock_audit_logger")
+def mock_audit_logger() -> MagicMock:
+    """Mock audit logger to avoid external logging system calls."""
+    mock_logger = MagicMock()
+    mock_logger.log_permission_change = AsyncMock()
+    mock_logger.log_user_action = AsyncMock()
+    mock_logger.log_admin_action = AsyncMock()
+    return mock_logger
+
+
+@pytest.fixture(name="mock_email_service") 
+def mock_email_service() -> MagicMock:
+    """Mock email service to avoid external SMTP calls."""
     mock_service = MagicMock()
-    mock_service.check_user_permission = AsyncMock(return_value=True)
-    mock_service.assign_permission = AsyncMock(return_value=True)
-    mock_service.revoke_permission = AsyncMock(return_value=True)
-    mock_service.get_user_permissions = AsyncMock(return_value={"create": True, "read": True, "update": True, "delete": True})
-    mock_service.bulk_assign_permissions = AsyncMock(return_value={"successful": [], "failed": []})
-    mock_service.apply_template = AsyncMock(return_value=True)
+    mock_service.send_welcome_email = AsyncMock(return_value=True)
+    mock_service.send_password_reset = AsyncMock(return_value=True)
+    mock_service.send_notification = AsyncMock(return_value=True)
+    return mock_service
+
+
+@pytest.fixture(name="mock_time") 
+def mock_time() -> MagicMock:
+    """Mock time functions for deterministic testing."""
+    mock = MagicMock()
+    # Set a fixed datetime for testing
+    fixed_datetime = datetime(2024, 1, 1, 12, 0, 0)
+    mock.datetime.now.return_value = fixed_datetime
+    mock.datetime.utcnow.return_value = fixed_datetime
+    return mock
+
+
+@pytest.fixture(name="mock_uuid")
+def mock_uuid() -> MagicMock:
+    """Mock UUID generation for deterministic testing."""
+    mock = MagicMock()
+    # Return predictable UUIDs for testing
+    test_uuid = UUID('12345678-1234-5678-9abc-123456789abc')
+    mock.uuid4.return_value = test_uuid
+    return mock
+
+
+@pytest.fixture(name="mock_permission_service") 
+def mock_permission_service() -> MagicMock:
+    """Mock permission service for E2E tests.
+    
+    NOTE: This mocks the service interface but tests using this fixture should
+    NOT mock business logic - only external dependencies like audit logging, email, etc.
+    """
+    from src.services.permission_service import PermissionService
+    mock_service = MagicMock(spec=PermissionService)
+    
+    # Set up reasonable defaults for common operations
+    mock_service.check_user_permission = AsyncMock(return_value=False)
+    mock_service.get_user_permissions = AsyncMock(return_value={})
+    mock_service.assign_permission = AsyncMock()
+    mock_service.revoke_permission = AsyncMock()
+    mock_service.bulk_assign_permissions = AsyncMock(return_value={})
+    mock_service.apply_template_to_users = AsyncMock(return_value={"successful": 0, "failed": 0, "errors": []})
     mock_service.list_templates = AsyncMock(return_value=([], 0))
     mock_service.create_template = AsyncMock()
     mock_service.update_template = AsyncMock()
-    mock_service.delete_template = AsyncMock(return_value=True)
+    mock_service.delete_template = AsyncMock(return_value=False)
     mock_service.get_audit_log = AsyncMock(return_value=([], 0))
-    mock_service.get_permission_stats = AsyncMock(return_value={"total_permissions": 0, "active_permissions": 0})
-    mock_service.close = AsyncMock()
+    mock_service.get_permission_stats = AsyncMock(return_value={})
+    
     return mock_service

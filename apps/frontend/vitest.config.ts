@@ -5,43 +5,46 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'happy-dom',
+    environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.tsx', 'src/**/*.test.ts'], // Simple include pattern
-    typecheck: {
-      include: ['**/*.{test,spec}.{ts,tsx}'],
-    },
+    globals: true,
+    css: true,
     exclude: [
       '**/node_modules/**',
-      '**/tests/e2e/**', // Exclude Playwright E2E tests
-      '**/*.e2e.spec.ts',
-      '**/*.e2e.test.ts',
-      '**/.next/**',
-      '**/dist/**',
+      '**/e2e/**',
+      '**/*.spec.ts',
+      '**/playwright.config.ts'
     ],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'html'],
+      include: ['src/**'],
       exclude: [
         'node_modules/',
         'src/test/',
+        'e2e/**',
         '**/*.d.ts',
         '**/*.config.*',
-        '**/coverage/**',
+        '.next/**',
+        'dist/**',
+        'coverage/**',
+        'test-debug.js',
+        'src/**/*.test.{ts,tsx}',
+        'src/**/__tests__/**'
       ],
       thresholds: {
         global: {
-          statements: 80,
           branches: 80,
           functions: 80,
           lines: 80,
-        },
-      },
-    },
+          statements: 80
+        }
+      }
+    }
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
+      '@': path.resolve(__dirname, './src')
+    }
+  }
 })

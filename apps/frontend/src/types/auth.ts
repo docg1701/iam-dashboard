@@ -29,6 +29,7 @@ export interface TwoFactorResponse {
 export interface User {
   user_id: string
   email: string
+  full_name: string
   role: 'sysadmin' | 'admin' | 'user'
   is_active: boolean
   totp_enabled: boolean
