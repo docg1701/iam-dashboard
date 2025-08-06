@@ -5,8 +5,9 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: 'jsdom',
+    environment: 'happy-dom',
     setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.test.tsx', 'src/**/*.test.ts'], // Simple include pattern
     typecheck: {
       include: ['**/*.{test,spec}.{ts,tsx}'],
     },
@@ -15,6 +16,8 @@ export default defineConfig({
       '**/tests/e2e/**', // Exclude Playwright E2E tests
       '**/*.e2e.spec.ts',
       '**/*.e2e.test.ts',
+      '**/.next/**',
+      '**/dist/**',
     ],
     coverage: {
       provider: 'v8',

@@ -312,15 +312,15 @@ class TestSanitizeFilename:
     def test_dangerous_characters(self) -> None:
         """Test removal of dangerous characters."""
         dangerous_cases = [
-            ("file<name>.txt", "file_name_.txt"),
-            ("file>name.txt", "file_name.txt"),
-            ('file"name.txt', "file_name.txt"),
-            ("file/name.txt", "file_name.txt"),
-            ("file\\name.txt", "file_name.txt"),
-            ("file|name.txt", "file_name.txt"),
-            ("file?name.txt", "file_name.txt"),
-            ("file*name.txt", "file_name.txt"),
-            ("file:name.txt", "file_name.txt"),
+            ("file<name>.txt", "filename.txt"),  # < and > removed entirely
+            ("file>name.txt", "filename.txt"),   # < and > removed entirely
+            ('file"name.txt', "filename.txt"),   # " removed entirely
+            ("file/name.txt", "file_name.txt"),  # / replaced with _
+            ("file\\name.txt", "file_name.txt"), # \ replaced with _
+            ("file|name.txt", "filename.txt"),   # | removed entirely
+            ("file?name.txt", "filename.txt"),   # ? removed entirely
+            ("file*name.txt", "filename.txt"),   # * removed entirely
+            ("file:name.txt", "filename.txt"),   # : removed entirely
         ]
 
         for original, expected in dangerous_cases:
@@ -342,9 +342,9 @@ class TestSanitizeFilename:
 
     def test_empty_and_none_filename(self) -> None:
         """Test empty and None filename handling."""
-        assert sanitize_filename("") == "unnamed_file"
-        assert sanitize_filename(None) == "unnamed_file"
-        assert sanitize_filename("   ") == "unnamed_file"  # Only whitespace
+        assert sanitize_filename("") == "untitled"
+        assert sanitize_filename(None) == "untitled"
+        assert sanitize_filename("   ") == "untitled"  # Only whitespace
 
     def test_filename_without_extension(self) -> None:
         """Test filename without extension."""
@@ -358,7 +358,7 @@ class TestSanitizeFilename:
         edge_cases = [
             ("...", "..."),  # Only dots should be preserved
             ("---", "---"),  # Only hyphens should be preserved
-            ("\x00\x01\x02", "unnamed_file"),  # Only control chars
+            ("\x00\x01\x02", "untitled"),  # Only control chars - becomes empty, so returns untitled
         ]
 
         for original, expected in edge_cases:

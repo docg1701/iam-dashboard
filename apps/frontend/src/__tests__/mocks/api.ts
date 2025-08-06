@@ -343,3 +343,26 @@ export const setupGlobalMocks = () => {
 export const resetAllMocks = () => {
   vi.clearAllMocks()
 }
+
+// Hook state mocks
+export const createMockUseUserPermissions = (permissionMatrix: UserPermissionMatrix | null = null) => {
+  return {
+    permissions: permissionMatrix?.permissions || null,
+    isLoading: false,
+    error: null,
+    lastUpdated: permissionMatrix ? new Date(permissionMatrix.last_updated) : null,
+    hasPermission: vi.fn((agent: AgentName, operation: keyof PermissionActions) => {
+      if (!permissionMatrix?.permissions) return false
+      const agentPerms = permissionMatrix.permissions[agent]
+      return agentPerms ? agentPerms[operation] : false
+    }),
+    hasAgentPermission: vi.fn((agent: AgentName) => {
+      if (!permissionMatrix?.permissions) return false
+      const agentPerms = permissionMatrix.permissions[agent]
+      return agentPerms ? Object.values(agentPerms).some(Boolean) : false
+    }),
+    getUserMatrix: vi.fn(() => permissionMatrix),
+    refetch: vi.fn().mockResolvedValue({ data: permissionMatrix }),
+    invalidate: vi.fn(),
+  }
+}

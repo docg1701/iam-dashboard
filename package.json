@@ -42,5 +42,9 @@
     "npm": ">=10.0.0"
   },
   "author": "Multi-Agent IAM Dashboard Team",
-  "license": "Private"
+  "license": "Private",
+  "dependencies": {
+    "@radix-ui/react-popover": "^1.1.14",
+    "@radix-ui/react-tabs": "^1.1.12"
+  }
 }

@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse
 
 from .api.v1 import api_router
 from .core.config import settings
-from .core.database import init_db
+from .core.database import close_db_connections, init_db
 from .core.middleware import setup_middleware
 from .schemas.common import HealthCheckResponse
 
@@ -27,8 +27,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await init_db()
     yield
     # Shutdown - cleanup database connections
-    from .core.database import close_db_connections
-
     close_db_connections()
 
 

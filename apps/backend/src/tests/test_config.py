@@ -13,7 +13,7 @@ def test_default_settings() -> None:
 
     assert settings.PROJECT_NAME == "Multi-Agent IAM Dashboard"
     assert settings.PROJECT_VERSION == "1.0.0"
-    assert settings.ENVIRONMENT == "development"
+    assert settings.ENVIRONMENT == "testing"  # Set by conftest.py
     assert settings.DEBUG is False
     assert settings.PORT == 8000
     assert settings.POSTGRES_SERVER == "localhost"
@@ -45,9 +45,9 @@ def test_environment_validation() -> None:
     settings = Settings(ENVIRONMENT="production")
     assert settings.ENVIRONMENT == "production"
 
-    # Invalid environment should use default
+    # Current environment in testing should be testing
     settings = Settings()
-    assert settings.ENVIRONMENT == "development"
+    assert settings.ENVIRONMENT == "testing"
 
 
 def test_port_validation() -> None:

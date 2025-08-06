@@ -13,12 +13,13 @@ import pytest
 from fastapi import Request
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from src.core.exceptions import ConflictError, DatabaseError, NotFoundError, ValidationError
-from src.models.client import Client
+from src.models.client import Client, ClientStatus
 from src.models.user import User, UserRole
 from src.schemas.clients import ClientCreate as ClientCreateSchema
+from src.schemas.clients import ClientSearchParams, ClientUpdate
 from src.services.client_service import ClientService
 
 
@@ -71,7 +72,6 @@ class TestClientServiceCreate:
         # updated_at is None for new records, only set during updates
 
         # Verify in database
-        from sqlmodel import select
 
         db_client = test_session.exec(
             select(Client).where(Client.client_id == result.client_id)
@@ -560,7 +560,6 @@ class TestClientServiceUpdate:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Update data
-        from src.schemas.clients import ClientUpdate
 
         update_data = ClientUpdate(
             full_name="Updated Name",
@@ -601,7 +600,6 @@ class TestClientServiceUpdate:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Update data
-        from src.schemas.clients import ClientUpdate
 
         update_data = ClientUpdate(full_name="Updated Name")
 
@@ -664,7 +662,6 @@ class TestClientServiceUpdate:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Try to update client2's SSN to match client1's SSN
-        from src.schemas.clients import ClientUpdate
 
         update_data = ClientUpdate(ssn="111-11-1111")
 
@@ -713,7 +710,6 @@ class TestClientServiceUpdate:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Update only birth_date
-        from src.schemas.clients import ClientUpdate
 
         update_data = ClientUpdate(birth_date=date(1985, 6, 15))
 
@@ -766,7 +762,6 @@ class TestClientServiceUpdate:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Update data
-        from src.schemas.clients import ClientUpdate
 
         update_data = ClientUpdate(full_name="Updated Name")
 
@@ -833,7 +828,6 @@ class TestClientServiceDelete:
         assert result is True
 
         # Verify client is soft-deleted (archived)
-        from sqlmodel import select
 
         db_client = test_session.exec(select(Client).where(Client.client_id == client_id)).first()
         assert db_client is not None
@@ -972,7 +966,6 @@ class TestClientServiceList:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Search parameters
-        from src.schemas.clients import ClientSearchParams
 
         search_params = ClientSearchParams()
 
@@ -985,7 +978,7 @@ class TestClientServiceList:
         assert len(result_clients) == 3  # First page with 3 items
         assert pagination_info["page"] == 1
         assert pagination_info["per_page"] == 3
-        assert pagination_info["total_count"] == 5
+        assert pagination_info["total"] == 5
         assert pagination_info["total_pages"] == 2
         assert pagination_info["has_next"] is True
         assert pagination_info["has_prev"] is False
@@ -1050,7 +1043,6 @@ class TestClientServiceList:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Search for clients with "John" in name
-        from src.schemas.clients import ClientSearchParams
 
         search_params = ClientSearchParams(full_name="john")
 
@@ -1060,7 +1052,7 @@ class TestClientServiceList:
 
         # Verify results - should find 2 clients with "John" in name
         assert len(result_clients) == 2
-        assert pagination_info["total_count"] == 2
+        assert pagination_info["total"] == 2
         client_names = [client.full_name for client in result_clients]
         assert "John Doe" in client_names
         assert "John Johnson" in client_names
@@ -1081,7 +1073,6 @@ class TestClientServiceList:
         test_session.add(user)
 
         # Create test clients with different statuses
-        from src.models.client import ClientStatus
 
         active_client = Client(
             client_id=uuid4(),
@@ -1117,7 +1108,6 @@ class TestClientServiceList:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Search for active clients only
-        from src.schemas.clients import ClientSearchParams
 
         search_params = ClientSearchParams(status=ClientStatus.ACTIVE)
 
@@ -1127,7 +1117,7 @@ class TestClientServiceList:
 
         # Verify results - should find only active client
         assert len(result_clients) == 1
-        assert pagination_info["total_count"] == 1
+        assert pagination_info["total"] == 1
         assert result_clients[0].full_name == "Active Client"
         assert result_clients[0].status == ClientStatus.ACTIVE
 
@@ -1155,7 +1145,6 @@ class TestClientServiceList:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Search parameters
-        from src.schemas.clients import ClientSearchParams
 
         search_params = ClientSearchParams()
 
@@ -1166,7 +1155,7 @@ class TestClientServiceList:
 
         # Verify empty results
         assert len(result_clients) == 0
-        assert pagination_info["total_count"] == 0
+        assert pagination_info["total"] == 0
         assert pagination_info["total_pages"] == 0
         assert pagination_info["has_next"] is False
         assert pagination_info["has_prev"] is False
@@ -1198,7 +1187,6 @@ class TestClientServiceList:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Search parameters
-        from src.schemas.clients import ClientSearchParams
 
         search_params = ClientSearchParams()
 
@@ -1362,7 +1350,6 @@ class TestClientServiceErrorHandlingExtended:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Update data
-        from src.schemas.clients import ClientUpdate
 
         update_data = ClientUpdate(full_name="Updated Name")
 
@@ -1440,7 +1427,6 @@ class TestClientServiceErrorHandlingExtended:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Search parameters
-        from src.schemas.clients import ClientSearchParams
 
         search_params = ClientSearchParams()
 

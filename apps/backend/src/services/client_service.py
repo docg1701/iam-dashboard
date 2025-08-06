@@ -391,7 +391,7 @@ class ClientService:
             pagination_info: dict[str, object] = {
                 "page": page,
                 "per_page": per_page,
-                "total_count": total_count,
+                "total": total_count,  # Changed from total_count to total to match PaginationInfo schema
                 "total_pages": total_pages,
                 "has_next": page < total_pages,
                 "has_prev": page > 1,

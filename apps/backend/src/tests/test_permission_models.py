@@ -25,6 +25,7 @@ from src.models.permissions import (
 )
 from src.tests.factories import (
     create_test_permission,
+    create_test_permission_audit_log,
     create_test_template,
     create_test_user,
 )
@@ -58,7 +59,7 @@ class TestAgentName:
 
     def test_invalid_agent_name(self) -> None:
         """Test creating AgentName with invalid value."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="is not a valid AgentName"):
             AgentName("invalid_agent")
 
 
@@ -458,8 +459,6 @@ class TestPermissionAuditLog:
 
     def test_permission_audit_log_creation(self) -> None:
         """Test creating PermissionAuditLog instance."""
-        from src.tests.factories import create_test_permission_audit_log
-
         user_id = uuid4()
         changed_by_id = uuid4()
 
@@ -480,8 +479,6 @@ class TestPermissionAuditLog:
 
     def test_permission_audit_log_database_persistence(self, test_session: Session) -> None:
         """Test PermissionAuditLog database persistence."""
-        from src.tests.factories import create_test_permission_audit_log
-
         user = create_test_user()
         test_session.add(user)
         test_session.commit()
@@ -505,8 +502,6 @@ class TestPermissionAuditLog:
 
     def test_permission_audit_log_with_permissions_data(self) -> None:
         """Test PermissionAuditLog with old and new permissions."""
-        from src.tests.factories import create_test_permission_audit_log
-
         old_permissions = {"create": False, "read": True, "update": False, "delete": False}
         new_permissions = {"create": True, "read": True, "update": True, "delete": False}
 
@@ -521,8 +516,6 @@ class TestPermissionAuditLog:
 
     def test_permission_audit_log_delete_action(self) -> None:
         """Test PermissionAuditLog for DELETE action."""
-        from src.tests.factories import create_test_permission_audit_log
-
         old_permissions = {"create": True, "read": True, "update": False, "delete": False}
 
         audit_log = create_test_permission_audit_log(
@@ -621,8 +614,6 @@ class TestPermissionModelIntegration:
         test_session.commit()
 
         # Create audit log
-        from src.tests.factories import create_test_permission_audit_log
-
         audit_log = create_test_permission_audit_log(
             user_id=user.user_id,
             agent_name=AgentName.CLIENT_MANAGEMENT,
@@ -696,8 +687,9 @@ class TestPermissionModelIntegration:
         assert len(permissions_created) == 6  # 3 users × 2 agents
 
         # Verify permissions can be queried
+        user_ids = [u.user_id for u in users]
         query = select(UserAgentPermission).where(
-            UserAgentPermission.user_id.in_([u.user_id for u in users])
+            UserAgentPermission.user_id.in_(user_ids)  # type: ignore[attr-defined]
         )
         result = test_session.exec(query)
         retrieved_permissions = list(result)

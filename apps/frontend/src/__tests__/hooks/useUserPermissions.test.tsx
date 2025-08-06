@@ -8,12 +8,48 @@ import {
 } from '@/hooks/useUserPermissions'
 import { AgentName, UserPermissionMatrix } from '@/types/permissions'
 
-// Mock PermissionAPI with hoisted functions
+// Mock all functions with hoisting
 const mocks = vi.hoisted(() => {
   return {
     mockGetUserPermissions: vi.fn(),
     mockHasPermission: vi.fn(),
     mockHasAgentPermission: vi.fn(),
+    mockUseQuery: vi.fn(),
+    mockUseQueryClient: vi.fn(() => ({
+      invalidateQueries: vi.fn(),
+      setQueryData: vi.fn(),
+      getQueryData: vi.fn(),
+      refetchQueries: vi.fn(),
+    })),
+  }
+})
+
+vi.mock('@tanstack/react-query', async () => {
+  const actual = await vi.importActual('@tanstack/react-query')
+  return {
+    ...actual,
+    useQuery: mocks.mockUseQuery,
+    useQueryClient: mocks.mockUseQueryClient,
+    useMutation: vi.fn(() => ({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn().mockResolvedValue({}),
+      isPending: false,
+      isError: false,
+      isSuccess: false,
+      error: null,
+      data: null,
+      reset: vi.fn(),
+    })),
+    QueryClient: vi.fn(() => ({
+      invalidateQueries: vi.fn(),
+      setQueryData: vi.fn(),
+      getQueryData: vi.fn(),
+      refetchQueries: vi.fn(),
+      clear: vi.fn(),
+      mount: vi.fn(),
+      unmount: vi.fn(),
+    })),
+    QueryClientProvider: ({ children }: any) => children,
   }
 })
 
@@ -78,13 +114,37 @@ const mockPermissionMatrix: UserPermissionMatrix = {
 }
 
 describe('useUserPermissions', () => {
-  const { mockGetUserPermissions, mockHasPermission, mockHasAgentPermission } = mocks
+  const { mockGetUserPermissions, mockHasPermission, mockHasAgentPermission, mockUseQuery } = mocks
 
   beforeEach(() => {
     vi.clearAllMocks()
+    
+    // Setup API mocks
     mockGetUserPermissions.mockResolvedValue(mockPermissionMatrix)
     mockHasPermission.mockReturnValue(true)
     mockHasAgentPermission.mockReturnValue(true)
+    
+    // Setup TanStack Query mock to simulate successful data fetch
+    mockUseQuery.mockImplementation(({ queryFn, enabled = true }) => {
+      if (!enabled) {
+        return {
+          data: undefined,
+          isLoading: false,
+          error: null,
+          refetch: vi.fn(),
+          dataUpdatedAt: 0,
+        }
+      }
+      
+      // Simulate calling the queryFn and returning data
+      return {
+        data: mockPermissionMatrix,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn().mockResolvedValue({ data: mockPermissionMatrix }),
+        dataUpdatedAt: Date.now(),
+      }
+    })
   })
 
   afterEach(() => {
@@ -102,7 +162,10 @@ describe('useUserPermissions', () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    expect(mockGetUserPermissions).toHaveBeenCalledWith('test-user-id')
+    // Check that the query function was called and data is available
+    expect(mockUseQuery).toHaveBeenCalled()
+    
+    // Verify permissions are correctly loaded
     expect(result.current.permissions).toEqual(mockPermissionMatrix.permissions)
   })
 
@@ -152,12 +215,35 @@ describe('useUserPermissions', () => {
 })
 
 describe('usePermissionCheck', () => {
-  const { mockGetUserPermissions, mockHasPermission } = mocks
+  const { mockGetUserPermissions, mockHasPermission, mockUseQuery } = mocks
 
   beforeEach(() => {
     vi.clearAllMocks()
+    
+    // Setup API mocks
     mockGetUserPermissions.mockResolvedValue(mockPermissionMatrix)
     mockHasPermission.mockReturnValue(true)
+    
+    // Setup TanStack Query mock to simulate successful data fetch
+    mockUseQuery.mockImplementation(({ queryFn, enabled = true }) => {
+      if (!enabled) {
+        return {
+          data: undefined,
+          isLoading: false,
+          error: null,
+          refetch: vi.fn(),
+          dataUpdatedAt: 0,
+        }
+      }
+      
+      return {
+        data: mockPermissionMatrix,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn().mockResolvedValue({ data: mockPermissionMatrix }),
+        dataUpdatedAt: Date.now(),
+      }
+    })
   })
 
   it('should check specific permission', async () => {

@@ -381,8 +381,8 @@ export function usePermissionTemplates() {
   })
 
   return {
-    templates: templates?.templates || [],
-    total: templates?.total || 0,
+    templates: templates || [],
+    total: templates?.length || 0,
     isLoading,
     error,
     refetch,

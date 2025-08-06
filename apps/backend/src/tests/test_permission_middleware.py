@@ -97,9 +97,8 @@ class TestPermissionChecker:
 
         checker = PermissionChecker(AgentName.CLIENT_MANAGEMENT, "create")
 
-        with patch("src.core.permissions.PermissionService", return_value=mock_permission_service):
-            with pytest.raises(HTTPException) as exc_info:
-                await checker(test_user, mock_permission_service)
+        with patch("src.core.permissions.PermissionService", return_value=mock_permission_service), pytest.raises(HTTPException) as exc_info:
+            await checker(test_user, mock_permission_service)
 
         assert exc_info.value.status_code == 403
         assert "Insufficient permissions" in exc_info.value.detail
@@ -113,9 +112,8 @@ class TestPermissionChecker:
 
         checker = PermissionChecker(AgentName.CLIENT_MANAGEMENT, "read")
 
-        with patch("src.core.permissions.PermissionService", return_value=mock_permission_service):
-            with pytest.raises(HTTPException) as exc_info:
-                await checker(test_user, mock_permission_service)
+        with patch("src.core.permissions.PermissionService", return_value=mock_permission_service), pytest.raises(HTTPException) as exc_info:
+            await checker(test_user, mock_permission_service)
 
         assert exc_info.value.status_code == 500
         assert "Permission check failed" in exc_info.value.detail

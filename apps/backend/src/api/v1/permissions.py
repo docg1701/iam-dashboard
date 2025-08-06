@@ -2,14 +2,14 @@
 
 import logging
 from datetime import datetime
-from typing import Any, Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlmodel import Session
 
 from src.core.database import get_session
-from src.core.exceptions import AuthorizationError, ValidationError
+from src.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from src.core.permissions import require_admin_or_sysadmin
 from src.models.permissions import AgentName
 from src.models.user import User
@@ -80,6 +80,8 @@ async def get_user_permissions(
     try:
         permissions = await service.get_user_permissions(user_id)
         return UserPermissionMatrixResponse(user_id=user_id, permissions=permissions)
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except ValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except AuthorizationError as e:
@@ -160,6 +162,8 @@ async def revoke_user_permission(
             change_reason=change_reason,
         )
         return {"message": "Permission revoked successfully"}
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except ValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except AuthorizationError as e:
@@ -259,7 +263,9 @@ async def list_permission_templates(
         await service.close()
 
 
-@router.post("/templates", response_model=PermissionTemplateResponse)
+@router.post(
+    "/templates", response_model=PermissionTemplateResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_permission_template(
     request: PermissionTemplateCreateRequest,
     current_user: User = require_admin_or_sysadmin(),
@@ -315,7 +321,7 @@ async def delete_permission_template(
     template_id: UUID,
     current_user: User = require_admin_or_sysadmin(),
     service: PermissionService = Depends(get_permission_service),
-) -> dict[str, str]:
+) -> dict[str, bool]:
     """Delete a permission template."""
     logger.info(f"Deleting permission template: {template_id}")
 
@@ -324,7 +330,7 @@ async def delete_permission_template(
         if not success:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found")
 
-        return {"message": "Template deleted successfully"}
+        return {"success": True}
     finally:
         await service.close()
 
@@ -348,7 +354,10 @@ async def get_permission_audit_log(
         )
 
         return PaginatedPermissionAuditResponse(
-            items=[PermissionAuditResponse.model_validate(entry) for entry in audit_entries],
+            items=[
+                PermissionAuditResponse.model_validate(entry.model_dump())
+                for entry in audit_entries
+            ],
             total=total,
             page=page,
             page_size=page_size,
@@ -385,10 +394,7 @@ async def validate_permissions(
     errors = []
     warnings = []
 
-    # Validate structure
-    if not isinstance(permissions, dict):
-        errors.append("Permissions must be a dictionary")
-        return PermissionValidationResponse(valid=False, errors=errors, warnings=warnings)
+    # Note: permissions is guaranteed to be a dict due to FastAPI type validation
 
     # Validate required operations
     required_operations = {"create", "read", "update", "delete"}

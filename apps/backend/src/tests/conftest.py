@@ -6,12 +6,14 @@ This module provides shared fixtures and configuration for all tests.
 
 import os
 from collections.abc import Callable, Generator
+from datetime import timedelta
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, MetaData
 from sqlmodel import Session, SQLModel, StaticPool, create_engine
 
 from src.core.database import get_session
@@ -20,16 +22,18 @@ from src.core.database import get_session
 os.environ["ENVIRONMENT"] = "testing"
 
 # Now import the app after mocking Redis
-from src.core.security import TokenData  # noqa: E402
+from src.core import security  # noqa: E402
+from src.core.security import TokenData, get_current_user  # noqa: E402
 from src.main import app  # noqa: E402
-from src.models.user import UserRole  # noqa: E402
+from src.models import audit, permissions  # noqa: F401, E402
+from src.models import client as client_models  # noqa: F401, E402
+from src.models import user as user_models  # noqa: F401, E402
+from src.models.user import User, UserRole  # noqa: E402
 
 
 @pytest.fixture(name="test_engine")
 def test_engine() -> Generator[Engine]:
     """Create test database engine with proper cleanup."""
-    from sqlalchemy import MetaData
-
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -38,9 +42,6 @@ def test_engine() -> Generator[Engine]:
 
     # Create a copy of metadata without PostgreSQL-specific constraints
     original_metadata = SQLModel.metadata
-
-    # Import all models to ensure they're registered
-    from src.models import audit, client, permissions, user  # noqa: F401
 
     # Create new metadata and copy tables without problematic constraints
     test_metadata = MetaData()
@@ -156,9 +157,82 @@ def auth_headers() -> dict[str, str]:
 def mock_redis_client() -> MagicMock:
     """Provide mock Redis client for testing."""
     mock = MagicMock()
-    mock.get = AsyncMock(return_value=None)
-    mock.setex = AsyncMock(return_value=True)
-    mock.delete = AsyncMock(return_value=0)
+    # Add data and lists attributes for password security tests
+    mock.data = {}
+    mock.lists = {}
+
+    # Mock synchronous methods (for password security service)
+    def mock_get_sync(key: str) -> str | None:
+        return mock.data.get(key)
+
+    def mock_setex_sync(key: str, timeout: int | timedelta, value: str) -> bool:
+        mock.data[key] = value
+        return True
+
+    def mock_delete_sync(key: str) -> int:
+        if key in mock.data:
+            del mock.data[key]
+            return 1
+        if key in mock.lists:
+            del mock.lists[key]
+            return 1
+        return 0
+
+    def mock_lpush_sync(key: str, *values: str) -> int:
+        if key not in mock.lists:
+            mock.lists[key] = []
+        for value in reversed(values):
+            mock.lists[key].insert(0, value)
+        return len(mock.lists[key])
+
+    def mock_ltrim_sync(key: str, start: int, stop: int) -> bool:
+        if key in mock.lists:
+            mock.lists[key] = mock.lists[key][start:stop+1]
+        return True
+
+    def mock_lrange_sync(key: str, start: int, stop: int) -> list[str]:
+        if key not in mock.lists:
+            return []
+        if stop == -1:
+            return mock.lists[key][start:]
+        return mock.lists[key][start:stop+1]
+
+    def mock_llen_sync(key: str) -> int:
+        return len(mock.lists.get(key, []))
+
+    def mock_expire_sync(key: str, timeout: int | timedelta) -> bool:
+        # Mock expire - don't actually implement expiration logic for tests
+        return True
+
+    def mock_exists_sync(key: str) -> bool:
+        return key in mock.data
+
+    # Mock async methods (for other services)
+    async def mock_get_async(key: str) -> str | None:
+        return mock.data.get(key)
+
+    async def mock_setex_async(key: str, timeout: int, value: str) -> bool:
+        mock.data[key] = value
+        return True
+
+    async def mock_delete_async(key: str) -> int:
+        return mock_delete_sync(key)
+
+    # Set both sync and async methods
+    mock.get = mock_get_sync
+    mock.setex = mock_setex_sync
+    mock.delete = mock_delete_sync
+    mock.lpush = mock_lpush_sync
+    mock.ltrim = mock_ltrim_sync
+    mock.lrange = mock_lrange_sync
+    mock.llen = mock_llen_sync
+    mock.expire = mock_expire_sync
+    mock.exists = mock_exists_sync
+
+    # Also set async versions for other tests
+    mock.aget = mock_get_async
+    mock.asetex = mock_setex_async
+    mock.adelete = mock_delete_async
     mock.keys = AsyncMock(return_value=[])
     mock.close = AsyncMock()
     return mock
@@ -167,12 +241,29 @@ def mock_redis_client() -> MagicMock:
 @pytest.fixture(name="client")
 def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]:
     """Create test client with test database and mocked authentication."""
-    from src.core import security  # noqa: PLC0415
-
     def get_test_session() -> Session:
         return test_session
 
-    def get_mock_user() -> TokenData:
+    def get_mock_user(credentials: Any = None) -> TokenData:
+        # If credentials are provided, extract token and return appropriate user
+        if credentials and hasattr(credentials, "credentials"):
+            token = credentials.credentials
+            if token == "sysadmin_mock_token":
+                return TokenData(
+                    user_id=uuid4(),
+                    email="sysadmin@example.com",
+                    role=UserRole.SYSADMIN.value,
+                    session_id="sysadmin_session",
+                    jti="sysadmin_jti",
+                )
+            elif token == "admin_mock_token":
+                return TokenData(
+                    user_id=uuid4(),
+                    email="admin@example.com",
+                    role=UserRole.ADMIN.value,
+                    session_id="admin_session",
+                    jti="admin_jti",
+                )
         return mock_user
 
     # Clear any existing overrides
@@ -190,9 +281,6 @@ def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]
     app.dependency_overrides[security.require_admin_or_above] = get_mock_user
 
     # Mock get_current_user to return admin user
-    from src.core.permissions import get_current_user
-    from src.models.user import User
-
     def mock_current_user() -> User:
         """Mock current user as admin for tests."""
         return User(
@@ -208,7 +296,7 @@ def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]
 
     # For require_any_role, we need to override the actual dependency
     def mock_require_any_role(required_roles: list[str]) -> Callable[[TokenData], TokenData]:
-        def dependency(user: TokenData) -> TokenData:
+        def dependency(token_data: TokenData) -> TokenData:
             return get_mock_user()
 
         return dependency
@@ -218,7 +306,7 @@ def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]
     security.require_any_role = mock_require_any_role
 
     # Mock permission-based dependencies
-    def mock_require_agent_permission(agent_name: str, operation: str) -> Callable:
+    def mock_require_agent_permission(agent_name: str, operation: str) -> Callable[[], TokenData]:
         def dependency() -> TokenData:
             return get_mock_user()
 
@@ -229,7 +317,7 @@ def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]
 
     # Mock the core permission check function
     async def mock_check_user_agent_permission(
-        user_id, agent_name: str, operation: str, session=None
+        user_id: UUID, agent_name: str, operation: str, session: Any = None
     ) -> bool:
         # Always return True for tests
         return True
@@ -241,7 +329,25 @@ def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]
     original_verify_token = security.auth_service.verify_token
 
     def mock_verify_token(token: str, check_session: bool = True) -> TokenData:
-        return mock_user
+        # Handle different mock tokens for different user types
+        if token == "sysadmin_mock_token":
+            return TokenData(
+                user_id=uuid4(),
+                email="sysadmin@example.com",
+                role=UserRole.SYSADMIN.value,
+                session_id="sysadmin_session",
+                jti="sysadmin_jti",
+            )
+        elif token == "admin_mock_token":
+            return TokenData(
+                user_id=uuid4(),
+                email="admin@example.com",
+                role=UserRole.ADMIN.value,
+                session_id="admin_session",
+                jti="admin_jti",
+            )
+        else:
+            return mock_user
 
     security.auth_service.verify_token = mock_verify_token  # type: ignore[method-assign]
 
@@ -254,3 +360,23 @@ def client(test_session: Session, mock_user: TokenData) -> Generator[TestClient]
     security.check_user_agent_permission = original_check_user_agent_permission
     security.auth_service.verify_token = original_verify_token  # type: ignore[method-assign]
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(name="mock_permission_service")
+def mock_permission_service() -> MagicMock:
+    """Create a mock PermissionService for testing."""
+    mock_service = MagicMock()
+    mock_service.check_user_permission = AsyncMock(return_value=True)
+    mock_service.assign_permission = AsyncMock(return_value=True)
+    mock_service.revoke_permission = AsyncMock(return_value=True)
+    mock_service.get_user_permissions = AsyncMock(return_value={"create": True, "read": True, "update": True, "delete": True})
+    mock_service.bulk_assign_permissions = AsyncMock(return_value={"successful": [], "failed": []})
+    mock_service.apply_template = AsyncMock(return_value=True)
+    mock_service.list_templates = AsyncMock(return_value=([], 0))
+    mock_service.create_template = AsyncMock()
+    mock_service.update_template = AsyncMock()
+    mock_service.delete_template = AsyncMock(return_value=True)
+    mock_service.get_audit_log = AsyncMock(return_value=([], 0))
+    mock_service.get_permission_stats = AsyncMock(return_value={"total_permissions": 0, "active_permissions": 0})
+    mock_service.close = AsyncMock()
+    return mock_service

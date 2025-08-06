@@ -142,7 +142,7 @@ const PermissionChangeComparison: React.FC<{
       changed: boolean
     }> = []
 
-    Object.entries(newPermissions).forEach(([operation, newValue]) => {
+    Object.entries(newPermissions).forEach(([operation, newValue]: [string, boolean]) => {
       const oldValue = oldPermissions[operation as keyof PermissionActions] || false
       changeList.push({
         operation: operation as keyof PermissionActions,
@@ -319,7 +319,14 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
       if (userId) {
         return PermissionAPI.Audit.getUserAuditLogs(userId, queryParams)
       } else {
-        return PermissionAPI.Audit.getAllAuditLogs(queryParams)
+        // Get recent changes when no specific user is selected
+        const recentLogs = await PermissionAPI.Audit.getRecentChanges(limit)
+        return {
+          logs: recentLogs,
+          total: recentLogs.length,
+          limit,
+          offset: 0,
+        }
       }
     },
     staleTime: 1 * 60 * 1000, // 1 minute
@@ -330,7 +337,7 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
   const filteredLogs = useMemo(() => {
     if (!auditData?.logs) return []
 
-    return auditData.logs.filter(log => {
+    return auditData.logs.filter((log: PermissionAuditLogType) => {
       if (filters.search) {
         const searchLower = filters.search.toLowerCase()
         return (
@@ -354,20 +361,20 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
       }
     }
 
-    const recentChanges = auditData.logs.filter(log => {
+    const recentChanges = auditData.logs.filter((log: PermissionAuditLogType) => {
       const logDate = new Date(log.created_at)
       const yesterday = subDays(new Date(), 1)
       return logDate >= yesterday
     }).length
 
-    const admins = new Set(auditData.logs.map(log => log.changed_by_user_id))
+    const admins = new Set(auditData.logs.map((log: PermissionAuditLogType) => log.changed_by_user_id))
     
-    const agentCounts = auditData.logs.reduce((acc, log) => {
+    const agentCounts = auditData.logs.reduce((acc: Record<AgentName, number>, log: PermissionAuditLogType) => {
       acc[log.agent_name] = (acc[log.agent_name] || 0) + 1
       return acc
     }, {} as Record<AgentName, number>)
 
-    const mostActiveAgent = Object.entries(agentCounts).reduce((max, [agent, count]) => {
+    const mostActiveAgent = Object.entries(agentCounts).reduce((max: [string, number], [agent, count]: [string, number]) => {
       return count > (max[1] || 0) ? [agent, count] : max
     }, ['', 0])[0] as AgentName || null
 
@@ -646,7 +653,7 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredLogs.map(log => (
+                  filteredLogs.map((log: PermissionAuditLogType) => (
                     <AuditLogEntry 
                       key={log.audit_id} 
                       log={log} 

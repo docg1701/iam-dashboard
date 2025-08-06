@@ -6,6 +6,7 @@ and can handle concurrent requests efficiently.
 """
 
 import asyncio
+import json
 import time
 from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -18,7 +19,7 @@ from src.core.exceptions import DatabaseError
 from src.models.permissions import AgentName
 from src.models.user import UserRole
 from src.services.permission_service import PermissionService
-from src.tests.factories import create_test_permission, create_test_user
+from src.tests.factories import create_test_permission, create_test_template, create_test_user
 
 
 class TestPermissionPerformance:
@@ -40,6 +41,7 @@ class TestPermissionPerformance:
         """Create PermissionService optimized for performance testing."""
         service = PermissionService()
         service.redis_client = mock_redis
+        service._is_testing = False  # Enable Redis operations for performance testing
         return service
 
     @pytest.fixture
@@ -86,8 +88,6 @@ class TestPermissionPerformance:
         user_id = uuid4()
 
         # Mock cache hit
-        import json
-
         permissions = {"create": True, "read": True, "update": False, "delete": False}
         mock_redis.get.return_value = json.dumps(permissions)
 
@@ -112,8 +112,6 @@ class TestPermissionPerformance:
         user_ids = [uuid4() for _ in range(100)]
 
         # Mock cache hits for all requests
-        import json
-
         permissions = {"create": True, "read": True, "update": False, "delete": False}
         mock_redis.get.return_value = json.dumps(permissions)
 
@@ -266,8 +264,7 @@ class TestPermissionPerformance:
 
         mock_fast_session.execute.return_value.scalars.side_effect = [
             users,  # All users query
-            [],  # Existing permissions for each user
-        ] * len(user_ids)
+        ] + [[] for _ in user_ids]  # Empty existing permissions for each user
 
         with patch.object(fast_permission_service, "get_db_session") as mock_get_session:
             mock_get_session.return_value.__enter__.return_value = mock_fast_session
@@ -390,13 +387,11 @@ class TestPermissionPerformance:
         mock_redis: MagicMock,
     ) -> None:
         """Test performance with multiple threads (simulating web server load)."""
-        import json
-
         # Mock cache hits
         permissions = {"create": True, "read": True, "update": False, "delete": False}
         mock_redis.get.return_value = json.dumps(permissions)
 
-        def check_permission_sync():
+        def check_permission_sync() -> bool:
             """Synchronous wrapper for async permission check."""
             user_id = uuid4()
             loop = asyncio.new_event_loop()
@@ -449,8 +444,6 @@ class TestPermissionPerformance:
         mock_fast_session: MagicMock,  # noqa: ARG002  # Mock fixture not used in this test
     ) -> None:
         """Test that memory usage remains reasonable with large permission matrices."""
-        import json
-
         # Create a large user set
         user_ids = [uuid4() for _ in range(1000)]
 
@@ -493,8 +486,6 @@ class TestPermissionPerformance:
         admin_id = uuid4()
 
         # Mock template exists
-        from src.tests.factories import create_test_template
-
         template = create_test_template(
             template_name="Performance Test Template",
             permissions={

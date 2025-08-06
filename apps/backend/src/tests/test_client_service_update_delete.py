@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import Request
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from src.core.exceptions import ConflictError, NotFoundError
 from src.models.client import Client, ClientStatus
@@ -76,8 +76,6 @@ class TestClientServiceUpdate:
         assert result.updated_at is not None
 
         # Verify in database
-        from sqlmodel import select
-
         db_client = test_session.exec(select(Client).where(Client.client_id == client_id)).first()
         assert db_client is not None
         assert db_client.full_name == "Updated Name"
@@ -278,8 +276,6 @@ class TestClientServiceDelete:
         assert result is True
 
         # Verify client is archived (soft deleted)
-        from sqlmodel import select
-
         db_client = test_session.exec(select(Client).where(Client.client_id == client_id)).first()
         assert db_client is not None
         assert db_client.status == ClientStatus.ARCHIVED

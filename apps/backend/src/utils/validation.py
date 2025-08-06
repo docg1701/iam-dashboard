@@ -20,15 +20,18 @@ def validate_ssn(ssn: str | None) -> bool:
     # Extract digits for validation
     digits = ssn.replace("-", "")
 
+    # Check for the most obvious sequential pattern
+    is_sequential = digits == "123456789"
+
     # Invalid patterns to check
     invalid_conditions = [
         digits == "000000000",
         digits[:3] == "000",  # Area number cannot be 000
         digits[3:5] == "00",  # Group number cannot be 00
         digits[5:] == "0000",  # Serial number cannot be 0000
+        is_sequential,  # Sequential patterns like 123456789
         digits
         in [
-            "123456789",
             "111111111",
             "222222222",
             "333333333",
@@ -129,7 +132,7 @@ def validate_birth_date(birth_date: date | None, min_age: int = 13) -> bool:
 
     today = date.today()
 
-    # Check minimum date (year 1900)
+    # Check minimum date (after year 1900)
     min_date = date(1900, 1, 1)
     if birth_date < min_date:
         return False
@@ -179,8 +182,8 @@ def validate_password_strength(password: str | None) -> tuple[bool, list[str]]:
     # Check for common weak patterns
     weak_patterns = [
         r"(.)\1{3,}",  # Same character repeated 4+ times
-        r"(012|123|234|345|456|567|678|789|890)",  # Sequential numbers
-        r"(abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz)",  # Sequential letters
+        r"(012|123|234|345|456|567|678|789|890)",  # Sequential numbers (3+ chars)
+        r"(abc|bcd|cde|def|efg|fgh|ghi|hij|ijk|jkl|klm|lmn|mno|nop|opq|pqr|qrs|rst|stu|tuv|uvw|vwx|wxy|xyz)",  # Sequential letters (3+ chars)
     ]
 
     for pattern in weak_patterns:
@@ -218,13 +221,20 @@ def sanitize_filename(filename: str | None) -> str:
         Sanitized filename safe for filesystem
     """
     if not filename:
-        return "unnamed_file"
+        return "untitled"
 
-    # Remove or replace dangerous characters
-    filename = re.sub(r'[<>:"/\\|?*]', "_", filename)
-
-    # Remove control characters
+    # Remove control characters first
     filename = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", filename)
+
+    # Replace spaces and path separators with underscores, remove other dangerous characters
+    filename = re.sub(r"[\s/\\]", "_", filename)  # Replace spaces, forward/back slashes with underscores
+    filename = re.sub(r'[<>:"|?*]', "", filename)  # Remove other dangerous characters entirely
+
+    # Clean up multiple consecutive underscores
+    filename = re.sub(r"_+", "_", filename)
+
+    # Remove leading/trailing underscores
+    filename = filename.strip("_")
 
     # Limit length
     if len(filename) > 255:
@@ -234,6 +244,6 @@ def sanitize_filename(filename: str | None) -> str:
 
     # Ensure it's not empty after sanitization
     if not filename.strip():
-        return "unnamed_file"
+        return "untitled"
 
     return filename.strip()

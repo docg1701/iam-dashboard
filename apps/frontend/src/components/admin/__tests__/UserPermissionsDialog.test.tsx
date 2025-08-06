@@ -6,7 +6,7 @@
  */
 
 import React from 'react'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -15,8 +15,11 @@ import {
   AgentName, 
   PERMISSION_LEVELS, 
   getPermissionsForLevel,
+  UserAgentPermission,
+  PermissionActions,
 } from '@/types/permissions'
 import * as useUserPermissions from '@/hooks/useUserPermissions'
+import { createMockMutation, createLoadingMutation } from '@/__tests__/mocks/tanstack-query'
 
 // Mock the hooks
 vi.mock('@/hooks/useUserPermissions')
@@ -119,21 +122,21 @@ describe('UserPermissionsDialog Component', () => {
     })
 
     vi.mocked(useUserPermissions.usePermissionMutations).mockReturnValue({
-      updatePermission: {
+      updatePermission: createMockMutation<unknown, Error, { agent: AgentName; permissions: PermissionActions }>({
         mutateAsync: mockUpdatePermission,
         isPending: false,
         error: null,
-      },
-      createPermission: {
+      }),
+      createPermission: createMockMutation<UserAgentPermission, Error, { agent: AgentName; permissions: PermissionActions }>({
         mutateAsync: mockCreatePermission,
         isPending: false,
         error: null,
-      },
-      deletePermission: {
+      }),
+      deletePermission: createMockMutation<unknown, Error, AgentName>({
         mutateAsync: vi.fn(),
         isPending: false,
         error: null,
-      },
+      }),
       isLoading: false,
       error: null,
     })
@@ -149,6 +152,7 @@ describe('UserPermissionsDialog Component', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+    cleanup()
   })
 
   const renderUserPermissionsDialog = (props = {}) => {
@@ -246,7 +250,7 @@ describe('UserPermissionsDialog Component', () => {
       expect(clientManagementSection).toBeInTheDocument()
       
       if (clientManagementSection) {
-        const permissionSelect = within(clientManagementSection).getByRole('combobox')
+        const permissionSelect = within(clientManagementSection as HTMLElement).getByRole('combobox')
         await userEvent.click(permissionSelect)
         
         const standardOption = screen.getByText('Padrão')
@@ -311,7 +315,8 @@ describe('UserPermissionsDialog Component', () => {
     it('should create new permissions for agents without existing permissions', async () => {
       // Mock permissions without PDF processing
       const permissionsWithoutPDF = { ...mockCurrentPermissions }
-      delete permissionsWithoutPDF[AgentName.PDF_PROCESSING]
+      const pdfAgent: AgentName = AgentName.PDF_PROCESSING
+      delete (permissionsWithoutPDF as Record<string, unknown>)[pdfAgent]
       
       vi.mocked(useUserPermissions.useUserPermissions).mockReturnValue({
         permissions: permissionsWithoutPDF,
@@ -332,7 +337,7 @@ describe('UserPermissionsDialog Component', () => {
       // Make a change to PDF processing
       const pdfSection = screen.getByText('Processamento de PDFs').closest('.space-y-4')
       if (pdfSection) {
-        const permissionSelect = within(pdfSection).getByRole('combobox')
+        const permissionSelect = within(pdfSection as HTMLElement).getByRole('combobox')
         await userEvent.click(permissionSelect)
         
         const readOnlyOption = screen.getByText('Leitura')
@@ -529,21 +534,21 @@ describe('UserPermissionsDialog Component', () => {
   describe('Loading and Saving States', () => {
     it('should show loading state when saving', async () => {
       vi.mocked(useUserPermissions.usePermissionMutations).mockReturnValue({
-        updatePermission: {
+        updatePermission: createLoadingMutation<unknown, Error, { agent: AgentName; permissions: PermissionActions }>({
           mutateAsync: mockUpdatePermission,
           isPending: true,
           error: null,
-        },
-        createPermission: {
+        }),
+        createPermission: createMockMutation<UserAgentPermission, Error, { agent: AgentName; permissions: PermissionActions }>({
           mutateAsync: mockCreatePermission,
           isPending: false,
           error: null,
-        },
-        deletePermission: {
+        }),
+        deletePermission: createMockMutation<unknown, Error, AgentName>({
           mutateAsync: vi.fn(),
           isPending: false,
           error: null,
-        },
+        }),
         isLoading: true,
         error: null,
       })
@@ -557,21 +562,21 @@ describe('UserPermissionsDialog Component', () => {
 
     it('should disable form elements when saving', async () => {
       vi.mocked(useUserPermissions.usePermissionMutations).mockReturnValue({
-        updatePermission: {
+        updatePermission: createLoadingMutation<unknown, Error, { agent: AgentName; permissions: PermissionActions }>({
           mutateAsync: mockUpdatePermission,
           isPending: true,
           error: null,
-        },
-        createPermission: {
+        }),
+        createPermission: createMockMutation<UserAgentPermission, Error, { agent: AgentName; permissions: PermissionActions }>({
           mutateAsync: mockCreatePermission,
           isPending: false,
           error: null,
-        },
-        deletePermission: {
+        }),
+        deletePermission: createMockMutation<unknown, Error, AgentName>({
           mutateAsync: vi.fn(),
           isPending: false,
           error: null,
-        },
+        }),
         isLoading: true,
         error: null,
       })

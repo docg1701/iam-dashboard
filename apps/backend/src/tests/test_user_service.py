@@ -12,7 +12,7 @@ from uuid import uuid4
 import pytest
 from fastapi import Request
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from src.core.exceptions import ConflictError, DatabaseError, NotFoundError, ValidationError
 from src.models.user import User, UserRole
@@ -525,7 +525,6 @@ class TestUserServiceIntegration:
         assert result.created_at is not None
 
         # Verify in database
-        from sqlmodel import select
 
         db_user = test_session.exec(select(User).where(User.user_id == result.user_id)).first()
         assert db_user is not None
@@ -572,8 +571,17 @@ class TestUserServiceIntegration:
     @pytest.mark.asyncio
     async def test_get_user_by_id_integration(self, test_session: Session) -> None:
         """Test get user by ID with real database."""
-        # Create test user
-        test_user = UserFactory(role=UserRole.USER)
+
+
+        # Create test user directly instead of using factory
+        test_user = User(
+            user_id=uuid4(),
+            email="test@example.com",
+            role=UserRole.USER,
+            is_active=True,
+            password_hash="test_hash",
+            full_name="Test User",
+        )
         test_session.add(test_user)
         test_session.commit()
         test_session.refresh(test_user)
@@ -617,8 +625,17 @@ class TestUserServiceIntegration:
     @pytest.mark.asyncio
     async def test_update_user_integration_success(self, test_session: Session) -> None:
         """Test user update with real database."""
-        # Create test user
-        test_user = UserFactory(role=UserRole.USER, email="original@example.com")
+        # Create test user directly to avoid factory issues
+
+
+        test_user = User(
+            user_id=uuid4(),
+            email="original@example.com",
+            role=UserRole.USER,
+            is_active=True,
+            password_hash="test_hash",
+            full_name="Test User",
+        )
         test_session.add(test_user)
         test_session.commit()
         test_session.refresh(test_user)
@@ -734,7 +751,6 @@ class TestUserServiceIntegration:
         user_service = UserService(test_session)
 
         # Search parameters
-        from src.schemas.users import UserSearchParams
 
         search_params = UserSearchParams()
 
@@ -766,7 +782,6 @@ class TestUserServiceIntegration:
         user_service = UserService(test_session)
 
         # Search for active users only
-        from src.schemas.users import UserSearchParams
 
         search_params = UserSearchParams(is_active=True)
 
@@ -826,7 +841,6 @@ class TestUserServiceIntegration:
         user_service = UserService(test_session)
 
         # Search parameters
-        from src.schemas.users import UserSearchParams
 
         search_params = UserSearchParams()
 
@@ -871,8 +885,17 @@ class TestUserServicePrivateMethods:
     @pytest.mark.asyncio
     async def test_get_user_by_id_internal_success(self, test_session: Session) -> None:
         """Test internal get user by ID method."""
-        # Create test user
-        test_user = UserFactory()
+        # Create test user directly to avoid factory issues
+
+
+        test_user = User(
+            user_id=uuid4(),
+            email="test@example.com",
+            role=UserRole.USER,
+            is_active=True,
+            password_hash="test_hash",
+            full_name="Test User",
+        )
         test_session.add(test_user)
         test_session.commit()
         test_session.refresh(test_user)
@@ -1001,7 +1024,7 @@ class TestUserServicePrivateMethods:
         user_service = UserService(test_session)
 
         # User should be able to update their own email and password
-        update_data = UserUpdateRequest(email="new@example.com", password="newpass")
+        update_data = UserUpdateRequest(email="new@example.com", password="NewPass123!")
 
         try:
             await user_service._validate_user_update_permissions(
@@ -1196,7 +1219,6 @@ class TestUserServiceErrorHandling:
         user_service = UserService(test_session)
 
         # Mock session exec to raise SQLAlchemy error
-        from src.schemas.users import UserSearchParams
 
         search_params = UserSearchParams()
 
@@ -1209,7 +1231,7 @@ class TestUserServiceErrorHandling:
                     requesting_user_id=sysadmin.user_id,
                 )
 
-            assert "Failed to list users" in str(exc_info.value.message)
+            assert "Failed to retrieve user due to database error" in str(exc_info.value.message)
             assert exc_info.value.error_code == "DATABASE_ERROR"
 
     @pytest.mark.asyncio

@@ -376,8 +376,6 @@ class TestClientServiceUpdate:
         update_data = ClientUpdate(ssn="987-65-4321")
 
         # Mock IntegrityError with "ssn" in the message
-        from sqlalchemy.exc import SQLAlchemyError
-
         orig_exception = SQLAlchemyError("ssn constraint violation")
         mock_error = IntegrityError("ssn constraint", {}, orig_exception)
         mock_error.orig = orig_exception

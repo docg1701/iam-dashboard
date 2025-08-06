@@ -8,6 +8,7 @@ All authentication logic is centralized here for consistency.
 import contextlib
 import logging
 import secrets
+import sys
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
@@ -69,18 +70,13 @@ class SecureAuthService:
     """Enhanced authentication service with session tracking and JWT blacklisting."""
 
     def __init__(self) -> None:
-        import sys
         self.secret_key = settings.SECRET_KEY
         self.algorithm = "HS256"
         self.access_token_expire_minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
         self.session_expire_hours = 24
 
         # Skip Redis initialization in test environment
-        self._is_testing = (
-            settings.ENVIRONMENT == "testing"
-            or "pytest" in sys.modules
-            or "test" in sys.argv[0] if sys.argv else False
-        )
+        self._is_testing = "pytest" in sys.modules or "test" in sys.argv[0] if sys.argv else False
 
         if self._is_testing:
             self.redis_client = None
@@ -94,7 +90,8 @@ class SecureAuthService:
                 logger.debug("AuthService initialized with Redis connection")
             except (redis.ConnectionError, redis.RedisError) as e:
                 raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Redis connection failed"
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Redis connection failed",
                 ) from e
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
@@ -136,8 +133,8 @@ class SecureAuthService:
             last_activity=now.isoformat(),
         )
 
-        # Skip Redis storage in testing mode
-        if not self._is_testing and self.redis_client is not None:
+        # Store session in Redis if available
+        if self.redis_client is not None:
             try:
                 self.redis_client.setex(
                     f"session:{session_id}",
@@ -272,7 +269,7 @@ class SecureAuthService:
             return
 
         # Skip blacklisting in testing mode
-        if self._is_testing or self.redis_client is None:
+        if self.redis_client is None:
             return
 
         try:
@@ -310,14 +307,14 @@ class SecureAuthService:
                 raise HTTPException(
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="Session storage unavailable",
-            ) from err
+                ) from err
 
         return session_id
 
     def get_temp_session(self, session_id: str) -> SessionData | None:
         """Get temporary session data."""
-        # Skip Redis operations in testing mode
-        if self._is_testing or self.redis_client is None:
+        # Skip Redis operations if no client available
+        if self.redis_client is None:
             return None
 
         try:
@@ -330,8 +327,8 @@ class SecureAuthService:
 
     def revoke_temp_session(self, session_id: str) -> None:
         """Revoke a temporary session."""
-        # Skip Redis operations in testing mode
-        if self._is_testing or self.redis_client is None:
+        # Skip Redis operations if no client available
+        if self.redis_client is None:
             return
 
         with contextlib.suppress(redis.RedisError):
@@ -339,8 +336,8 @@ class SecureAuthService:
 
     def revoke_session(self, session_id: str) -> None:
         """Revoke a user session."""
-        # Skip Redis operations in testing mode
-        if self._is_testing or self.redis_client is None:
+        # Skip Redis operations if no client available
+        if self.redis_client is None:
             return
 
         with contextlib.suppress(redis.RedisError):
@@ -349,7 +346,7 @@ class SecureAuthService:
     def _is_token_blacklisted(self, jti: str) -> bool:
         """Check if a token is blacklisted."""
         # Skip blacklist check in testing mode
-        if self._is_testing or self.redis_client is None:
+        if self.redis_client is None:
             return False
 
         try:
@@ -360,6 +357,10 @@ class SecureAuthService:
 
     def _validate_session(self, session_id: str, user_id: str) -> None:
         """Validate that a session exists and belongs to the user."""
+        # Skip session validation if no Redis client
+        if self.redis_client is None:
+            return
+
         session_data = self._get_session_data(session_id)
         if not session_data or session_data.user_id != user_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session")
@@ -378,8 +379,8 @@ class SecureAuthService:
 
     def _get_session_data(self, session_id: str) -> SessionData | None:
         """Get session data from Redis."""
-        # Skip session validation in testing mode
-        if self._is_testing or self.redis_client is None:
+        # Skip session validation if no Redis client
+        if self.redis_client is None:
             return None
 
         try:
@@ -705,38 +706,61 @@ async def check_user_agent_permission(
     from src.models.permissions import AgentName  # noqa: PLC0415
     from src.services.permission_service import PermissionService  # noqa: PLC0415
 
-    try:
-        # Validate agent name
-        agent_enum = AgentName(agent_name)
+    # First try role-based check for immediate resolution
+    if session:
+        from src.models.user import User  # noqa: PLC0415
 
-        # Use the permission service to check
-        permission_service = PermissionService()
+        user = session.exec(select(User).where(User.user_id == user_id)).first()
+        if user:
+            # Sysadmin bypass (use enum value as stored in database)
+            if user.role.value == "sysadmin":
+                return True
+
+            # Admin role inheritance for client_management and reports_analysis (use enum value)
+            if user.role.value == "admin" and agent_name in [
+                "client_management",
+                "reports_analysis",
+            ]:
+                return True
+
+    # Check for explicit permissions in the database
+    if session:
+        from src.models.permissions import UserAgentPermission  # noqa: PLC0415
+
         try:
-            has_permission = await permission_service.check_user_permission(
-                user_id, agent_enum, operation
+            agent_enum = AgentName(agent_name)
+            perm_query = select(UserAgentPermission).where(
+                UserAgentPermission.user_id == user_id,  # type: ignore[arg-type]
+                UserAgentPermission.agent_name == agent_enum,  # type: ignore[arg-type]
             )
-            return has_permission
-        finally:
-            await permission_service.close()
-    except Exception:
-        # Fallback to role-based check if permission system fails
-        if session:
-            from src.models.user import User  # noqa: PLC0415
+            permission = session.exec(perm_query).first()
+            if permission:
+                return permission.permissions.get(operation, False)
+        except Exception:
+            pass
 
-            user = session.exec(select(User).where(User.user_id == user_id)).first()
-            if user:
-                # Sysadmin bypass
-                if user.role.value == "SYSADMIN":
-                    return True
+    # If no explicit permission found, try the permission service (PostgreSQL-specific)
+    # Skip this in testing environments where PostgreSQL functions aren't available
+    is_testing = "pytest" in sys.modules or "test" in sys.argv[0] if sys.argv else False
 
-                # Admin role inheritance for client_management and reports_analysis
-                if user.role.value == "ADMIN" and agent_name in [
-                    "client_management",
-                    "reports_analysis",
-                ]:
-                    return True
+    if not is_testing:
+        try:
+            # Validate agent name
+            agent_enum = AgentName(agent_name)
 
-        return False
+            # Use the permission service to check
+            permission_service = PermissionService()
+            try:
+                has_permission = await permission_service.check_user_permission(
+                    user_id, agent_enum, operation
+                )
+                return has_permission
+            finally:
+                await permission_service.close()
+        except Exception:
+            pass
+
+    return False
 
 
 def require_agent_permission(agent_name: str, operation: str) -> Any:

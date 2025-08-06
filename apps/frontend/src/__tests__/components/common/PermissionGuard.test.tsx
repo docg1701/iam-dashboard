@@ -2,6 +2,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
+import { AgentName } from '@/types/permissions'
+
+// Mock the hooks with factory functions
+vi.mock('@/hooks/useUserPermissions', () => ({
+  usePermissionCheck: vi.fn().mockReturnValue({
+    allowed: true,
+    isLoading: false,
+    error: null,
+    agent: AgentName.CLIENT_MANAGEMENT,
+    operation: 'create',
+  }),
+  useAgentAccess: vi.fn().mockReturnValue({
+    hasAccess: true,
+    isLoading: false,
+    error: null,
+    agent: AgentName.CLIENT_MANAGEMENT,
+    permissions: { create: true, read: true, update: false, delete: false },
+  }),
+}))
+
+// Import components AFTER mocking their dependencies
 import {
   PermissionGuard,
   CreatePermissionGuard,
@@ -13,41 +34,13 @@ import {
   SuspensePermissionGuard,
   withPermissionGuard,
 } from '@/components/common/PermissionGuard'
-import { AgentName } from '@/types/permissions'
+import { usePermissionCheck, useAgentAccess } from '@/hooks/useUserPermissions'
 
-// Mock the hooks directly
-const mockUsePermissionCheck = vi.fn()
-const mockUseAgentAccess = vi.fn()
+// Get the mocked functions for test control
+const mockUsePermissionCheck = vi.mocked(usePermissionCheck)
+const mockUseAgentAccess = vi.mocked(useAgentAccess)
 
-vi.mock('@/hooks/useUserPermissions', () => ({
-  usePermissionCheck: (...args: unknown[]) => {
-    mockUsePermissionCheck(...args)
-    return mockUsePermissionCheck.mockReturnValue || {
-      allowed: true,
-      isLoading: false,
-      error: null,
-      agent: args[0],
-      operation: args[1],
-    }
-  },
-  useAgentAccess: (...args: unknown[]) => {
-    mockUseAgentAccess(...args)
-    return mockUseAgentAccess.mockReturnValue || {
-      hasAccess: true,
-      isLoading: false,
-      error: null,
-      agent: args[0],
-      permissions: { create: true, read: true, update: false, delete: false },
-    }
-  },
-}))
-
-// Mock Lucide React icons
-vi.mock('lucide-react', () => ({
-  Lock: () => <div data-testid="lock-icon">Lock</div>,
-  Loader2: () => <div data-testid="loader-icon">Loader2</div>,
-  AlertTriangle: () => <div data-testid="alert-triangle-icon">AlertTriangle</div>,
-}))
+// Lucide React icons are mocked globally in test/setup.ts
 
 // Test wrapper component
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -73,13 +66,13 @@ describe('PermissionGuard', () => {
 
   describe('Basic Permission Guard', () => {
     it('should render children when permission is granted', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: true,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -94,13 +87,13 @@ describe('PermissionGuard', () => {
     })
 
     it('should show default fallback when permission is denied', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: false,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -111,18 +104,18 @@ describe('PermissionGuard', () => {
       )
 
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
-      expect(screen.getByTestId('lock-icon')).toBeInTheDocument()
+      expect(screen.getByTestId('lucide-icon')).toBeInTheDocument()
       expect(screen.getByText(/não tem permissão para criar/)).toBeInTheDocument()
     })
 
     it('should show custom fallback when permission is denied', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: false,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       const customFallback = <div data-testid="custom-fallback">Access Denied</div>
 
@@ -144,13 +137,13 @@ describe('PermissionGuard', () => {
     })
 
     it('should show loading state', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: false,
         isLoading: true,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -161,18 +154,18 @@ describe('PermissionGuard', () => {
       )
 
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
-      expect(screen.getByTestId('loader-icon')).toBeInTheDocument()
+      expect(screen.getByTestId('lucide-icon')).toBeInTheDocument()
       expect(screen.getByText('Verificando permissões...')).toBeInTheDocument()
     })
 
     it('should show custom loading component', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: false,
         isLoading: true,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       const customLoading = <div data-testid="custom-loading">Loading...</div>
 
@@ -195,13 +188,13 @@ describe('PermissionGuard', () => {
 
     it('should show error state', () => {
       const error = new Error('Permission check failed')
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: false,
         isLoading: false,
         error: error,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -212,20 +205,20 @@ describe('PermissionGuard', () => {
       )
 
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
-      expect(screen.getByTestId('alert-triangle-icon')).toBeInTheDocument()
+      expect(screen.getByTestId('lucide-icon')).toBeInTheDocument()
       expect(screen.getByText(/Permission check failed/)).toBeInTheDocument()
     })
   })
 
   describe('Agent Access Guard', () => {
     it('should render children when agent access is granted', () => {
-      mockUseAgentAccess.mockReturnValue = {
+      mockUseAgentAccess.mockReturnValue({
         hasAccess: true,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         permissions: { create: true, read: true, update: false, delete: false },
-      }
+      })
 
       render(
         <TestWrapper>
@@ -239,13 +232,13 @@ describe('PermissionGuard', () => {
     })
 
     it('should show fallback when agent access is denied', () => {
-      mockUseAgentAccess.mockReturnValue = {
+      mockUseAgentAccess.mockReturnValue({
         hasAccess: false,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         permissions: null,
-      }
+      })
 
       render(
         <TestWrapper>
@@ -262,13 +255,13 @@ describe('PermissionGuard', () => {
 
   describe('Specific Permission Guards', () => {
     it('should render CreatePermissionGuard correctly', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: true,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -287,13 +280,13 @@ describe('PermissionGuard', () => {
     })
 
     it('should render ReadPermissionGuard correctly', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: true,
         isLoading: false,
         error: null,
         agent: AgentName.PDF_PROCESSING,
         operation: 'read',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -312,13 +305,13 @@ describe('PermissionGuard', () => {
     })
 
     it('should render UpdatePermissionGuard correctly', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: true,
         isLoading: false,
         error: null,
         agent: AgentName.REPORTS_ANALYSIS,
         operation: 'update',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -337,13 +330,13 @@ describe('PermissionGuard', () => {
     })
 
     it('should render DeletePermissionGuard correctly', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: true,
         isLoading: false,
         error: null,
         agent: AgentName.AUDIO_RECORDING,
         operation: 'delete',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -362,13 +355,13 @@ describe('PermissionGuard', () => {
     })
 
     it('should render AgentAccessGuard correctly', () => {
-      mockUseAgentAccess.mockReturnValue = {
+      mockUseAgentAccess.mockReturnValue({
         hasAccess: true,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         permissions: { create: true, read: true, update: false, delete: false },
-      }
+      })
 
       render(
         <TestWrapper>
@@ -389,13 +382,13 @@ describe('PermissionGuard', () => {
   describe('MultiplePermissionGuard', () => {
     it('should render children when any permission is granted', () => {
       // Mock first permission granted
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: true,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'delete',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -414,13 +407,13 @@ describe('PermissionGuard', () => {
     })
 
     it('should show fallback when no permissions are granted', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: false,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'delete',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -440,13 +433,13 @@ describe('PermissionGuard', () => {
     })
 
     it('should show loading when any permission is loading', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: false,
         isLoading: true,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -462,18 +455,18 @@ describe('PermissionGuard', () => {
       )
 
       expect(screen.queryByTestId('multiple-content')).not.toBeInTheDocument()
-      expect(screen.getByTestId('loader-icon')).toBeInTheDocument()
+      expect(screen.getByTestId('lucide-icon')).toBeInTheDocument()
     })
 
     it('should show error when any permission has error', () => {
       const error = new Error('Permission error')
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: false,
         isLoading: false,
         error: error,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -489,27 +482,27 @@ describe('PermissionGuard', () => {
       )
 
       expect(screen.queryByTestId('multiple-content')).not.toBeInTheDocument()
-      expect(screen.getByTestId('alert-triangle-icon')).toBeInTheDocument()
+      expect(screen.getByTestId('lucide-icon')).toBeInTheDocument()
       expect(screen.getByText(/Permission error/)).toBeInTheDocument()
     })
 
     it('should handle mixed permission and agent access checks', () => {
       // Set first permission to allowed since MultiplePermissionGuard only checks first permission
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: true,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'delete',
-      }
+      })
 
-      mockUseAgentAccess.mockReturnValue = {
+      mockUseAgentAccess.mockReturnValue({
         hasAccess: true,
         isLoading: false,
         error: null,
         agent: AgentName.PDF_PROCESSING,
         permissions: { create: false, read: true, update: false, delete: false },
-      }
+      })
 
       render(
         <TestWrapper>
@@ -530,13 +523,13 @@ describe('PermissionGuard', () => {
 
   describe('SuspensePermissionGuard', () => {
     it('should render with suspense wrapper', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: true,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'read',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -561,13 +554,13 @@ describe('PermissionGuard', () => {
         operation: 'create',
       })
 
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: true,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -590,13 +583,13 @@ describe('PermissionGuard', () => {
         fallback: <div data-testid="hoc-fallback">Access Denied</div>,
       })
 
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: false,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'delete',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -626,13 +619,13 @@ describe('PermissionGuard', () => {
 
   describe('User ID handling', () => {
     it('should pass userId to hooks', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: true,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -656,13 +649,13 @@ describe('PermissionGuard', () => {
 
   describe('Agent text mapping', () => {
     it('should display correct Portuguese agent names in fallback', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: false,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         operation: 'create',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -676,13 +669,13 @@ describe('PermissionGuard', () => {
     })
 
     it('should display correct Portuguese operation names in fallback', () => {
-      mockUsePermissionCheck.mockReturnValue = {
+      mockUsePermissionCheck.mockReturnValue({
         allowed: false,
         isLoading: false,
         error: null,
         agent: AgentName.PDF_PROCESSING,
         operation: 'delete',
-      }
+      })
 
       render(
         <TestWrapper>
@@ -698,13 +691,13 @@ describe('PermissionGuard', () => {
 
   describe('Error scenarios', () => {
     it('should handle undefined operation gracefully', () => {
-      mockUseAgentAccess.mockReturnValue = {
+      mockUseAgentAccess.mockReturnValue({
         hasAccess: true,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         permissions: { create: true, read: true, update: false, delete: false },
-      }
+      })
 
       render(
         <TestWrapper>
@@ -718,13 +711,13 @@ describe('PermissionGuard', () => {
     })
 
     it('should handle null permissions in agent access', () => {
-      mockUseAgentAccess.mockReturnValue = {
+      mockUseAgentAccess.mockReturnValue({
         hasAccess: false,
         isLoading: false,
         error: null,
         agent: AgentName.CLIENT_MANAGEMENT,
         permissions: null,
-      }
+      })
 
       render(
         <TestWrapper>

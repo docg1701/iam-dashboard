@@ -64,11 +64,12 @@ class PasswordSecurityService:
         )
 
         try:
-            self.redis_client.setex(
-                f"password_reset:{token}",
-                timedelta(hours=self.reset_token_expire_hours),
-                reset_data.model_dump_json(),
-            )
+            if self.redis_client is not None:
+                self.redis_client.setex(
+                    f"password_reset:{token}",
+                    timedelta(hours=self.reset_token_expire_hours),
+                    reset_data.model_dump_json(),
+                )
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -80,7 +81,9 @@ class PasswordSecurityService:
     def verify_reset_token(self, token: str) -> PasswordResetToken | None:
         """Verify and retrieve password reset token data."""
         try:
-            token_json = self.redis_client.get(f"password_reset:{token}")
+            token_json = None
+            if self.redis_client is not None:
+                token_json = self.redis_client.get(f"password_reset:{token}")
             if token_json:
                 token_data = PasswordResetToken.model_validate_json(token_json)
                 # Check if token is expired
@@ -94,7 +97,8 @@ class PasswordSecurityService:
     def revoke_reset_token(self, token: str) -> None:
         """Revoke a password reset token after use."""
         with contextlib.suppress(Exception):
-            self.redis_client.delete(f"password_reset:{token}")
+            if self.redis_client is not None:
+                self.redis_client.delete(f"password_reset:{token}")
 
     def record_login_attempt(self, email: str, ip_address: str, success: bool) -> None:
         """Record a login attempt for tracking failed attempts."""
@@ -108,11 +112,14 @@ class PasswordSecurityService:
         try:
             # Store in Redis with expiration based on lockout duration
             expiry = timedelta(minutes=self.lockout_duration_minutes + 5)
-            self.redis_client.lpush(f"login_attempts:{email}", attempt.model_dump_json())
-            self.redis_client.expire(f"login_attempts:{email}", expiry)
+            if self.redis_client is not None:
+                self.redis_client.lpush(f"login_attempts:{email}", attempt.model_dump_json())
+            if self.redis_client is not None:
+                self.redis_client.expire(f"login_attempts:{email}", expiry)
 
             # Limit the list to recent attempts only
-            self.redis_client.ltrim(f"login_attempts:{email}", 0, 19)  # Keep last 20 attempts
+            if self.redis_client is not None:
+                self.redis_client.ltrim(f"login_attempts:{email}", 0, 19)  # Keep last 20 attempts
 
         except Exception:
             # If Redis is unavailable, don't fail the login process
@@ -121,7 +128,9 @@ class PasswordSecurityService:
     def is_account_locked(self, email: str) -> bool:
         """Check if an account is locked due to failed login attempts."""
         try:
-            attempts_json = self.redis_client.lrange(f"login_attempts:{email}", 0, -1)
+            attempts_json = []
+            if self.redis_client is not None:
+                attempts_json = self.redis_client.lrange(f"login_attempts:{email}", 0, -1)
 
             if not attempts_json:
                 return False
@@ -153,7 +162,8 @@ class PasswordSecurityService:
     def clear_failed_attempts(self, email: str) -> None:
         """Clear failed login attempts for an account after successful login."""
         with contextlib.suppress(Exception):
-            self.redis_client.delete(f"login_attempts:{email}")
+            if self.redis_client is not None:
+                self.redis_client.delete(f"login_attempts:{email}")
 
     def store_password_hash(self, user_id: UUID, password_hash: str) -> None:
         """Store a password hash in the user's password history."""
@@ -161,13 +171,16 @@ class PasswordSecurityService:
             history_key = f"password_history:{user_id}"
 
             # Add new hash to the front of the list
-            self.redis_client.lpush(history_key, password_hash)
+            if self.redis_client is not None:
+                self.redis_client.lpush(history_key, password_hash)
 
             # Keep only the last N passwords
-            self.redis_client.ltrim(history_key, 0, self.password_history_count - 1)
+            if self.redis_client is not None:
+                self.redis_client.ltrim(history_key, 0, self.password_history_count - 1)
 
             # Set expiration (keep password history for 90 days)
-            self.redis_client.expire(history_key, timedelta(days=90))
+            if self.redis_client is not None:
+                self.redis_client.expire(history_key, timedelta(days=90))
 
         except Exception:
             # If Redis is unavailable, don't fail password changes
@@ -177,7 +190,9 @@ class PasswordSecurityService:
         """Check if a password has been used recently."""
         try:
             history_key = f"password_history:{user_id}"
-            password_hashes = self.redis_client.lrange(history_key, 0, -1)
+            password_hashes = []
+            if self.redis_client is not None:
+                password_hashes = self.redis_client.lrange(history_key, 0, -1)
 
             for stored_hash in password_hashes:
                 if auth_service.verify_password(new_password, stored_hash):
@@ -195,7 +210,9 @@ class PasswordSecurityService:
             return None
 
         try:
-            attempts_json = self.redis_client.lrange(f"login_attempts:{email}", 0, 4)
+            attempts_json = []
+            if self.redis_client is not None:
+                attempts_json = self.redis_client.lrange(f"login_attempts:{email}", 0, 4)
 
             if attempts_json:
                 # Get the time of the most recent failed attempt

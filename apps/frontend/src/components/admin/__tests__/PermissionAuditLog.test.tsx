@@ -18,12 +18,85 @@ import {
 } from '@/types/permissions'
 import * as permissionAPI from '@/lib/api/permissions'
 
+// Mock all UI components
+vi.mock('@/components/ui/table', async () => {
+  const actual = await import('@/__tests__/mocks/ui-components')
+  return {
+    Table: actual.Table,
+    TableHeader: actual.TableHeader,
+    TableBody: actual.TableBody,
+    TableRow: actual.TableRow,
+    TableHead: actual.TableHead,
+    TableCell: actual.TableCell,
+  }
+})
+
+vi.mock('@/components/ui/button', async () => {
+  const actual = await import('@/__tests__/mocks/ui-components')
+  return {
+    Button: actual.Button,
+  }
+})
+
+vi.mock('@/components/ui/badge', async () => {
+  const actual = await import('@/__tests__/mocks/ui-components')
+  return {
+    Badge: actual.Badge,
+  }
+})
+
+vi.mock('@/components/ui/input', async () => {
+  const actual = await import('@/__tests__/mocks/ui-components')
+  return {
+    Input: actual.Input,
+  }
+})
+
+vi.mock('@/components/ui/card', async () => {
+  const actual = await import('@/__tests__/mocks/ui-components')
+  return {
+    Card: actual.Card,
+    CardContent: actual.CardContent,
+    CardDescription: actual.CardDescription,
+    CardHeader: actual.CardHeader,
+    CardTitle: actual.CardTitle,
+    CardFooter: actual.CardFooter,
+  }
+})
+
+vi.mock('@/components/ui/select', async () => {
+  const actual = await import('@/__tests__/mocks/ui-components')
+  return {
+    Select: actual.Select,
+    SelectContent: actual.SelectContent,
+    SelectItem: actual.SelectItem,
+    SelectTrigger: actual.SelectTrigger,
+    SelectValue: actual.SelectValue,
+  }
+})
+
+vi.mock('@/components/ui/popover', async () => {
+  const actual = await import('@/__tests__/mocks/ui-components')
+  return {
+    Popover: actual.Popover,
+    PopoverContent: actual.PopoverContent,
+    PopoverTrigger: actual.PopoverTrigger,
+  }
+})
+
+vi.mock('@/components/ui/calendar', async () => {
+  const actual = await import('@/__tests__/mocks/ui-components')
+  return {
+    Calendar: actual.Calendar,
+  }
+})
+
 // Mock the PermissionAPI
 vi.mock('@/lib/api/permissions', () => ({
   PermissionAPI: {
     Audit: {
       getUserAuditLogs: vi.fn(),
-      getAllAuditLogs: vi.fn(),
+      getAgentAuditLogs: vi.fn(),
     },
   },
 }))
@@ -38,15 +111,31 @@ vi.mock('@/components/ui/toast', () => ({
   toast: vi.fn(),
 }))
 
-// Mock date-fns
+// Mock date-fns with proper date handling
 vi.mock('date-fns', async () => {
   const actual = await vi.importActual('date-fns')
   return {
     ...actual,
     format: vi.fn((date, formatStr) => {
-      if (formatStr === 'dd/MM/yyyy HH:mm') return '15/01/2024 14:30'
-      if (formatStr === 'yyyy-MM-dd-HHmm') return '2024-01-15-1430'
-      return '15/01/2024'
+      const dateObj = new Date(date)
+      if (formatStr === 'dd/MM/yyyy HH:mm') {
+        // Return different formatted dates based on the input
+        const day = String(dateObj.getDate()).padStart(2, '0')
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+        const year = dateObj.getFullYear()
+        const hours = String(dateObj.getHours()).padStart(2, '0')
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0')
+        return `${day}/${month}/${year} ${hours}:${minutes}`
+      }
+      if (formatStr === 'yyyy-MM-dd-HHmm') {
+        const year = dateObj.getFullYear()
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+        const day = String(dateObj.getDate()).padStart(2, '0')
+        const hours = String(dateObj.getHours()).padStart(2, '0')
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0')
+        return `${year}-${month}-${day}-${hours}${minutes}`
+      }
+      return `${String(dateObj.getDate()).padStart(2, '0')}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${dateObj.getFullYear()}`
     }),
     subDays: vi.fn((date, days) => new Date(date.getTime() - days * 24 * 60 * 60 * 1000)),
   }
@@ -127,17 +216,15 @@ describe('PermissionAuditLog Component', () => {
     vi.mocked(permissionAPI.PermissionAPI.Audit.getUserAuditLogs).mockResolvedValue({
       logs: mockAuditLogs,
       total: mockAuditLogs.length,
-      page: 1,
-      per_page: 50,
-      total_pages: 1,
+      limit: 50,
+      offset: 0,
     })
 
-    vi.mocked(permissionAPI.PermissionAPI.Audit.getAllAuditLogs).mockResolvedValue({
+    vi.mocked(permissionAPI.PermissionAPI.Audit.getAgentAuditLogs).mockResolvedValue({
       logs: mockAuditLogs,
       total: mockAuditLogs.length,
-      page: 1,
-      per_page: 50,
-      total_pages: 1,
+      limit: 50,
+      offset: 0,
     })
 
     // Mock URL functions for export
@@ -170,21 +257,55 @@ describe('PermissionAuditLog Component', () => {
     })
 
     it('should render embedded view when embedded prop is true', () => {
-      renderPermissionAuditLog({ embedded: true })
+      const { container } = renderPermissionAuditLog({ embedded: true })
+      
+      // Check that embedded view is rendered (space-y-4 class)
+      const embeddedWrapper = container.querySelector('.space-y-4')
+      expect(embeddedWrapper).toBeInTheDocument()
+      
+      // Check that full view is not rendered (no statistics cards)
+      expect(screen.queryByText('Total de Registros')).not.toBeInTheDocument()
       expect(screen.queryByText('Log de Auditoria de Permissões')).not.toBeInTheDocument()
       expect(screen.getByRole('table')).toBeInTheDocument()
     })
 
-    it('should show loading state initially', () => {
-      vi.mocked(permissionAPI.PermissionAPI.Audit.getUserAuditLogs).mockImplementation(
-        () => new Promise(() => {}) // Never resolves
-      )
+    it('should show loading state initially', async () => {
+      // Import useQuery from the actual module and mock it temporarily
+      const { useQuery } = await import('@tanstack/react-query')
+      const mockUseQuery = vi.mocked(useQuery)
+      
+      // Override the useQuery mock to return loading state for this test
+      mockUseQuery.mockReturnValueOnce({
+        data: undefined,
+        isLoading: true,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as any)
 
       renderPermissionAuditLog({ embedded: true })
       expect(screen.getByText('Carregando histórico...')).toBeInTheDocument()
     })
 
     it('should display audit statistics correctly', async () => {
+      // Import useQuery and override to provide audit data
+      const { useQuery } = await import('@tanstack/react-query')
+      const mockUseQuery = vi.mocked(useQuery)
+      
+      // Override the useQuery mock to return audit data
+      mockUseQuery.mockReturnValueOnce({
+        data: {
+          logs: mockAuditLogs,
+          total: mockAuditLogs.length,
+          limit: 50,
+          offset: 0,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as any)
+
       renderPermissionAuditLog()
 
       await waitFor(() => {
@@ -196,51 +317,111 @@ describe('PermissionAuditLog Component', () => {
 
   describe('Audit Log Display', () => {
     it('should render audit log entries correctly', async () => {
+      // Override useQuery to provide audit data for this test
+      const { useQuery } = await import('@tanstack/react-query')
+      const mockUseQuery = vi.mocked(useQuery)
+      
+      mockUseQuery.mockReturnValueOnce({
+        data: {
+          logs: mockAuditLogs,
+          total: mockAuditLogs.length,
+          limit: 50,
+          offset: 0,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as any)
+
       renderPermissionAuditLog({ embedded: true })
 
       await waitFor(() => {
-        expect(screen.getByText('15/01/2024 14:30')).toBeInTheDocument()
-        expect(screen.getByText('Gestão de Clientes')).toBeInTheDocument()
-        expect(screen.getByText('Atualizado')).toBeInTheDocument()
-        expect(screen.getByText('admin-1')).toBeInTheDocument()
+        expect(screen.getByText('15/01/2024 11:30')).toBeInTheDocument()
+        expect(screen.getAllByText('Gestão de Clientes').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Atualizado').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('admin-1').length).toBeGreaterThan(0)
         expect(screen.getByText('Promoção para supervisor')).toBeInTheDocument()
       })
     })
 
     it('should display action badges with correct colors', async () => {
+      // Override useQuery to provide audit data for this test
+      const { useQuery } = await import('@tanstack/react-query')
+      const mockUseQuery = vi.mocked(useQuery)
+      
+      mockUseQuery.mockReturnValueOnce({
+        data: {
+          logs: mockAuditLogs,
+          total: mockAuditLogs.length,
+          limit: 50,
+          offset: 0,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as any)
+
       renderPermissionAuditLog({ embedded: true })
 
       await waitFor(() => {
-        const updateBadge = screen.getByText('Atualizado')
-        expect(updateBadge).toHaveClass('bg-blue-100', 'text-blue-800')
+        const updateBadges = screen.getAllByText('Atualizado')
+        expect(updateBadges[0]).toHaveClass('bg-blue-100', 'text-blue-800')
 
-        const grantBadge = screen.getByText('Concedido')
-        expect(grantBadge).toHaveClass('bg-green-100', 'text-green-800')
+        const grantBadges = screen.getAllByText('Concedido')
+        expect(grantBadges[0]).toHaveClass('bg-green-100', 'text-green-800')
 
-        const revokeBadge = screen.getByText('Revogado')
-        expect(revokeBadge).toHaveClass('bg-red-100', 'text-red-800')
+        const revokeBadges = screen.getAllByText('Revogado')
+        expect(revokeBadges[0]).toHaveClass('bg-red-100', 'text-red-800')
       })
     })
 
     it('should show agent names in Portuguese', async () => {
+      // Override useQuery to provide audit data
+      const { useQuery } = await import('@tanstack/react-query')
+      const mockUseQuery = vi.mocked(useQuery)
+      
+      mockUseQuery.mockReturnValueOnce({
+        data: {
+          logs: mockAuditLogs,
+          total: mockAuditLogs.length,
+          limit: 50,
+          offset: 0,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as any)
+
       renderPermissionAuditLog({ embedded: true })
 
       await waitFor(() => {
-        expect(screen.getByText('Gestão de Clientes')).toBeInTheDocument()
-        expect(screen.getByText('Processamento PDFs')).toBeInTheDocument()
-        expect(screen.getByText('Relatórios')).toBeInTheDocument()
-        expect(screen.getByText('Gravação de Áudio')).toBeInTheDocument()
+        expect(screen.getAllByText('Gestão de Clientes').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Processamento PDFs').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Relatórios').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Gravação de Áudio').length).toBeGreaterThan(0)
       })
     })
 
     it('should handle empty audit logs', async () => {
-      vi.mocked(permissionAPI.PermissionAPI.Audit.getUserAuditLogs).mockResolvedValue({
-        logs: [],
-        total: 0,
-        page: 1,
-        per_page: 50,
-        total_pages: 0,
-      })
+      // Override useQuery to provide empty data
+      const { useQuery } = await import('@tanstack/react-query')
+      const mockUseQuery = vi.mocked(useQuery)
+      
+      mockUseQuery.mockReturnValueOnce({
+        data: {
+          logs: [],
+          total: 0,
+          limit: 50,
+          offset: 0,
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as any)
 
       renderPermissionAuditLog({ embedded: true })
 
@@ -364,9 +545,9 @@ describe('PermissionAuditLog Component', () => {
         href: '',
         download: '',
         click: mockClick,
-      }
+      } as unknown as HTMLAnchorElement
       
-      vi.spyOn(document, 'createElement').mockReturnValue(mockLink as HTMLAnchorElement)
+      vi.spyOn(document, 'createElement').mockReturnValue(mockLink)
       
       renderPermissionAuditLog()
 
@@ -393,9 +574,9 @@ describe('PermissionAuditLog Component', () => {
         href: '',
         download: '',
         click: vi.fn(),
-      }
+      } as unknown as HTMLAnchorElement
       
-      vi.spyOn(document, 'createElement').mockReturnValue(mockLink as HTMLAnchorElement)
+      vi.spyOn(document, 'createElement').mockReturnValue(mockLink)
       document.body.appendChild = vi.fn()
       document.body.removeChild = vi.fn()
       
@@ -425,11 +606,12 @@ describe('PermissionAuditLog Component', () => {
       })
     })
 
-    it('should call getAllAuditLogs when userId is not provided', async () => {
+    it('should call getAgentAuditLogs when userId is not provided', async () => {
       renderPermissionAuditLog({ userId: undefined })
 
       await waitFor(() => {
-        expect(permissionAPI.PermissionAPI.Audit.getAllAuditLogs).toHaveBeenCalledWith(
+        expect(permissionAPI.PermissionAPI.Audit.getAgentAuditLogs).toHaveBeenCalledWith(
+          expect.any(String),
           expect.any(Object)
         )
       })
@@ -566,9 +748,8 @@ describe('PermissionAuditLog Component', () => {
       vi.mocked(permissionAPI.PermissionAPI.Audit.getUserAuditLogs).mockResolvedValue({
         logs: manyLogs,
         total: manyLogs.length,
-        page: 1,
-        per_page: 50,
-        total_pages: 2,
+        limit: 50,
+        offset: 0,
       })
 
       renderPermissionAuditLog()

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     PROJECT_VERSION: str = "1.0.0"
 
     # Environment Configuration
-    ENVIRONMENT: Literal["development", "staging", "production"] = "development"
+    ENVIRONMENT: Literal["development", "testing", "staging", "production"] = "development"
     DEBUG: bool = Field(default=False, description="Enable debug mode")
     PORT: int = Field(default=8000, description="Server port")
 

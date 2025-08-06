@@ -62,7 +62,9 @@ class TestPermissionService:
         return session
 
     @pytest.fixture
-    def permission_service(self, mock_redis: MagicMock, mock_session: MagicMock) -> PermissionService:
+    def permission_service(
+        self, mock_redis: MagicMock, mock_session: MagicMock
+    ) -> PermissionService:
         """Create PermissionService with mocked Redis and database session."""
         service = PermissionService(session=mock_session)
         service.redis_client = mock_redis
@@ -82,7 +84,7 @@ class TestPermissionService:
     @pytest.fixture
     def regular_user(self) -> User:
         """Create a regular user for testing."""
-        return cast("User", UserFactory.build())
+        return cast("User", UserFactory.build(role=UserRole.USER))
 
     async def test_check_user_permission_cache_hit(
         self,
@@ -93,7 +95,7 @@ class TestPermissionService:
         """Test permission check with cache hit."""
         # Enable Redis for this test
         permission_service._is_testing = False
-        
+
         # Mock cache hit
         permissions = {"create": True, "read": True, "update": False, "delete": False}
         mock_redis.get.return_value = json.dumps(permissions)
@@ -118,7 +120,7 @@ class TestPermissionService:
         """Test permission check with cache miss."""
         # Enable Redis for this test but keep testing mode for session handling
         permission_service._is_testing = False
-        
+
         # Mock cache miss
         mock_redis.get.return_value = None
 
@@ -129,11 +131,13 @@ class TestPermissionService:
             agent_name=AgentName.CLIENT_MANAGEMENT,
             permissions={"create": True, "read": True, "update": False, "delete": False},
         )
-        
+
         # Setup multiple return values for the two execute calls in sequence
         mock_session.execute.side_effect = [
             MagicMock(scalar=MagicMock(return_value=True)),  # First call: database function
-            MagicMock(scalar_one_or_none=MagicMock(return_value=permission))  # Second call: permission query
+            MagicMock(
+                scalar_one_or_none=MagicMock(return_value=permission)
+            ),  # Second call: permission query
         ]
 
         result = await permission_service.check_user_permission(
@@ -193,7 +197,7 @@ class TestPermissionService:
         """Test get user permissions with cache hit."""
         # Enable Redis for this test
         permission_service._is_testing = False
-        
+
         expected_permissions = {
             "client_management": {"create": True, "read": True, "update": False, "delete": False},
             "pdf_processing": {"create": False, "read": True, "update": False, "delete": False},
@@ -778,7 +782,7 @@ class TestPermissionService:
         """Test cache invalidation functionality."""
         # Enable Redis for this test
         permission_service._is_testing = False
-        
+
         keys_to_delete = [
             f"permission:user:{regular_user.user_id}:agent:client_management",
             f"permission:user:{regular_user.user_id}:matrix",
@@ -799,7 +803,7 @@ class TestPermissionService:
         """Test cache invalidation with Redis error."""
         # Enable Redis for this test
         permission_service._is_testing = False
-        
+
         mock_redis.keys.side_effect = Exception("Redis connection failed")
 
         # Should not raise exception
@@ -816,7 +820,7 @@ class TestPermissionService:
         """Test permission checking meets <50ms performance requirement."""
         # Enable Redis for this test
         permission_service._is_testing = False
-        
+
         # Mock cache hit for fastest path
         permissions = {"create": True, "read": True, "update": False, "delete": False}
         mock_redis.get.return_value = json.dumps(permissions)

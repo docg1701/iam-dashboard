@@ -189,11 +189,11 @@ def require_audio_recording_delete() -> Any:
 class PermissionMiddleware:
     """Middleware for handling permission-based route protection."""
 
-    def __init__(self, app):
+    def __init__(self, app: Any) -> None:
         """Initialize permission middleware."""
         self.app = app
 
-    async def __call__(self, request: Request, call_next):
+    async def __call__(self, request: Request, call_next: Callable[[Request], Any]) -> Any:
         """
         Process request and check permissions if required.
 
@@ -216,7 +216,9 @@ class PermissionMiddleware:
                 await request.state.permission_service.close()
 
 
-def check_user_permission_sync(user_id: UUID, agent_name: AgentName, operation: str) -> bool:
+def check_user_permission_sync(
+    user_id: UUID, agent_name: AgentName, operation: str
+) -> Callable[[], bool]:
     """
     Synchronous permission checker for use in non-async contexts.
 
@@ -236,7 +238,7 @@ def check_user_permission_sync(user_id: UUID, agent_name: AgentName, operation: 
     def checker() -> bool:
         """Check permission synchronously (requires running event loop)."""
 
-        async def _check():
+        async def _check() -> bool:
             service = PermissionService()
             try:
                 return await service.check_user_permission(user_id, agent_name, operation)
@@ -262,7 +264,9 @@ def check_user_permission_sync(user_id: UUID, agent_name: AgentName, operation: 
     return checker
 
 
-def permission_required(agent_name: AgentName, operation: str):
+def permission_required(
+    agent_name: AgentName, operation: str
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     Function decorator for permission checking.
 
@@ -282,7 +286,7 @@ def permission_required(agent_name: AgentName, operation: str):
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Extract user_id from function arguments
             user_id = None
 

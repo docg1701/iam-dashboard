@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { UserEditForm } from '@/components/forms/UserEditForm'
@@ -22,6 +22,104 @@ vi.mock('@/hooks/use-toast', () => ({
     toasts: []
   })
 }))
+
+// Mock React Hook Form to properly handle defaultValues
+vi.mock('react-hook-form', () => {
+  const React = require('react')
+  
+  return {
+    useForm: ({ defaultValues = {} } = {}) => ({
+      register: vi.fn(() => ({
+        onChange: vi.fn(),
+        onBlur: vi.fn(),
+        name: 'test',
+        ref: vi.fn(),
+      })),
+      handleSubmit: vi.fn((fn) => (e) => {
+        e?.preventDefault?.()
+        return fn(defaultValues)
+      }),
+      formState: {
+        errors: {},
+        isSubmitting: false,
+        isValid: true,
+        isDirty: false,
+        isLoading: false,
+      },
+      watch: vi.fn(() => defaultValues),
+      setValue: vi.fn(),
+      getValues: vi.fn(() => defaultValues),
+      reset: vi.fn(),
+      control: { _defaultValues: defaultValues },
+      clearErrors: vi.fn(),
+      setError: vi.fn(),
+    }),
+    FormProvider: ({ children, ...props }: any) => (
+      React.createElement('div', {
+        'data-testid': 'form-provider',
+        ...props,
+      }, children)
+    ),
+    Controller: ({ render, control, name }: any) => {
+      const defaultValues = control?._defaultValues || {}
+      const mockFieldProps = {
+        field: {
+          onChange: vi.fn(),
+          onBlur: vi.fn(),
+          value: defaultValues[name] || '',
+          name,
+          ref: vi.fn(),
+        },
+        fieldState: {
+          error: null,
+          isDirty: false,
+          isTouched: false,
+        },
+        formState: {
+          isSubmitting: false,
+          isValid: true,
+        },
+      }
+      return render ? render(mockFieldProps) : null
+    },
+    useController: vi.fn((config) => {
+      const defaultValues = config?.control?._defaultValues || {}
+      return {
+        field: {
+          onChange: vi.fn(),
+          onBlur: vi.fn(),
+          value: defaultValues[config?.name] || '',
+          name: config?.name || 'test',
+          ref: vi.fn(),
+        },
+        fieldState: {
+          error: null,
+          isDirty: false,
+          isTouched: false,
+        },
+        formState: {
+          isSubmitting: false,
+          isValid: true,
+        },
+      }
+    }),
+    useFormContext: vi.fn(() => ({
+      register: vi.fn(),
+      handleSubmit: vi.fn(),
+      formState: { errors: {} },
+      watch: vi.fn(),
+      setValue: vi.fn(),
+      getValues: vi.fn(() => ({})),
+      getFieldState: vi.fn(() => ({
+        error: null,
+        isDirty: false,
+        isTouched: false,
+        invalid: false,
+      })),
+      control: {},
+    })),
+  }
+})
 
 // Test wrapper component
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -60,6 +158,10 @@ describe('UserEditForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    cleanup()
   })
 
   const renderUserEditForm = (user: User = mockUser) => {

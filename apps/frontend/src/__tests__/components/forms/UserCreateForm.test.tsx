@@ -4,22 +4,17 @@ import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { UserCreateForm } from '@/components/forms/UserCreateForm'
 import { ToastProvider } from '@/components/ui/toast'
-import * as usersAPI from '@/lib/api/users'
 
-// Mock the users API
-vi.mock('@/lib/api/users', () => ({
-  usersAPI: {
-    createUser: vi.fn()
-  }
+// Hoisted mock for the createUser function
+const { mockCreateUser } = vi.hoisted(() => ({
+  mockCreateUser: vi.fn(),
 }))
 
-// Mock the toast hook
-vi.mock('@/hooks/use-toast', () => ({
-  useToast: () => ({
-    toast: vi.fn(),
-    dismiss: vi.fn(),
-    toasts: []
-  })
+// Mock the users API module with the correct structure
+vi.mock('@/lib/api/users', () => ({
+  usersAPI: {
+    createUser: mockCreateUser,
+  },
 }))
 
 // Test wrapper component
@@ -43,10 +38,20 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => {
 describe('UserCreateForm', () => {
   const mockOnSuccess = vi.fn()
   const mockOnCancel = vi.fn()
-  const mockCreateUser = vi.mocked(usersAPI.usersAPI.createUser)
 
   beforeEach(() => {
     vi.clearAllMocks()
+    
+    // Setup successful API response by default
+    mockCreateUser.mockResolvedValue({
+      user_id: 'test-user-id',
+      email: 'test@example.com',
+      full_name: 'Test User',
+      role: 'admin',
+      is_active: true,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+    })
   })
 
   afterEach(() => {

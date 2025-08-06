@@ -45,7 +45,9 @@ class UserPermissionUpdateRequest(BaseModel):
 class BulkPermissionAssignRequest(BaseModel):
     """Request schema for bulk permission assignment."""
 
-    user_ids: list[UUID] = Field(description="List of user IDs to assign permissions to")
+    user_ids: list[UUID] = Field(
+        min_length=1, description="List of user IDs to assign permissions to"
+    )
     agent_name: AgentName = Field(description="Agent name for permissions")
     permissions: dict[str, Any] = Field(description="Permissions structure to assign")
     change_reason: str | None = Field(default=None, description="Reason for bulk permission change")
@@ -54,7 +56,7 @@ class BulkPermissionAssignRequest(BaseModel):
 class BulkTemplateApplyRequest(BaseModel):
     """Request schema for applying template to multiple users."""
 
-    user_ids: list[UUID] = Field(description="List of user IDs to apply template to")
+    user_ids: list[UUID] = Field(min_length=1, description="List of user IDs to apply template to")
     template_id: UUID = Field(description="Template ID to apply")
     change_reason: str | None = Field(default=None, description="Reason for template application")
 
