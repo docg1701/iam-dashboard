@@ -44,7 +44,8 @@ class TestPermissionPerformance:
         service._is_testing = False  # Enable Redis operations for performance testing
         return service
 
-    # Removed mock_fast_session - use real test_session for accurate performance testing
+    # Using real test_session for accurate performance testing
+    # Only mocking external dependencies (Redis responses, SMTP, etc.)
 
     async def test_single_permission_check_performance(
         self,
@@ -200,8 +201,10 @@ class TestPermissionPerformance:
         test_session.add(admin)
         test_session.commit()
 
-        # Mock cache invalidation only (external dependency)
-        with patch.object(fast_permission_service, "_invalidate_user_cache"):
+        # Use real cache invalidation to test actual performance
+        # Only mock external Redis operations that aren't part of business logic
+        with patch.object(fast_permission_service.redis_client, "delete") as mock_redis_delete:
+            mock_redis_delete.return_value = True  # Mock external Redis response
             start_time = time.time()
 
             result = await fast_permission_service.assign_permission(
@@ -254,8 +257,10 @@ class TestPermissionPerformance:
         test_session.add(admin)
         test_session.commit()
 
-        # Mock cache invalidation only (external dependency)
-        with patch.object(fast_permission_service, "_invalidate_user_cache"):
+        # Use real cache invalidation to test actual performance
+        # Only mock external Redis operations that aren't part of business logic  
+        with patch.object(fast_permission_service.redis_client, "delete") as mock_redis_delete:
+            mock_redis_delete.return_value = True  # Mock external Redis response
             start_time = time.time()
 
             result = await fast_permission_service.bulk_assign_permissions(
@@ -303,6 +308,7 @@ class TestPermissionPerformance:
         assert duration_ms < 10, f"Cache invalidation took {duration_ms}ms, should be <10ms"
         mock_redis.delete.assert_called_once_with(*cache_keys)
 
+    @pytest.mark.asyncio
     async def test_database_error_handling_performance(
         self,
         fast_permission_service: PermissionService,
@@ -311,7 +317,8 @@ class TestPermissionPerformance:
         """Test that error handling doesn't significantly impact performance."""
         user_id = uuid4()
 
-        # Mock database connection failure (external system failure)
+        # Mock database connection failure at the session level (external system failure)
+        # This simulates real database connection failures without breaking test framework
         with patch.object(test_session, "execute", side_effect=DatabaseError("Database timeout")):
             start_time = time.time()
 
@@ -489,8 +496,10 @@ class TestPermissionPerformance:
         test_session.add(admin)
         test_session.commit()
 
-        # Mock cache invalidation only (external dependency)
-        with patch.object(fast_permission_service, "_invalidate_user_cache"):
+        # Use real cache invalidation to test actual performance
+        # Only mock external Redis operations that aren't part of business logic
+        with patch.object(fast_permission_service.redis_client, "delete") as mock_redis_delete:
+            mock_redis_delete.return_value = True  # Mock external Redis response
             start_time = time.time()
 
             result = await fast_permission_service.apply_template_to_users(

@@ -1,0 +1,8 @@
+src/tests/security/test_permission_escalation_security.py:- Use real permission logic (no mocks of PermissionService)
+src/tests/MOCK_REFACTORING_GUIDE.md:**Pattern**: 5 test methods mocking `PermissionService` (internal business logic)  
+src/tests/integration/test_permission_middleware.py:    # NOTE: Integration tests should NOT mock PermissionService according to CLAUDE.md
+src/tests/performance/test_permission_performance.py:    def fast_permission_service(self, test_session: Session, mock_redis: MagicMock) -> PermissionService:
+src/tests/security/test_authentication_security.py:- Test real authentication logic (no mocks of AuthService core functions)
+src/tests/MOCK_REFACTORING_GUIDE.md:# @patch('src.services.user_service.UserService')        ❌
+src/tests/MOCK_REFACTORING_GUIDE.md:# @patch('src.services.permission_service.PermissionService') ❌  
+src/tests/MOCK_REFACTORING_GUIDE.md:# @patch('src.services.client_service.ClientService')    ❌

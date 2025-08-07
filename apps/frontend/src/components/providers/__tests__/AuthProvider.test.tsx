@@ -3,83 +3,22 @@
  * Tests authentication context provider, role-based access, and integration with Zustand store
  * Following CLAUDE.md rules: no internal mocking, only external API mocking
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, act } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuthContext, RoleGuard, ResourceGuard } from '../AuthProvider'
 import useAuthStore from '@/store/authStore'
 import type { User } from '@/types/auth'
+import {
+  describe, it, expect, vi, beforeEach, afterEach,
+  renderWithProviders, screen, waitFor, act, userEvent,
+  useTestSetup, mockSuccessfulFetch, mockFailedFetch
+} from '@/test/test-template'
+import {
+  createMockUser, createMockAdmin, createMockSysAdmin,
+  setupTestAuth, clearTestAuth, setupAuthenticatedUser,
+  createMockJWTToken, createExpiredJWTToken
+} from '@/test/auth-helpers'
 
-// Mock only external fetch API for token refresh
-const mockFetch = vi.fn()
-global.fetch = mockFetch
-
-// Test wrapper for providers
-const createTestQueryClient = () => {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
-      mutations: { retry: false }
-    },
-    logger: { log: () => {}, warn: () => {}, error: () => {} }
-  })
-}
-
-const TestWrapper = ({ children }: { children: React.ReactNode }) => {
-  const queryClient = createTestQueryClient()
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
-}
-
-// Helper function to create mock users with different roles
-const createMockUser = (role: 'sysadmin' | 'admin' | 'user'): User => ({
-  user_id: `user-${role}-123`,
-  email: `${role}@example.com`,
-  full_name: `Test ${role}`,
-  role,
-  is_active: true,
-  totp_enabled: false,
-  created_at: '2023-01-01T00:00:00Z',
-  updated_at: '2023-01-01T00:00:00Z',
-})
-
-// Helper to create valid JWT token
-const createValidToken = () => {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  const payload = btoa(JSON.stringify({ 
-    exp: Math.floor(Date.now() / 1000) + 3600, // expires in 1 hour
-    user_id: 'user-123'
-  }))
-  const signature = 'mock-signature'
-  return `${header}.${payload}.${signature}`
-}
-
-// Helper to create expired JWT token
-const createExpiredToken = () => {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  const payload = btoa(JSON.stringify({ 
-    exp: Math.floor(Date.now() / 1000) - 3600, // expired 1 hour ago
-    user_id: 'user-123'
-  }))
-  const signature = 'mock-signature'
-  return `${header}.${payload}.${signature}`
-}
-
-beforeEach(() => {
-  vi.clearAllMocks()
-  mockFetch.mockReset()
-  
-  // Reset auth store to initial state
-  useAuthStore.getState().clearAuth()
-})
-
-afterEach(() => {
-  vi.restoreAllMocks()
-})
+// Use standardized test setup
+useTestSetup()
 
 describe('AuthProvider', () => {
   describe('Context Provider Setup', () => {
@@ -94,12 +33,10 @@ describe('AuthProvider', () => {
         )
       }
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('authenticated')).toHaveTextContent('false')
@@ -116,10 +53,8 @@ describe('AuthProvider', () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
       expect(() => {
-        render(
-          <TestWrapper>
-            <TestChild />
-          </TestWrapper>
+        renderWithProviders(
+          <TestChild />
         )
       }).toThrow('useAuthContext must be used within an AuthProvider')
 
@@ -143,12 +78,10 @@ describe('AuthProvider', () => {
         )
       }
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('user')).toHaveTextContent('null')
@@ -164,8 +97,8 @@ describe('AuthProvider', () => {
 
   describe('Auth State Propagation', () => {
     it('should propagate authenticated user state to children', () => {
-      const mockUser = createMockUser('admin')
-      const validToken = createValidToken()
+      const mockUser = createMockAdmin()
+      const validToken = createMockJWTToken({ role: 'admin', user_id: mockUser.user_id })
 
       const TestChild = () => {
         const context = useAuthContext()
@@ -180,16 +113,13 @@ describe('AuthProvider', () => {
       }
 
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('authenticated')).toHaveTextContent('true')
@@ -207,23 +137,21 @@ describe('AuthProvider', () => {
       }
 
       act(() => {
-        useAuthStore.getState().setLoading(true)
+        useAuthStore.setState({ isLoading: true })
       })
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('loading')).toHaveTextContent('true')
     })
 
     it('should update context when auth state changes', () => {
-      const mockUser = createMockUser('user')
-      const validToken = createValidToken()
+      const mockUser = createMockUser()
+      const validToken = createMockJWTToken({ role: 'user', user_id: mockUser.user_id })
 
       const TestChild = () => {
         const context = useAuthContext()
@@ -235,12 +163,10 @@ describe('AuthProvider', () => {
         )
       }
 
-      const { rerender } = render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      const { rerender } = renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('authenticated')).toHaveTextContent('false')
@@ -248,16 +174,13 @@ describe('AuthProvider', () => {
 
       // Login user
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
 
       rerender(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('authenticated')).toHaveTextContent('true')
@@ -265,15 +188,13 @@ describe('AuthProvider', () => {
 
       // Logout user
       act(() => {
-        useAuthStore.getState().clearAuth()
+        clearTestAuth()
       })
 
       rerender(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('authenticated')).toHaveTextContent('false')
@@ -283,8 +204,8 @@ describe('AuthProvider', () => {
 
   describe('Role-based Access Functions', () => {
     it('should provide hasRole function that works correctly', () => {
-      const mockUser = createMockUser('admin')
-      const validToken = createValidToken()
+      const mockUser = createMockAdmin()
+      const validToken = createMockJWTToken({ role: 'admin', user_id: mockUser.user_id })
 
       const TestChild = () => {
         const context = useAuthContext()
@@ -298,16 +219,13 @@ describe('AuthProvider', () => {
       }
 
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('has-admin')).toHaveTextContent('true')
@@ -316,8 +234,8 @@ describe('AuthProvider', () => {
     })
 
     it('should provide hasAnyRole function that works correctly', () => {
-      const mockUser = createMockUser('user')
-      const validToken = createValidToken()
+      const mockUser = createMockUser()
+      const validToken = createMockJWTToken({ role: 'user', user_id: mockUser.user_id })
 
       const TestChild = () => {
         const context = useAuthContext()
@@ -331,16 +249,13 @@ describe('AuthProvider', () => {
       }
 
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('has-admin-or-user')).toHaveTextContent('true')
@@ -349,10 +264,10 @@ describe('AuthProvider', () => {
     })
 
     it('should provide isAdmin and isSysAdmin computed properties', () => {
-      const sysadminUser = createMockUser('sysadmin')
-      const adminUser = createMockUser('admin')
-      const regularUser = createMockUser('user')
-      const validToken = createValidToken()
+      const sysadminUser = createMockSysAdmin()
+      const adminUser = createMockAdmin()
+      const regularUser = createMockUser()
+      const validToken = createMockJWTToken()
 
       const TestChild = () => {
         const context = useAuthContext()
@@ -370,12 +285,10 @@ describe('AuthProvider', () => {
         useAuthStore.getState().setToken(validToken)
       })
 
-      const { rerender } = render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      const { rerender } = renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('is-admin')).toHaveTextContent('true') // Sysadmin has admin permissions
@@ -383,15 +296,13 @@ describe('AuthProvider', () => {
 
       // Test admin
       act(() => {
-        useAuthStore.getState().setUser(adminUser)
+        setupTestAuth(adminUser, validToken)
       })
 
       rerender(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('is-admin')).toHaveTextContent('true')
@@ -399,15 +310,13 @@ describe('AuthProvider', () => {
 
       // Test regular user
       act(() => {
-        useAuthStore.getState().setUser(regularUser)
+        setupTestAuth(regularUser, validToken)
       })
 
       rerender(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('is-admin')).toHaveTextContent('false')
@@ -417,8 +326,8 @@ describe('AuthProvider', () => {
 
   describe('Resource-based Access Control', () => {
     it('should provide canAccess function for resource-based permissions', () => {
-      const adminUser = createMockUser('admin')
-      const validToken = createValidToken()
+      const adminUser = createMockAdmin()
+      const validToken = createMockJWTToken({ role: 'admin', user_id: adminUser.user_id })
 
       const TestChild = () => {
         const context = useAuthContext()
@@ -440,12 +349,10 @@ describe('AuthProvider', () => {
         useAuthStore.getState().setToken(validToken)
       })
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       // Admin permissions
@@ -459,8 +366,8 @@ describe('AuthProvider', () => {
     })
 
     it('should handle canAccess with default read action', () => {
-      const userRole = createMockUser('user')
-      const validToken = createValidToken()
+      const userRole = createMockUser()
+      const validToken = createMockJWTToken({ role: 'user', user_id: userRole.user_id })
 
       const TestChild = () => {
         const context = useAuthContext()
@@ -478,12 +385,10 @@ describe('AuthProvider', () => {
         useAuthStore.getState().setToken(validToken)
       })
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('can-access-clients')).toHaveTextContent('true')
@@ -501,20 +406,18 @@ describe('AuthProvider', () => {
         )
       }
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('can-access-anything')).toHaveTextContent('false')
     })
 
     it('should return false for canAccess with unknown resource', () => {
-      const adminUser = createMockUser('admin')
-      const validToken = createValidToken()
+      const adminUser = createMockAdmin()
+      const validToken = createMockJWTToken({ role: 'admin', user_id: adminUser.user_id })
 
       const TestChild = () => {
         const context = useAuthContext()
@@ -530,12 +433,10 @@ describe('AuthProvider', () => {
         useAuthStore.getState().setToken(validToken)
       })
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('can-access-unknown')).toHaveTextContent('false')
@@ -544,40 +445,34 @@ describe('AuthProvider', () => {
 
   describe('Token Refresh Functionality', () => {
     it('should auto-refresh expired token on mount', async () => {
-      const mockUser = createMockUser('admin')
-      const expiredToken = createExpiredToken()
-      const newToken = createValidToken()
+      const mockUser = createMockAdmin()
+      const expiredToken = createExpiredJWTToken({ role: 'admin', user_id: mockUser.user_id })
+      const newToken = createMockJWTToken({ role: 'admin', user_id: mockUser.user_id })
 
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(expiredToken)
+        setupTestAuth(mockUser, expiredToken)
       })
 
       // Mock successful token refresh
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({
-          access_token: newToken,
-          token_type: 'bearer',
-          expires_in: 3600
-        })
-      } as Response)
+      mockSuccessfulFetch('/auth/refresh', {
+        access_token: newToken,
+        token_type: 'bearer',
+        expires_in: 3600
+      })
 
       const TestChild = () => {
         const context = useAuthContext()
         return <div data-testid="authenticated">{context.isAuthenticated.toString()}</div>
       }
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(
+        expect(global.fetch).toHaveBeenCalledWith(
           expect.stringContaining('/auth/refresh'),
           expect.objectContaining({
             method: 'POST',
@@ -593,16 +488,15 @@ describe('AuthProvider', () => {
     })
 
     it('should logout when token refresh fails', async () => {
-      const mockUser = createMockUser('admin')
-      const expiredToken = createExpiredToken()
+      const mockUser = createMockAdmin()
+      const expiredToken = createExpiredJWTToken({ role: 'admin', user_id: mockUser.user_id })
 
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(expiredToken)
+        setupTestAuth(mockUser, expiredToken)
       })
 
       // Mock failed token refresh
-      mockFetch.mockRejectedValueOnce(new Error('Token refresh failed'))
+      mockFailedFetch('/auth/refresh', 'Token refresh failed', 401)
 
       const TestChild = () => {
         const context = useAuthContext()
@@ -614,12 +508,10 @@ describe('AuthProvider', () => {
         )
       }
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       await waitFor(() => {
@@ -631,46 +523,40 @@ describe('AuthProvider', () => {
     it('should handle interval-based token refresh', async () => {
       vi.useFakeTimers()
 
-      const mockUser = createMockUser('admin')
-      const validToken = createValidToken()
-      const newToken = createValidToken()
+      const mockUser = createMockAdmin()
+      const expiredToken = createExpiredJWTToken({ role: 'admin', user_id: mockUser.user_id })
+      const newToken = createMockJWTToken({ role: 'admin', user_id: mockUser.user_id })
 
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, expiredToken)
       })
 
       // Mock successful token refresh
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({
-          access_token: newToken,
-          token_type: 'bearer',
-          expires_in: 3600
-        })
-      } as Response)
+      mockSuccessfulFetch('/auth/refresh', {
+        access_token: newToken,
+        token_type: 'bearer',
+        expires_in: 3600
+      })
 
       const TestChild = () => {
         const context = useAuthContext()
         return <div data-testid="authenticated">{context.isAuthenticated.toString()}</div>
       }
 
-      render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       // Fast forward 5 minutes to trigger interval
       await act(async () => {
         vi.advanceTimersByTime(5 * 60 * 1000)
-        await vi.runAllTimersAsync()
+        await vi.runOnlyPendingTimersAsync()
       })
 
       // Should call refresh due to interval
-      expect(mockFetch).toHaveBeenCalled()
+      expect(global.fetch).toHaveBeenCalled()
 
       vi.useRealTimers()
     })
@@ -678,12 +564,11 @@ describe('AuthProvider', () => {
     it('should cleanup interval on unmount', async () => {
       vi.useFakeTimers()
 
-      const mockUser = createMockUser('admin')
-      const validToken = createValidToken()
+      const mockUser = createMockAdmin()
+      const validToken = createMockJWTToken({ role: 'admin', user_id: mockUser.user_id })
 
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
 
       const TestChild = () => {
@@ -691,12 +576,10 @@ describe('AuthProvider', () => {
         return <div data-testid="authenticated">{context.isAuthenticated.toString()}</div>
       }
 
-      const { unmount } = render(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+      const { unmount } = renderWithProviders(
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       unmount()
@@ -708,7 +591,7 @@ describe('AuthProvider', () => {
       })
 
       // Should not call refresh after unmount
-      expect(mockFetch).not.toHaveBeenCalled()
+      expect(global.fetch).not.toHaveBeenCalled()
 
       vi.useRealTimers()
     })
@@ -717,22 +600,19 @@ describe('AuthProvider', () => {
 
 describe('RoleGuard Component', () => {
   it('should render children when user has required role', () => {
-    const adminUser = createMockUser('admin')
-    const validToken = createValidToken()
+    const adminUser = createMockAdmin()
+    const validToken = createMockJWTToken({ role: 'admin', user_id: adminUser.user_id })
 
     act(() => {
-      useAuthStore.getState().setUser(adminUser)
-      useAuthStore.getState().setToken(validToken)
+      setupTestAuth(adminUser, validToken)
     })
 
-    render(
-      <TestWrapper>
-        <AuthProvider>
-          <RoleGuard roles={['admin']}>
-            <div data-testid="protected-content">Conteúdo de Admin</div>
-          </RoleGuard>
-        </AuthProvider>
-      </TestWrapper>
+    renderWithProviders(
+      <AuthProvider>
+        <RoleGuard roles={['admin']}>
+          <div data-testid="protected-content">Conteúdo de Admin</div>
+        </RoleGuard>
+      </AuthProvider>
     )
 
     expect(screen.getByTestId('protected-content')).toBeInTheDocument()
@@ -740,25 +620,22 @@ describe('RoleGuard Component', () => {
   })
 
   it('should render fallback when user lacks required role', () => {
-    const userRole = createMockUser('user')
-    const validToken = createValidToken()
+    const userRole = createMockUser()
+    const validToken = createMockJWTToken({ role: 'user', user_id: userRole.user_id })
 
     act(() => {
-      useAuthStore.getState().setUser(userRole)
-      useAuthStore.getState().setToken(validToken)
+      setupTestAuth(userRole, validToken)
     })
 
-    render(
-      <TestWrapper>
-        <AuthProvider>
-          <RoleGuard 
+    renderWithProviders(
+      <AuthProvider>
+        <RoleGuard 
             roles={['admin']} 
             fallback={<div data-testid="access-denied">Acesso Negado</div>}
           >
             <div data-testid="protected-content">Conteúdo de Admin</div>
           </RoleGuard>
-        </AuthProvider>
-      </TestWrapper>
+      </AuthProvider>
     )
 
     expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
@@ -767,44 +644,38 @@ describe('RoleGuard Component', () => {
   })
 
   it('should render null fallback by default when access denied', () => {
-    const userRole = createMockUser('user')
-    const validToken = createValidToken()
+    const userRole = createMockUser()
+    const validToken = createMockJWTToken({ role: 'user', user_id: userRole.user_id })
 
     act(() => {
-      useAuthStore.getState().setUser(userRole)
-      useAuthStore.getState().setToken(validToken)
+      setupTestAuth(userRole, validToken)
     })
 
-    render(
-      <TestWrapper>
-        <AuthProvider>
-          <RoleGuard roles={['admin']}>
+    renderWithProviders(
+      <AuthProvider>
+        <RoleGuard roles={['admin']}>
             <div data-testid="protected-content">Conteúdo de Admin</div>
           </RoleGuard>
-        </AuthProvider>
-      </TestWrapper>
+      </AuthProvider>
     )
 
     expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
   })
 
   it('should handle multiple roles with requireAll=false (default)', () => {
-    const userRole = createMockUser('user')
-    const validToken = createValidToken()
+    const userRole = createMockUser()
+    const validToken = createMockJWTToken({ role: 'user', user_id: userRole.user_id })
 
     act(() => {
-      useAuthStore.getState().setUser(userRole)
-      useAuthStore.getState().setToken(validToken)
+      setupTestAuth(userRole, validToken)
     })
 
-    render(
-      <TestWrapper>
-        <AuthProvider>
-          <RoleGuard roles={['admin', 'user']}>
+    renderWithProviders(
+      <AuthProvider>
+        <RoleGuard roles={['admin', 'user']}>
             <div data-testid="protected-content">Conteúdo Multi-Role</div>
           </RoleGuard>
-        </AuthProvider>
-      </TestWrapper>
+      </AuthProvider>
     )
 
     // Should render because user has one of the required roles
@@ -812,22 +683,19 @@ describe('RoleGuard Component', () => {
   })
 
   it('should handle multiple roles with requireAll=true', () => {
-    const adminUser = createMockUser('admin')
-    const validToken = createValidToken()
+    const adminUser = createMockAdmin()
+    const validToken = createMockJWTToken({ role: 'admin', user_id: adminUser.user_id })
 
     act(() => {
-      useAuthStore.getState().setUser(adminUser)
-      useAuthStore.getState().setToken(validToken)
+      setupTestAuth(adminUser, validToken)
     })
 
-    render(
-      <TestWrapper>
-        <AuthProvider>
-          <RoleGuard roles={['admin', 'sysadmin']} requireAll={true}>
+    renderWithProviders(
+      <AuthProvider>
+        <RoleGuard roles={['admin', 'sysadmin']} requireAll={true}>
             <div data-testid="protected-content">Conteúdo Restrito</div>
           </RoleGuard>
-        </AuthProvider>
-      </TestWrapper>
+      </AuthProvider>
     )
 
     // Should not render because admin doesn't have sysadmin role
@@ -835,22 +703,19 @@ describe('RoleGuard Component', () => {
   })
 
   it('should work with sysadmin having all permissions', () => {
-    const sysadminUser = createMockUser('sysadmin')
-    const validToken = createValidToken()
+    const sysadminUser = createMockSysAdmin()
+    const validToken = createMockJWTToken({ role: 'sysadmin', user_id: sysadminUser.user_id })
 
     act(() => {
-      useAuthStore.getState().setUser(sysadminUser)
-      useAuthStore.getState().setToken(validToken)
+      setupTestAuth(sysadminUser, validToken)
     })
 
-    render(
-      <TestWrapper>
-        <AuthProvider>
-          <RoleGuard roles={['admin', 'sysadmin']} requireAll={true}>
+    renderWithProviders(
+      <AuthProvider>
+        <RoleGuard roles={['admin', 'sysadmin']} requireAll={true}>
             <div data-testid="protected-content">Conteúdo Super Restrito</div>
           </RoleGuard>
-        </AuthProvider>
-      </TestWrapper>
+      </AuthProvider>
     )
 
     // Should render because sysadmin has both admin and sysadmin permissions
@@ -860,22 +725,19 @@ describe('RoleGuard Component', () => {
 
 describe('ResourceGuard Component', () => {
   it('should render children when user has resource access', () => {
-    const adminUser = createMockUser('admin')
-    const validToken = createValidToken()
+    const adminUser = createMockAdmin()
+    const validToken = createMockJWTToken({ role: 'admin', user_id: adminUser.user_id })
 
     act(() => {
-      useAuthStore.getState().setUser(adminUser)
-      useAuthStore.getState().setToken(validToken)
+      setupTestAuth(adminUser, validToken)
     })
 
-    render(
-      <TestWrapper>
-        <AuthProvider>
-          <ResourceGuard resource="users" action="read">
+    renderWithProviders(
+      <AuthProvider>
+        <ResourceGuard resource="users" action="read">
             <div data-testid="user-list">Lista de Usuários</div>
           </ResourceGuard>
-        </AuthProvider>
-      </TestWrapper>
+      </AuthProvider>
     )
 
     expect(screen.getByTestId('user-list')).toBeInTheDocument()
@@ -883,26 +745,23 @@ describe('ResourceGuard Component', () => {
   })
 
   it('should render fallback when user lacks resource access', () => {
-    const userRole = createMockUser('user')
-    const validToken = createValidToken()
+    const userRole = createMockUser()
+    const validToken = createMockJWTToken({ role: 'user', user_id: userRole.user_id })
 
     act(() => {
-      useAuthStore.getState().setUser(userRole)
-      useAuthStore.getState().setToken(validToken)
+      setupTestAuth(userRole, validToken)
     })
 
-    render(
-      <TestWrapper>
-        <AuthProvider>
-          <ResourceGuard 
+    renderWithProviders(
+      <AuthProvider>
+        <ResourceGuard 
             resource="users" 
             action="read"
             fallback={<div data-testid="no-access">Sem Acesso aos Usuários</div>}
           >
             <div data-testid="user-list">Lista de Usuários</div>
           </ResourceGuard>
-        </AuthProvider>
-      </TestWrapper>
+      </AuthProvider>
     )
 
     expect(screen.queryByTestId('user-list')).not.toBeInTheDocument()
@@ -911,22 +770,19 @@ describe('ResourceGuard Component', () => {
   })
 
   it('should use default read action when action not specified', () => {
-    const userRole = createMockUser('user')
-    const validToken = createValidToken()
+    const userRole = createMockUser()
+    const validToken = createMockJWTToken({ role: 'user', user_id: userRole.user_id })
 
     act(() => {
-      useAuthStore.getState().setUser(userRole)
-      useAuthStore.getState().setToken(validToken)
+      setupTestAuth(userRole, validToken)
     })
 
-    render(
-      <TestWrapper>
-        <AuthProvider>
-          <ResourceGuard resource="clients">
+    renderWithProviders(
+      <AuthProvider>
+        <ResourceGuard resource="clients">
             <div data-testid="client-list">Lista de Clientes</div>
           </ResourceGuard>
-        </AuthProvider>
-      </TestWrapper>
+      </AuthProvider>
     )
 
     // User can read clients by default
@@ -935,22 +791,19 @@ describe('ResourceGuard Component', () => {
   })
 
   it('should render null fallback by default when access denied', () => {
-    const userRole = createMockUser('user')
-    const validToken = createValidToken()
+    const userRole = createMockUser()
+    const validToken = createMockJWTToken({ role: 'user', user_id: userRole.user_id })
 
     act(() => {
-      useAuthStore.getState().setUser(userRole)
-      useAuthStore.getState().setToken(validToken)
+      setupTestAuth(userRole, validToken)
     })
 
-    render(
-      <TestWrapper>
-        <AuthProvider>
-          <ResourceGuard resource="settings" action="update">
+    renderWithProviders(
+      <AuthProvider>
+        <ResourceGuard resource="settings" action="update">
             <div data-testid="settings-form">Configurações</div>
           </ResourceGuard>
-        </AuthProvider>
-      </TestWrapper>
+      </AuthProvider>
     )
 
     // User cannot update settings
@@ -970,12 +823,10 @@ describe('Error Handling and Edge Cases', () => {
       )
     }
 
-    render(
-      <TestWrapper>
-        <AuthProvider>
-          <TestChild />
-        </AuthProvider>
-      </TestWrapper>
+    renderWithProviders(
+      <AuthProvider>
+        <TestChild />
+      </AuthProvider>
     )
 
     expect(screen.getByTestId('can-access-test')).toHaveTextContent('false')
@@ -993,56 +844,50 @@ describe('Error Handling and Edge Cases', () => {
       )
     }
 
-    const { rerender } = render(
-      <TestWrapper>
-        <AuthProvider>
-          <TestChild />
-        </AuthProvider>
-      </TestWrapper>
+    const { rerender } = renderWithProviders(
+      <AuthProvider>
+        <TestChild />
+      </AuthProvider>
     )
 
     // Rapid state changes
     const users = [
-      createMockUser('user'),
-      createMockUser('admin'),
-      createMockUser('sysadmin'),
+      createMockUser(),
+      createMockAdmin(),
+      createMockSysAdmin(),
     ]
-    const validToken = createValidToken()
+    const validToken = createMockJWTToken()
 
     users.forEach((user, index) => {
       act(() => {
-        useAuthStore.getState().setUser(user)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(user, validToken)
       })
 
       rerender(
-        <TestWrapper>
-          <AuthProvider>
-            <TestChild />
-          </AuthProvider>
-        </TestWrapper>
+        <AuthProvider>
+          <TestChild />
+        </AuthProvider>
       )
 
       expect(screen.getByTestId('authenticated')).toHaveTextContent('true')
-      expect(screen.getByTestId('user-email')).toHaveTextContent(`${user.role}@example.com`)
+      expect(screen.getByTestId('user-email')).toHaveTextContent(user.email)
     })
   })
 
   it('should handle component unmounting during token refresh', async () => {
-    const mockUser = createMockUser('admin')
-    const expiredToken = createExpiredToken()
+    const mockUser = createMockAdmin()
+    const expiredToken = createExpiredJWTToken({ role: 'admin', user_id: mockUser.user_id })
 
     act(() => {
-      useAuthStore.getState().setUser(mockUser)
-      useAuthStore.getState().setToken(expiredToken)
+      setupTestAuth(mockUser, expiredToken)
     })
 
     // Mock slow token refresh
-    mockFetch.mockImplementationOnce(() => 
+    vi.mocked(global.fetch).mockImplementationOnce(() => 
       new Promise(resolve => 
         setTimeout(() => resolve({
           ok: true,
-          json: () => Promise.resolve({ access_token: createValidToken() })
+          json: () => Promise.resolve({ access_token: createMockJWTToken() })
         } as Response), 100)
       )
     )
@@ -1052,12 +897,10 @@ describe('Error Handling and Edge Cases', () => {
       return <div data-testid="authenticated">{context.isAuthenticated.toString()}</div>
     }
 
-    const { unmount } = render(
-      <TestWrapper>
-        <AuthProvider>
-          <TestChild />
-        </AuthProvider>
-      </TestWrapper>
+    const { unmount } = renderWithProviders(
+      <AuthProvider>
+        <TestChild />
+      </AuthProvider>
     )
 
     // Unmount before token refresh completes

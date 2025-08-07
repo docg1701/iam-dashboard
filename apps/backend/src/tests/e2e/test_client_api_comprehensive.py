@@ -74,28 +74,18 @@ class TestClientAPICreate:
         assert response_data["notes"] is None
 
     def test_create_client_duplicate_ssn(
-        self, client: TestClient, test_session: Session, auth_headers: dict[str, str]
+        self, client: TestClient, test_session: Session, auth_headers: dict[str, str], test_user: User
     ) -> None:
         """Test client creation with duplicate SSN returns conflict error."""
-        # Create existing client
-        user = User(
-            user_id=uuid4(),
-            email="test@example.com",
-            password_hash="$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
-            role=UserRole.ADMIN,
-            is_active=True,
-            totp_enabled=False,
-        )
-        test_session.add(user)
-
+        # Create existing client using the test_user fixture
         existing_client = Client(
             client_id=uuid4(),
             full_name="Existing Client",
             ssn="555-66-7777",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
-            created_by=user.user_id,
-            updated_by=user.user_id,
+            created_by=test_user.user_id,
+            updated_by=test_user.user_id,
             created_at=datetime.utcnow(),
         )
         test_session.add(existing_client)
@@ -158,20 +148,10 @@ class TestClientAPIGet:
     """Test GET /clients/{client_id} endpoint."""
 
     def test_get_client_success(
-        self, client: TestClient, test_session: Session, auth_headers: dict[str, str]
+        self, client: TestClient, test_session: Session, auth_headers: dict[str, str], test_user: User
     ) -> None:
         """Test successful client retrieval via API."""
-        # Create test user and client
-        user = User(
-            user_id=uuid4(),
-            email="test@example.com",
-            password_hash="$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
-            role=UserRole.ADMIN,
-            is_active=True,
-            totp_enabled=False,
-        )
-        test_session.add(user)
-
+        # Create test client using the test_user fixture
         client_id = uuid4()
         test_client = Client(
             client_id=client_id,
@@ -180,8 +160,8 @@ class TestClientAPIGet:
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             notes="Test notes",
-            created_by=user.user_id,
-            updated_by=user.user_id,
+            created_by=test_user.user_id,
+            updated_by=test_user.user_id,
             created_at=datetime.utcnow(),
         )
         test_session.add(test_client)
@@ -239,20 +219,10 @@ class TestClientAPIUpdate:
     """Test PUT /clients/{client_id} endpoint."""
 
     def test_update_client_success(
-        self, client: TestClient, test_session: Session, auth_headers: dict[str, str]
+        self, client: TestClient, test_session: Session, auth_headers: dict[str, str], test_user: User
     ) -> None:
         """Test successful client update via API."""
-        # Create test user and client
-        user = User(
-            user_id=uuid4(),
-            email="test@example.com",
-            password_hash="$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
-            role=UserRole.ADMIN,
-            is_active=True,
-            totp_enabled=False,
-        )
-        test_session.add(user)
-
+        # Create test client using the test_user fixture
         client_id = uuid4()
         test_client = Client(
             client_id=client_id,
@@ -261,8 +231,8 @@ class TestClientAPIUpdate:
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             notes="Original notes",
-            created_by=user.user_id,
-            updated_by=user.user_id,
+            created_by=test_user.user_id,
+            updated_by=test_user.user_id,
             created_at=datetime.utcnow(),
         )
         test_session.add(test_client)
@@ -324,20 +294,10 @@ class TestClientAPIDelete:
     """Test DELETE /clients/{client_id} endpoint."""
 
     def test_delete_client_success(
-        self, client: TestClient, test_session: Session, auth_headers: dict[str, str]
+        self, client: TestClient, test_session: Session, auth_headers: dict[str, str], test_user: User
     ) -> None:
         """Test successful client deletion via API."""
-        # Create test user and client
-        user = User(
-            user_id=uuid4(),
-            email="test@example.com",
-            password_hash="$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW",
-            role=UserRole.ADMIN,
-            is_active=True,
-            totp_enabled=False,
-        )
-        test_session.add(user)
-
+        # Create test client using the test_user fixture
         client_id = uuid4()
         test_client = Client(
             client_id=client_id,
@@ -345,8 +305,8 @@ class TestClientAPIDelete:
             ssn="123-45-6789",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
-            created_by=user.user_id,
-            updated_by=user.user_id,
+            created_by=test_user.user_id,
+            updated_by=test_user.user_id,
             created_at=datetime.utcnow(),
         )
         test_session.add(test_client)

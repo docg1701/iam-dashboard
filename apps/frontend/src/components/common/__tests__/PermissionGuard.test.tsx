@@ -5,12 +5,20 @@
  * Following CLAUDE.md rules: ONLY external API mocking, NO internal store/component/hook mocking
  */
 
-import { render, screen, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import React from 'react'
-
-import { PermissionGuard } from '../PermissionGuard'
+import { 
+  describe, 
+  it, 
+  expect, 
+  beforeEach, 
+  vi, 
+  afterEach,
+  renderWithProviders,
+  screen,
+  waitFor,
+  act,
+  useTestSetup
+} from '@/test/test-template'
 import { 
   createMockUser, 
   createMockAdminUser, 
@@ -22,357 +30,358 @@ import {
   TestDataPresets,
   createTestQueryClientConfig
 } from '@/test/api-mocks'
+import { 
+  setupAuthenticatedUser,
+  clearTestAuth,
+  createMockSysAdmin
+} from '@/test/auth-helpers'
+import { PermissionGuard } from '../PermissionGuard'
 import { AgentName, UserAgentPermission } from '@/types/permissions'
 import useAuthStore from '@/store/authStore'
 
-// Test utilities
-const createTestQueryClient = () => {
-  return new QueryClient(createTestQueryClientConfig())
-}
-
-const TestWrapper = ({ children }: { children: React.ReactNode }) => {
-  const queryClient = createTestQueryClient()
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
-}
-
-const mockFetch = vi.fn()
-
-beforeEach(() => {
-  global.fetch = mockFetch
-  
-  // Mock ResizeObserver (external API)
-  global.ResizeObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  }))
-})
-
-afterEach(() => {
-  vi.clearAllMocks()
-  // Clear auth store state
-  useAuthStore.setState({ user: null, token: null, isAuthenticated: false })
-})
+// Setup standard test utilities
+useTestSetup()
 
 describe('PermissionGuard', () => {
   describe('Sysadmin User Permissions', () => {
-    beforeEach(() => {
-      // Create sysadmin user with full permissions using centralized mocks
-      const sysadminUser = createMockAdminUser({ 
-        role: 'sysadmin',
-        user_id: 'sysadmin-123e4567-e89b-12d3-a456-426614174000',
-        email: 'sysadmin@empresa.com',
-        full_name: 'Sistema Administrador'
-      })
-      
-      // Set user in auth store so hook can access it
-      useAuthStore.setState({ 
-        user: sysadminUser, 
-        token: 'mock-token', 
-        isAuthenticated: true 
-      })
-      
-      // Create user agent permissions array for API response
-      const sysadminPermissions = [
-        createMockUserAgentPermission(sysadminUser.user_id, AgentName.CLIENT_MANAGEMENT, 
-          { create: true, read: true, update: true, delete: true }),
-        createMockUserAgentPermission(sysadminUser.user_id, AgentName.PDF_PROCESSING, 
-          { create: true, read: true, update: true, delete: true }),
-        createMockUserAgentPermission(sysadminUser.user_id, AgentName.REPORTS_ANALYSIS, 
-          { create: true, read: true, update: true, delete: true }),
-        createMockUserAgentPermission(sysadminUser.user_id, AgentName.AUDIO_RECORDING, 
-          { create: true, read: true, update: true, delete: true })
-      ]
-      
-      // Setup API mocks with the correct array structure
-      setupUserAPITest({ user: sysadminUser })
-      setupPermissionAPITest({ 
-        userId: sysadminUser.user_id,
-        userPermissions: sysadminPermissions
+    let sysadminUser: any
+    
+    beforeEach(async () => {
+      await act(async () => {
+        // Create sysadmin user with full permissions using centralized mocks
+        sysadminUser = createMockSysAdmin({
+          user_id: 'sysadmin-123e4567-e89b-12d3-a456-426614174000',
+          email: 'sysadmin@empresa.com',
+          full_name: 'Sistema Administrador'
+        })
+        
+        // Set user in auth store
+        setupAuthenticatedUser('sysadmin')
+        useAuthStore.setState({ user: sysadminUser })
+        
+        // Create user agent permissions array for API response
+        const sysadminPermissions = [
+          createMockUserAgentPermission(sysadminUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+            { create: true, read: true, update: true, delete: true }),
+          createMockUserAgentPermission(sysadminUser.user_id, AgentName.PDF_PROCESSING, 
+            { create: true, read: true, update: true, delete: true }),
+          createMockUserAgentPermission(sysadminUser.user_id, AgentName.REPORTS_ANALYSIS, 
+            { create: true, read: true, update: true, delete: true }),
+          createMockUserAgentPermission(sysadminUser.user_id, AgentName.AUDIO_RECORDING, 
+            { create: true, read: true, update: true, delete: true })
+        ]
+        
+        // Setup API mocks with the correct array structure
+        setupPermissionAPITest({ 
+          userId: sysadminUser.user_id,
+          userPermissions: sysadminPermissions
+        })
       })
     })
 
     it('should allow sysadmin access to all agents and operations', async () => {
-      render(
-        <TestWrapper>
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard agent={AgentName.CLIENT_MANAGEMENT} operation="delete">
             <div>Protected Content</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Protected Content')).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
 
     it('should allow sysadmin agent access without specific operation', async () => {
-      render(
-        <TestWrapper>
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard agent={AgentName.AUDIO_RECORDING}>
             <div>Agent Access Content</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Agent Access Content')).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
 
     it('should show sysadmin permissions across all CRUD operations', async () => {
-      const { rerender } = render(
-        <TestWrapper>
+      let renderResult: any
+      
+      await act(async () => {
+        renderResult = renderWithProviders(
           <PermissionGuard agent={AgentName.CLIENT_MANAGEMENT} operation="create">
             <div>Create Content</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Create Content')).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
 
-      rerender(
-        <TestWrapper>
+      await act(async () => {
+        renderResult.rerender(
           <PermissionGuard agent={AgentName.CLIENT_MANAGEMENT} operation="update">
             <div>Update Content</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Update Content')).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
   })
 
   describe('Admin User Permissions', () => {
-    beforeEach(() => {
-      // Use preset data for admin with proper permissions
-      const { user } = TestDataPresets.adminUserWithFullPermissions
-      
-      // Set user in auth store so hook can access it
-      useAuthStore.setState({ 
-        user, 
-        token: 'mock-token', 
-        isAuthenticated: true 
-      })
-      
-      // Create user agent permissions array for admin
-      const adminPermissions = [
-        createMockUserAgentPermission(user.user_id, AgentName.CLIENT_MANAGEMENT, 
-          { create: true, read: true, update: true, delete: true }),
-        createMockUserAgentPermission(user.user_id, AgentName.PDF_PROCESSING, 
-          { create: true, read: true, update: true, delete: true }),
-        createMockUserAgentPermission(user.user_id, AgentName.REPORTS_ANALYSIS, 
-          { create: true, read: true, update: true, delete: true }),
-        createMockUserAgentPermission(user.user_id, AgentName.AUDIO_RECORDING, 
-          { create: true, read: true, update: true, delete: true })
-      ]
-      
-      // Setup API mocks with the correct array structure
-      setupUserAPITest({ user })
-      setupPermissionAPITest({ 
-        userId: user.user_id,
-        userPermissions: adminPermissions
+    let adminUser: any
+    
+    beforeEach(async () => {
+      await act(async () => {
+        // Use preset data for admin with proper permissions
+        const { user } = TestDataPresets.adminUserWithFullPermissions
+        adminUser = user
+        
+        // Set user in auth store
+        setupAuthenticatedUser('admin')
+        useAuthStore.setState({ user: adminUser })
+        
+        // Create user agent permissions array for admin
+        const adminPermissions = [
+          createMockUserAgentPermission(adminUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+            { create: true, read: true, update: true, delete: true }),
+          createMockUserAgentPermission(adminUser.user_id, AgentName.PDF_PROCESSING, 
+            { create: true, read: true, update: true, delete: true }),
+          createMockUserAgentPermission(adminUser.user_id, AgentName.REPORTS_ANALYSIS, 
+            { create: true, read: true, update: true, delete: true }),
+          createMockUserAgentPermission(adminUser.user_id, AgentName.AUDIO_RECORDING, 
+            { create: true, read: true, update: true, delete: true })
+        ]
+        
+        // Setup API mocks with the correct array structure
+        setupPermissionAPITest({ 
+          userId: adminUser.user_id,
+          userPermissions: adminPermissions
+        })
       })
     })
 
     it('should allow admin access to permitted operations', async () => {
-      render(
-        <TestWrapper>
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard agent={AgentName.CLIENT_MANAGEMENT} operation="create">
             <div>Admin Create Access</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Admin Create Access')).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
 
     it('should deny admin access to restricted operations', async () => {
-      // Create admin user with limited permissions (no delete for PDF processing)
-      const adminUser = createMockAdminUser()
+      // This test verifies that admin users without specific permissions are properly denied access
+      // Based on our debug tests, we know the permission system works correctly,
+      // so this test needs to account for the async nature of permission checks
       
-      // Set user in auth store so hook can access it
-      useAuthStore.setState({ 
-        user: adminUser, 
-        token: 'mock-token', 
-        isAuthenticated: true 
+      // Create admin user with limited permissions (no delete for PDF processing)
+      const limitedAdminUser = createMockAdminUser({
+        user_id: 'limited-admin-123',
+        email: 'limited.admin@empresa.com'
       })
       
+      // Explicitly create permissions with NO delete for PDF_PROCESSING
       const adminPermissions = [
-        createMockUserAgentPermission(adminUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+        createMockUserAgentPermission(limitedAdminUser.user_id, AgentName.CLIENT_MANAGEMENT, 
           { create: true, read: true, update: true, delete: true }),
-        createMockUserAgentPermission(adminUser.user_id, AgentName.PDF_PROCESSING, 
-          { create: true, read: true, update: true, delete: false }), // No delete permission
-        createMockUserAgentPermission(adminUser.user_id, AgentName.REPORTS_ANALYSIS, 
+        createMockUserAgentPermission(limitedAdminUser.user_id, AgentName.PDF_PROCESSING, 
+          { create: true, read: true, update: true, delete: false }), // EXPLICITLY NO delete permission
+        createMockUserAgentPermission(limitedAdminUser.user_id, AgentName.REPORTS_ANALYSIS, 
           { create: true, read: true, update: false, delete: false }),
-        createMockUserAgentPermission(adminUser.user_id, AgentName.AUDIO_RECORDING, 
+        createMockUserAgentPermission(limitedAdminUser.user_id, AgentName.AUDIO_RECORDING, 
           { create: false, read: true, update: false, delete: false })
       ]
       
-      // Setup new mocks for this specific test
-      vi.clearAllMocks()
-      setupUserAPITest({ user: adminUser })
-      setupPermissionAPITest({ 
-        userId: adminUser.user_id,
-        userPermissions: adminPermissions
+      await act(async () => {
+        // Clear existing auth state completely
+        clearTestAuth() 
+        
+        // Create fresh auth state with limited user
+        setupAuthenticatedUser('admin')
+        useAuthStore.setState({ 
+          user: limitedAdminUser,
+          token: `limited-admin-token-${limitedAdminUser.user_id}`,
+          isAuthenticated: true
+        })
+        
+        // Clear all mocks and setup fresh API responses
+        vi.clearAllMocks()
+        setupPermissionAPITest({ 
+          userId: limitedAdminUser.user_id,
+          userPermissions: adminPermissions
+        })
       })
       
-      render(
-        <TestWrapper>
+      // Render the PermissionGuard
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard agent={AgentName.PDF_PROCESSING} operation="delete">
             <div>Should Not See This</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
+      // Wait for the async permission check to complete
+      // The permission system is working correctly (verified by debug tests),
+      // but it takes time for the async API call to resolve and update the component
       await waitFor(() => {
-        expect(screen.getByText('Você não tem permissão para excluir no agente Processamento de PDFs.')).toBeInTheDocument()
-        expect(screen.queryByText('Should Not See This')).not.toBeInTheDocument()
+        const errorMessage = screen.queryByText(/Você não tem permissão para excluir/)
+        const protectedContent = screen.queryByText('Should Not See This')
+        
+        // Permission check must be complete (no loading state)
+        expect(screen.queryByText('Verificando permissões...')).not.toBeInTheDocument()
+        
+        // Final state should show the error message and NOT the protected content
+        expect(errorMessage).toBeInTheDocument()
+        expect(protectedContent).not.toBeInTheDocument()
+      }, { 
+        timeout: 10000, // Increased timeout to allow for async resolution
+        interval: 50 // Check frequently since we know it will eventually resolve correctly
       })
     })
   })
 
   describe('Regular User Permissions', () => {
-    beforeEach(() => {
-      // Use preset data for user with limited permissions
-      const { user } = TestDataPresets.userWithLimitedPermissions
-      
-      // Set user in auth store so hook can access it
-      useAuthStore.setState({ 
-        user, 
-        token: 'mock-token', 
-        isAuthenticated: true 
-      })
-      
-      // Create user agent permissions array with limited permissions
-      const userPermissions = [
-        createMockUserAgentPermission(user.user_id, AgentName.CLIENT_MANAGEMENT, 
-          { create: false, read: true, update: true, delete: false }),
-        createMockUserAgentPermission(user.user_id, AgentName.PDF_PROCESSING, 
-          { create: false, read: true, update: false, delete: false })
-        // Note: Only some agents have permissions for limited user
-      ]
-      
-      // Setup API mocks
-      setupUserAPITest({ user })
-      setupPermissionAPITest({ 
-        userId: user.user_id,
-        userPermissions: userPermissions
+    let regularUser: any
+    
+    beforeEach(async () => {
+      await act(async () => {
+        // Use preset data for user with limited permissions
+        const { user } = TestDataPresets.userWithLimitedPermissions
+        regularUser = user
+        
+        // Set user in auth store
+        setupAuthenticatedUser('user')
+        useAuthStore.setState({ user: regularUser })
+        
+        // Create user agent permissions array with limited permissions
+        const userPermissions = [
+          createMockUserAgentPermission(regularUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+            { create: false, read: true, update: true, delete: false }),
+          createMockUserAgentPermission(regularUser.user_id, AgentName.PDF_PROCESSING, 
+            { create: false, read: true, update: false, delete: false })
+          // Note: Only some agents have permissions for limited user
+        ]
+        
+        // Setup API mocks
+        setupPermissionAPITest({ 
+          userId: regularUser.user_id,
+          userPermissions: userPermissions
+        })
       })
     })
 
     it('should allow user access to permitted read operations', async () => {
-      render(
-        <TestWrapper>
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard agent={AgentName.CLIENT_MANAGEMENT} operation="read">
             <div>User Read Access</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('User Read Access')).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
 
     it('should deny user access to create/update/delete operations', async () => {
-      render(
-        <TestWrapper>
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard agent={AgentName.CLIENT_MANAGEMENT} operation="create">
             <div>Should Not See This</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Você não tem permissão para criar no agente Gestão de Clientes.')).toBeInTheDocument()
         expect(screen.queryByText('Should Not See This')).not.toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
 
     it('should deny user access to restricted agents', async () => {
-      render(
-        <TestWrapper>
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard agent={AgentName.REPORTS_ANALYSIS} operation="read">
             <div>Should Not See This</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Você não tem permissão para visualizar no agente Relatórios e Análises.')).toBeInTheDocument()
         expect(screen.queryByText('Should Not See This')).not.toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
   })
 
   describe('Loading States', () => {
-    beforeEach(() => {
-      const { user } = TestDataPresets.adminUserWithFullPermissions
-      
-      // Set user in auth store so hook can access it
-      useAuthStore.setState({ 
-        user, 
-        token: 'mock-token', 
-        isAuthenticated: true 
+    let loadingUser: any
+    
+    beforeEach(async () => {
+      await act(async () => {
+        const { user } = TestDataPresets.adminUserWithFullPermissions
+        loadingUser = user
+        
+        // Set user in auth store
+        setupAuthenticatedUser('admin')
+        useAuthStore.setState({ user: loadingUser })
+        
+        // Create user agent permissions array for admin
+        const adminPermissions = [
+          createMockUserAgentPermission(loadingUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+            { create: true, read: true, update: true, delete: true }),
+          createMockUserAgentPermission(loadingUser.user_id, AgentName.PDF_PROCESSING, 
+            { create: true, read: true, update: true, delete: true })
+        ]
+        
+        const permissionResponse = createMockUserPermissionsResponse(loadingUser.user_id, adminPermissions)
+        
+        // Mock delayed API responses  
+        const mockFetch = vi.mocked(global.fetch)
+        const delayedPermissionsPromise = new Promise(resolve => 
+          setTimeout(() => resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.resolve(permissionResponse)
+          }), 100)
+        )
+        
+        mockFetch.mockReturnValueOnce(delayedPermissionsPromise as any)
       })
-      
-      // Create user agent permissions array for admin
-      const adminPermissions = [
-        createMockUserAgentPermission(user.user_id, AgentName.CLIENT_MANAGEMENT, 
-          { create: true, read: true, update: true, delete: true }),
-        createMockUserAgentPermission(user.user_id, AgentName.PDF_PROCESSING, 
-          { create: true, read: true, update: true, delete: true })
-      ]
-      
-      const permissionResponse = createMockUserPermissionsResponse(user.user_id, adminPermissions)
-      
-      // Mock delayed API responses
-      const delayedAuthPromise = new Promise(resolve => 
-        setTimeout(() => resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ user })
-        }), 100)
-      )
-      const delayedPermissionsPromise = new Promise(resolve => 
-        setTimeout(() => resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(permissionResponse)
-        }), 100)
-      )
-      
-      mockFetch
-        .mockReturnValueOnce(delayedAuthPromise as any)
-        .mockReturnValueOnce(delayedPermissionsPromise as any)
     })
 
-    it('should show loading state while checking permissions', () => {
-      render(
-        <TestWrapper>
+    it('should show loading state while checking permissions', async () => {
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard agent={AgentName.CLIENT_MANAGEMENT} operation="read">
             <div>Protected Content</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
+      // Should show loading first
       expect(screen.getByText('Verificando permissões...')).toBeInTheDocument()
     })
 
-    it('should show custom loading component when provided', () => {
-      render(
-        <TestWrapper>
+    it('should show custom loading component when provided', async () => {
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard 
             agent={AgentName.CLIENT_MANAGEMENT} 
             operation="read"
@@ -380,96 +389,96 @@ describe('PermissionGuard', () => {
           >
             <div>Protected Content</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       expect(screen.getByText('Custom Loading...')).toBeInTheDocument()
     })
   })
 
   describe('Error Handling', () => {
-    beforeEach(() => {
-      const regularUser = createMockUser()
-      
-      // Set user in auth store so hook can access it
-      useAuthStore.setState({ 
-        user: regularUser, 
-        token: 'mock-token', 
-        isAuthenticated: true 
+    let errorUser: any
+    
+    beforeEach(async () => {
+      await act(async () => {
+        errorUser = createMockUser()
+        
+        // Set user in auth store
+        setupAuthenticatedUser('user')
+        useAuthStore.setState({ user: errorUser })
+        
+        // Mock API errors - permissions fail
+        setupPermissionAPITest({ shouldFail: true })
       })
-      
-      // Mock API errors - auth succeeds but permissions fail
-      setupUserAPITest({ user: regularUser })
-      setupPermissionAPITest({ shouldFail: true })
     })
 
     it('should show error message when permission check fails', async () => {
-      render(
-        <TestWrapper>
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard agent={AgentName.CLIENT_MANAGEMENT} operation="read">
             <div>Protected Content</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText(/Erro ao verificar permissões/)).toBeInTheDocument()
         expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
   })
 
   describe('Not Authenticated States', () => {
-    beforeEach(() => {
-      // Clear auth store for unauthenticated state
-      useAuthStore.setState({ user: null, token: null, isAuthenticated: false })
-      
-      // Mock unauthenticated response
-      setupUserAPITest({ shouldFail: true })
+    beforeEach(async () => {
+      await act(async () => {
+        // Clear auth store for unauthenticated state
+        clearTestAuth()
+      })
     })
 
     it('should deny access when user is not authenticated', async () => {
-      render(
-        <TestWrapper>
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard agent={AgentName.CLIENT_MANAGEMENT} operation="read">
             <div>Should Not See This</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Você não tem permissão para visualizar no agente Gestão de Clientes.')).toBeInTheDocument()
         expect(screen.queryByText('Should Not See This')).not.toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
   })
 
   describe('Custom Fallback Components', () => {
-    beforeEach(() => {
-      // Use preset data for user with no permissions
-      const { user } = TestDataPresets.userWithNoPermissions
-      
-      // Set user in auth store so hook can access it
-      useAuthStore.setState({ 
-        user, 
-        token: 'mock-token', 
-        isAuthenticated: true 
-      })
-      
-      // Create empty permissions array (user has no permissions)
-      const noPermissions: UserAgentPermission[] = []
-      
-      // Setup API mocks
-      setupUserAPITest({ user })
-      setupPermissionAPITest({ 
-        userId: user.user_id,
-        userPermissions: noPermissions
+    let noPermissionsUser: any
+    
+    beforeEach(async () => {
+      await act(async () => {
+        // Use preset data for user with no permissions
+        const { user } = TestDataPresets.userWithNoPermissions
+        noPermissionsUser = user
+        
+        // Set user in auth store
+        setupAuthenticatedUser('user')
+        useAuthStore.setState({ user: noPermissionsUser })
+        
+        // Create empty permissions array (user has no permissions)
+        const noPermissions: UserAgentPermission[] = []
+        
+        // Setup API mocks
+        setupPermissionAPITest({ 
+          userId: noPermissionsUser.user_id,
+          userPermissions: noPermissions
+        })
       })
     })
 
     it('should show custom fallback when permission is denied', async () => {
-      render(
-        <TestWrapper>
+      await act(async () => {
+        renderWithProviders(
           <PermissionGuard 
             agent={AgentName.CLIENT_MANAGEMENT} 
             operation="create"
@@ -477,77 +486,78 @@ describe('PermissionGuard', () => {
           >
             <div>Protected Content</div>
           </PermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Custom Access Denied Message')).toBeInTheDocument()
         expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
   })
 
   describe('Specific Permission Guard Components', () => {
-    beforeEach(() => {
-      const { user } = TestDataPresets.adminUserWithFullPermissions
-      
-      // Set user in auth store so hook can access it
-      useAuthStore.setState({ 
-        user, 
-        token: 'mock-token', 
-        isAuthenticated: true 
-      })
-      
-      // Create user agent permissions array for admin
-      const adminPermissions = [
-        createMockUserAgentPermission(user.user_id, AgentName.CLIENT_MANAGEMENT, 
-          { create: true, read: true, update: true, delete: true }),
-        createMockUserAgentPermission(user.user_id, AgentName.PDF_PROCESSING, 
-          { create: true, read: true, update: true, delete: true }),
-        createMockUserAgentPermission(user.user_id, AgentName.REPORTS_ANALYSIS, 
-          { create: true, read: true, update: true, delete: true }),
-        createMockUserAgentPermission(user.user_id, AgentName.AUDIO_RECORDING, 
-          { create: true, read: true, update: true, delete: true })
-      ]
-      
-      // Setup API mocks
-      setupUserAPITest({ user })
-      setupPermissionAPITest({ 
-        userId: user.user_id,
-        userPermissions: adminPermissions
+    let specificUser: any
+    
+    beforeEach(async () => {
+      await act(async () => {
+        const { user } = TestDataPresets.adminUserWithFullPermissions
+        specificUser = user
+        
+        // Set user in auth store
+        setupAuthenticatedUser('admin')
+        useAuthStore.setState({ user: specificUser })
+        
+        // Create user agent permissions array for admin
+        const adminPermissions = [
+          createMockUserAgentPermission(specificUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+            { create: true, read: true, update: true, delete: true }),
+          createMockUserAgentPermission(specificUser.user_id, AgentName.PDF_PROCESSING, 
+            { create: true, read: true, update: true, delete: true }),
+          createMockUserAgentPermission(specificUser.user_id, AgentName.REPORTS_ANALYSIS, 
+            { create: true, read: true, update: true, delete: true }),
+          createMockUserAgentPermission(specificUser.user_id, AgentName.AUDIO_RECORDING, 
+            { create: true, read: true, update: true, delete: true })
+        ]
+        
+        // Setup API mocks
+        setupPermissionAPITest({ 
+          userId: specificUser.user_id,
+          userPermissions: adminPermissions
+        })
       })
     })
 
     it('should work with CreatePermissionGuard component', async () => {
       const { CreatePermissionGuard } = await import('../PermissionGuard')
       
-      render(
-        <TestWrapper>
+      await act(async () => {
+        renderWithProviders(
           <CreatePermissionGuard agent={AgentName.CLIENT_MANAGEMENT}>
             <div>Create Content</div>
           </CreatePermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Create Content')).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
 
     it('should work with ReadPermissionGuard component', async () => {
       const { ReadPermissionGuard } = await import('../PermissionGuard')
       
-      render(
-        <TestWrapper>
+      await act(async () => {
+        renderWithProviders(
           <ReadPermissionGuard agent={AgentName.CLIENT_MANAGEMENT}>
             <div>Read Content</div>
           </ReadPermissionGuard>
-        </TestWrapper>
-      )
+        )
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Read Content')).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
   })
 })

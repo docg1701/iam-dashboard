@@ -284,6 +284,7 @@ class TestPermissionService:
         test_session.refresh(existing_permission)
         assert existing_permission.permissions == new_permissions
 
+    @pytest.mark.asyncio
     async def test_assign_permission_authorization_error(
         self,
         permission_service: PermissionService,

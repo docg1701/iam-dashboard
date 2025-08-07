@@ -1,47 +1,40 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { vi } from 'vitest'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-
+/**
+ * UserCreateForm Component Tests
+ * Tests user creation form behavior and user interactions
+ * Following CLAUDE.md rules: no internal mocking, only external API mocking
+ */
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  renderWithProviders,
+  screen,
+  waitFor,
+  userEvent,
+  useTestSetup,
+  mockSuccessfulFetch,
+  mockFailedFetch,
+  act,
+} from '@/test/test-template'
 import { UserCreateForm } from '../UserCreateForm'
-// VIOLAÇÃO CORRIGIDA: Não fazer mock de código interno (@/lib/api/users)
-// Mock apenas fetch - API externa real
-
-// Mock apenas APIs externas (fetch) - NUNCA código interno
-const mockFetch = vi.fn()
-global.fetch = mockFetch
-
-// Não fazer mock de hooks internos - usar implementação real
-
-const TestWrapper = ({ children }: { children: React.ReactNode }) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false }
-    }
-  })
-  
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
-}
+import type { UserCreate, User } from '@/types/auth'
 
 describe('UserCreateForm', () => {
+  useTestSetup()
+  
   const mockOnSuccess = vi.fn()
   const mockOnCancel = vi.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockOnSuccess.mockReset()
+    mockOnCancel.mockReset()
   })
 
   const renderComponent = () => {
-    return render(
-      <TestWrapper>
-        <UserCreateForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />
-      </TestWrapper>
-    )
+    return renderWithProviders(<UserCreateForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />)
   }
 
   describe('Rendering and Initial State', () => {

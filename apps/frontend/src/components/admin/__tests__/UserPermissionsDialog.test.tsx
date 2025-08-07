@@ -1,165 +1,219 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { vi, beforeEach, afterEach, describe, it, expect } from 'vitest'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
-
+import userEvent from '@testing-library/user-event'
+import { 
+  describe, 
+  it, 
+  expect, 
+  beforeEach, 
+  vi, 
+  afterEach,
+  renderWithProviders,
+  screen,
+  waitFor,
+  act,
+  useTestSetup
+} from '@/test/test-template'
+import { 
+  createMockAdminUser,
+  createMockUserAgentPermission,
+  setupPermissionAPITest,
+  setupUserAPITest,
+  TestDataPresets
+} from '@/test/api-mocks'
+import { 
+  setupAuthenticatedUser,
+  clearTestAuth
+} from '@/test/auth-helpers'
 import { UserPermissionsDialog } from '../UserPermissionsDialog'
+import { AgentName } from '@/types/permissions'
 import useAuthStore from '@/store/authStore'
 
-// Test utilities
-const createTestQueryClient = () => {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
-      mutations: { retry: false }
-    },
-    logger: { log: () => {}, warn: () => {}, error: () => {} }
-  })
-}
+// Setup standard test utilities
+useTestSetup()
 
-const TestWrapper = ({ children }: { children: React.ReactNode }) => {
-  const queryClient = createTestQueryClient()
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
-}
-
-// Mock data
-const mockAdminUser = {
+// Mock data using test infrastructure
+const mockAdminUser = createMockAdminUser({
   user_id: 'admin-123',
   email: 'admin@test.com',
-  role: 'admin',
-  is_active: true,
-  totp_enabled: false,
-  created_at: '2024-01-01T00:00:00Z',
-  updated_at: '2024-01-01T00:00:00Z',
   full_name: 'Admin User'
-}
+})
 
-const mockTestUser = {
+const mockTestUser = createMockAdminUser({
   user_id: '123',
   email: 'joao@example.com',
   role: 'user',
-  is_active: true,
-  totp_enabled: false,
-  created_at: '2023-01-01T00:00:00Z',
-  updated_at: '2023-01-01T00:00:00Z',
   full_name: 'João Silva'
-}
-
-const mockPermissions = {
-  client_management: { create: true, read: true, update: true, delete: false },
-  pdf_processing: { create: false, read: true, update: false, delete: false },
-  reports_analysis: { create: false, read: true, update: false, delete: false },
-  audio_recording: { create: false, read: false, update: false, delete: false },
-}
-
-const mockFetch = vi.fn()
-
-beforeEach(() => {
-  global.fetch = mockFetch
-  
-  // Mock ResizeObserver (external API)
-  global.ResizeObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  }))
-})
-
-afterEach(() => {
-  vi.clearAllMocks()
 })
 
 describe('UserPermissionsDialog', () => {
   const mockOnOpenChange = vi.fn()
   const mockOnPermissionsChanged = vi.fn()
   
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockOnOpenChange.mockClear()
-    mockOnPermissionsChanged.mockClear()
+  beforeEach(async () => {
+    await act(async () => {
+      // Clear all previous state
+      clearTestAuth()
+      vi.clearAllMocks()
+      mockOnOpenChange.mockClear()
+      mockOnPermissionsChanged.mockClear()
+      
+      // Setup authenticated admin user with proper permissions to view the dialog
+      setupAuthenticatedUser('admin')
+      useAuthStore.setState({ user: mockAdminUser })
+      
+      // Setup API mocks for the admin user to have permissions to view the dialog
+      const adminPermissions = [
+        createMockUserAgentPermission(mockAdminUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+          { create: true, read: true, update: true, delete: true }),
+        createMockUserAgentPermission(mockAdminUser.user_id, AgentName.PDF_PROCESSING, 
+          { create: true, read: true, update: true, delete: false }),
+        createMockUserAgentPermission(mockAdminUser.user_id, AgentName.REPORTS_ANALYSIS, 
+          { create: true, read: true, update: false, delete: false }),
+        createMockUserAgentPermission(mockAdminUser.user_id, AgentName.AUDIO_RECORDING, 
+          { create: false, read: true, update: false, delete: false })
+      ]
+      
+      // Setup permission API for the current admin user
+      setupPermissionAPITest({ 
+        userId: mockAdminUser.user_id,
+        userPermissions: adminPermissions
+      })
+      
+      // Setup API mocks for the target user being edited
+      const targetUserPermissions = [
+        createMockUserAgentPermission(mockTestUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+          { create: true, read: true, update: true, delete: false }),
+        createMockUserAgentPermission(mockTestUser.user_id, AgentName.PDF_PROCESSING, 
+          { create: false, read: true, update: false, delete: false }),
+        createMockUserAgentPermission(mockTestUser.user_id, AgentName.REPORTS_ANALYSIS, 
+          { create: false, read: true, update: false, delete: false }),
+        createMockUserAgentPermission(mockTestUser.user_id, AgentName.AUDIO_RECORDING, 
+          { create: false, read: false, update: false, delete: false })
+      ]
+      
+      // Setup permission API for the target user
+      setupPermissionAPITest({ 
+        userId: mockTestUser.user_id,
+        userPermissions: targetUserPermissions
+      })
+    })
   })
 
-  const renderComponent = (user = mockTestUser, open = true) => {
-    return render(
-      <TestWrapper>
+  const renderComponent = async (user = mockTestUser, open = true) => {
+    return await act(async () => {
+      return renderWithProviders(
         <UserPermissionsDialog
           user={user}
           open={open}
           onOpenChange={mockOnOpenChange}
           onPermissionsChanged={mockOnPermissionsChanged}
         />
-      </TestWrapper>
-    )
+      )
+    })
   }
 
   describe('Dialog Rendering', () => {
-    it('should not render when user is null', () => {
-      renderComponent(null)
+    it('should not render when user is null', async () => {
+      await renderComponent(null)
 
       expect(screen.queryByText(/permissões de/i)).not.toBeInTheDocument()
     })
 
-    it('should not render when dialog is closed', () => {
-      renderComponent(mockTestUser, false)
+    it('should not render when dialog is closed', async () => {
+      await renderComponent(mockTestUser, false)
 
       expect(screen.queryByText(/permissões de/i)).not.toBeInTheDocument()
     })
 
-    it('should render dialog header with user name', () => {
-      renderComponent()
+    it('should render dialog header with user name', async () => {
+      await renderComponent()
 
-      expect(screen.getByText(`Permissões de ${mockTestUser.full_name}`)).toBeInTheDocument()
-      expect(screen.getByText(/gerencie as permissões de acesso aos agentes/i)).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText(`Permissões de ${mockTestUser.full_name}`)).toBeInTheDocument()
+        expect(screen.getByText(/gerencie as permissões de acesso aos agentes/i)).toBeInTheDocument()
+      }, { timeout: 3000 })
     })
 
-    it('should display user information card', () => {
-      renderComponent()
+    it('should display user information card', async () => {
+      await renderComponent()
 
-      expect(screen.getByText(/nome completo/i)).toBeInTheDocument()
-      expect(screen.getByText(mockTestUser.full_name!)).toBeInTheDocument()
-      expect(screen.getByText(mockTestUser.email)).toBeInTheDocument()
-      expect(screen.getByText(mockTestUser.role)).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText(/nome completo/i)).toBeInTheDocument()
+        expect(screen.getByText(mockTestUser.full_name!)).toBeInTheDocument()
+        expect(screen.getByText(mockTestUser.email)).toBeInTheDocument()
+        expect(screen.getByText(mockTestUser.role)).toBeInTheDocument()
+      }, { timeout: 3000 })
     })
   })
 
   describe('Permissions Loading States', () => {
-    beforeEach(() => {
-      // Reset fetch mock for each test
-      mockFetch.mockClear()
-    })
-
     it('should display loading state while fetching permissions', async () => {
-      // Mock delayed response
-      const delayedPromise = new Promise(resolve => 
+      // Mock delayed response for target user permissions
+      const delayedPermissionsPromise = new Promise(resolve => 
         setTimeout(() => resolve({
           ok: true,
           status: 200,
-          json: () => Promise.resolve(mockPermissions)
-        }), 100)
+          json: () => Promise.resolve({
+            user_id: mockTestUser.user_id,
+            permissions: [
+              createMockUserAgentPermission(mockTestUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+                { create: true, read: true, update: true, delete: false })
+            ],
+            last_updated: new Date().toISOString()
+          })
+        }), 200)
       )
-      mockFetch.mockReturnValueOnce(delayedPromise as any)
-
-      renderComponent()
-
-      expect(screen.getByText(/permissões de/i)).toBeInTheDocument()
       
+      // Clear existing mocks and set up delayed response
+      vi.clearAllMocks()
+      const mockFetch = vi.mocked(global.fetch)
+      
+      // First call for admin user permissions (immediate)
+      setupPermissionAPITest({ 
+        userId: mockAdminUser.user_id,
+        userPermissions: [
+          createMockUserAgentPermission(mockAdminUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+            { create: true, read: true, update: true, delete: true })
+        ]
+      })
+      
+      // Second call for target user permissions (delayed)
+      mockFetch.mockReturnValueOnce(delayedPermissionsPromise as any)
+
+      await renderComponent()
+
+      // Should show the dialog header first
+      await waitFor(() => {
+        expect(screen.getByText(/permissões de/i)).toBeInTheDocument()
+      }, { timeout: 3000 })
+      
+      // Eventually should show the form
       await waitFor(() => {
         expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
-      })
+      }, { timeout: 3000 })
     })
 
     it('should display error state when permissions loading fails', async () => {
-      // Mock API error
-      mockFetch.mockRejectedValueOnce(new Error('Failed to fetch permissions'))
+      // Clear existing mocks
+      vi.clearAllMocks()
+      
+      // Setup admin permissions (successful)
+      setupPermissionAPITest({ 
+        userId: mockAdminUser.user_id,
+        userPermissions: [
+          createMockUserAgentPermission(mockAdminUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+            { create: true, read: true, update: true, delete: true })
+        ]
+      })
+      
+      // Setup failed permissions for target user
+      setupPermissionAPITest({ shouldFail: true })
 
-      renderComponent()
+      await renderComponent()
 
-      expect(screen.getByText(/permissões de/i)).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText(/permissões de/i)).toBeInTheDocument()
+      }, { timeout: 3000 })
     })
 
     it('should display permissions form when loaded successfully', async () => {

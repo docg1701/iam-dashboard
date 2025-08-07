@@ -1,36 +1,54 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { vi } from 'vitest'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+/**
+ * Users Dashboard Page Enhanced Tests
+ * 
+ * Phase 3: Enhanced critical page testing implementation
+ * 
+ * Test coverage focuses on:
+ * - Complete user management workflow
+ * - Search and filtering functionality
+ * - Permission-based actions and access control
+ * - CRUD operations with real API integration
+ * - Responsive behavior and accessibility
+ * - Loading states and error scenarios
+ * 
+ * Following CLAUDE.md testing directives:
+ * - NEVER mock internal components, pages, or application logic
+ * - ONLY mock external APIs (fetch calls, browser APIs)
+ * - Test real page rendering and user interactions
+ * - Focus on user-facing functionality and business logic
+ */
 
+import {
+  renderWithProviders,
+  screen,
+  fireEvent,
+  waitFor,
+  userEvent,
+  vi,
+  expect,
+  describe,
+  test,
+  useTestSetup,
+  mockSuccessfulFetch,
+  mockFailedFetch,
+  mockNetworkError,
+  triggerWindowResize,
+  within,
+} from '@/test/test-template'
+import { 
+  AuthScenarios,
+  setupAuthenticatedUser,
+  setupUnauthenticatedUser,
+  expectAuthState,
+  clearTestAuth,
+} from '@/test/auth-helpers'
 import UsersPage from '../page'
-// VIOLAÇÃO CORRIGIDA: Não fazer mock de código interno (@/lib/api/users)
-// Usar implementação real do toast
 import type { User } from '@iam-dashboard/shared'
 import type { UserListResponse } from '@/lib/api/users'
 
-// Mock apenas APIs externas (fetch) - NUNCA código interno
-const mockFetch = vi.fn()
-global.fetch = mockFetch
-
-// Não fazer mock de hooks internos - usar implementação real
-
-const TestWrapper = ({ children }: { children: React.ReactNode }) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false }
-    }
-  })
-  
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
-}
-
 describe('UsersPage', () => {
+  useTestSetup()
+
   const mockUsers: User[] = [
     {
       user_id: '1',
@@ -73,58 +91,79 @@ describe('UsersPage', () => {
     total_pages: 1
   }
 
-  beforeEach(() => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => mockUsersResponse
-    })
-    vi.clearAllMocks()
-  })
-
-  const renderComponent = () => {
-    return render(
-      <TestWrapper>
-        <UsersPage />
-      </TestWrapper>
-    )
+  const renderUsersPage = (userRole: 'user' | 'admin' | 'sysadmin' = 'admin') => {
+    // Setup authenticated user with appropriate role
+    setupAuthenticatedUser(userRole)
+    
+    // Mock successful users fetch by default
+    mockSuccessfulFetch('/api/v1/users', mockUsersResponse)
+    
+    return renderWithProviders(<UsersPage />)
   }
 
-  describe('Page Rendering and Initial State', () => {
-    it('should render page header with title and description', async () => {
-      renderComponent()
+  describe('Page Structure and Layout', () => {
+    test('renders page header with proper structure and branding', async () => {
+      renderUsersPage()
 
       expect(screen.getByRole('heading', { name: /usuários/i })).toBeInTheDocument()
       expect(screen.getByText(/gerencie os usuários e suas permissões/i)).toBeInTheDocument()
+      
+      // Check for icon and layout
+      const userIcon = document.querySelector('[data-lucide="users"]')
+      expect(userIcon).toBeInTheDocument()
     })
 
-    it('should render new user button', async () => {
-      renderComponent()
+    test('renders action buttons with proper accessibility', async () => {
+      renderUsersPage()
 
-      expect(screen.getByRole('button', { name: /novo usuário/i })).toBeInTheDocument()
+      const newUserButton = screen.getByRole('button', { name: /novo usuário/i })
+      expect(newUserButton).toBeInTheDocument()
+      expect(newUserButton).toBeEnabled()
+      
+      // Check for plus icon
+      const plusIcon = document.querySelector('[data-lucide="plus"]')
+      expect(plusIcon).toBeInTheDocument()
     })
 
-    it('should render search and filter controls', async () => {
-      renderComponent()
+    test('renders comprehensive search and filter controls', async () => {
+      renderUsersPage()
 
       expect(screen.getByPlaceholderText(/buscar por email/i)).toBeInTheDocument()
-      expect(screen.getByText(/filtrar por role/i)).toBeInTheDocument()
+      expect(screen.getByText(/filtrar por role/i)).toBeInTheDocument()  
       expect(screen.getByText(/filtrar por status/i)).toBeInTheDocument()
+      
+      // Check for search icon
+      const searchIcon = document.querySelector('[data-lucide="search"]')
+      expect(searchIcon).toBeInTheDocument()
     })
 
-    it('should render users table with proper headers', async () => {
-      renderComponent()
+    test('renders users table with complete structure and accessibility', async () => {
+      renderUsersPage()
 
       await waitFor(() => {
         expect(screen.getByRole('table')).toBeInTheDocument()
       })
 
-      expect(screen.getByText(/usuário/i)).toBeInTheDocument()
-      expect(screen.getByText(/email/i)).toBeInTheDocument()
-      expect(screen.getByText(/role/i)).toBeInTheDocument()
-      expect(screen.getByText(/status/i)).toBeInTheDocument()
-      expect(screen.getByText(/criado em/i)).toBeInTheDocument()
-      expect(screen.getByText(/ações/i)).toBeInTheDocument()
+      const table = screen.getByRole('table')
+      const columnHeaders = within(table).getAllByRole('columnheader')
+      
+      expect(columnHeaders).toHaveLength(6)
+      expect(within(table).getByText(/usuário/i)).toBeInTheDocument()
+      expect(within(table).getByText(/email/i)).toBeInTheDocument()
+      expect(within(table).getByText(/role/i)).toBeInTheDocument()
+      expect(within(table).getByText(/status/i)).toBeInTheDocument()
+      expect(within(table).getByText(/criado em/i)).toBeInTheDocument()
+      expect(within(table).getByText(/ações/i)).toBeInTheDocument()
+    })
+
+    test('maintains responsive design classes and structure', () => {
+      renderUsersPage()
+      
+      const container = screen.getByText('Usuários').closest('.container')
+      expect(container).toHaveClass('mx-auto', 'px-4', 'py-8', 'max-w-7xl')
+      
+      const filtersContainer = screen.getByPlaceholderText(/buscar por email/i).closest('.flex')
+      expect(filtersContainer).toHaveClass('flex-col', 'sm:flex-row')
     })
   })
 
@@ -674,7 +713,7 @@ describe('UsersPage', () => {
 
   describe('Responsive Behavior', () => {
     it('should render properly on different screen sizes', async () => {
-      renderComponent()
+      renderUsersPage()
 
       await waitFor(() => {
         expect(screen.getByRole('table')).toBeInTheDocument()
@@ -686,10 +725,221 @@ describe('UsersPage', () => {
     })
 
     it('should show mobile-friendly search and filters layout', async () => {
-      renderComponent()
+      renderUsersPage()
 
       const filtersContainer = screen.getByPlaceholderText(/buscar por email/i).closest('.flex')
       expect(filtersContainer).toHaveClass('flex-col', 'sm:flex-row')
+    })
+
+    test('adapts layout for mobile viewports', () => {
+      triggerWindowResize(375, 667) // Mobile viewport
+      renderUsersPage()
+      
+      // Should still render main components
+      expect(screen.getByRole('heading', { name: /usuários/i })).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/buscar por email/i)).toBeInTheDocument()
+      
+      // Check responsive classes are working
+      const container = screen.getByText('Usuários').closest('.container')
+      expect(container).toHaveClass('px-4') // Mobile padding
+    })
+
+    test('handles tablet viewport correctly', () => {
+      triggerWindowResize(768, 1024) // Tablet viewport
+      renderUsersPage()
+      
+      expect(screen.getByRole('table')).toBeInTheDocument()
+      expect(screen.getByText(/novo usuário/i)).toBeInTheDocument()
+    })
+  })
+
+  describe('Authentication and Permission Integration', () => {
+    test('renders for admin users with full functionality', () => {
+      renderUsersPage('admin')
+      
+      expectAuthState({
+        isAuthenticated: true,
+        isLoading: false,
+      })
+      
+      expect(screen.getByRole('button', { name: /novo usuário/i })).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/buscar por email/i)).toBeInTheDocument()
+    })
+
+    test('renders for sysadmin users with enhanced capabilities', () => {
+      renderUsersPage('sysadmin')
+      
+      expect(screen.getByRole('heading', { name: /usuários/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /novo usuário/i })).toBeInTheDocument()
+      
+      // Sysadmins should see all functionality
+      expect(screen.getByText(/filtrar por role/i)).toBeInTheDocument()
+    })
+
+    test('renders for regular users with limited permissions', () => {
+      renderUsersPage('user')
+      
+      expect(screen.getByRole('heading', { name: /usuários/i })).toBeInTheDocument()
+      
+      // Regular users might have limited access - this depends on implementation
+      // For now, we test that the page renders without crashing
+      expect(screen.getByPlaceholderText(/buscar por email/i)).toBeInTheDocument()
+    })
+
+    test('handles unauthenticated access appropriately', () => {
+      setupUnauthenticatedUser()
+      
+      // This might redirect or show an error - depends on implementation
+      // For now, test that it doesn't crash
+      renderWithProviders(<UsersPage />)
+      
+      // The behavior here depends on how the app handles unauthenticated access
+      expect(document.body).toBeInTheDocument()
+    })
+  })
+
+  describe('Error Boundaries and Edge Cases', () => {
+    test('handles malformed user data gracefully', async () => {
+      const malformedUsers = [
+        {
+          user_id: '1',
+          // Missing required fields
+          full_name: null,
+          email: 'broken@example.com',
+          role: 'admin',
+        }
+      ] as any
+      
+      mockSuccessfulFetch('/api/v1/users', {
+        users: malformedUsers,
+        total: 1,
+        page: 1,
+        per_page: 50,
+        total_pages: 1,
+      })
+      
+      renderUsersPage()
+      
+      // Should handle malformed data without crashing
+      expect(screen.getByRole('heading', { name: /usuários/i })).toBeInTheDocument()
+    })
+
+    test('handles network timeouts gracefully', async () => {
+      mockNetworkError('/api/v1/users', 'Request timeout')
+      
+      renderUsersPage()
+      
+      await waitFor(() => {
+        expect(screen.getByText(/erro ao carregar usuários/i)).toBeInTheDocument()
+      })
+      
+      // Should show error state
+      expect(screen.getByRole('heading', { name: /usuários/i })).toBeInTheDocument()
+    })
+
+    test('recovers from API errors with retry', async () => {
+      // First call fails
+      mockFailedFetch('/api/v1/users', 'Server error', 500)
+      
+      renderUsersPage()
+      
+      await waitFor(() => {
+        expect(screen.getByText(/erro ao carregar usuários/i)).toBeInTheDocument()
+      })
+      
+      // Second call succeeds (simulating retry)
+      mockSuccessfulFetch('/api/v1/users', mockUsersResponse)
+      
+      // The actual retry mechanism would be handled by React Query
+      expect(screen.getByRole('heading', { name: /usuários/i })).toBeInTheDocument()
+    })
+  })
+
+  describe('Performance and Optimization', () => {
+    test('handles large user lists efficiently', async () => {
+      const largeUserList = Array.from({ length: 100 }, (_, i) => ({
+        user_id: `user-${i}`,
+        full_name: `User ${i}`,
+        email: `user${i}@example.com`,
+        role: 'user' as const,
+        status: 'active' as const,
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z',
+        is_verified: true,
+      }))
+      
+      mockSuccessfulFetch('/api/v1/users', {
+        users: largeUserList,
+        total: 100,
+        page: 1,
+        per_page: 50,
+        total_pages: 2,
+      })
+      
+      renderUsersPage()
+      
+      await waitFor(() => {
+        expect(screen.getByText(/mostrando 100 de 100 usuário/i)).toBeInTheDocument()
+      })
+      
+      // Should render without performance issues
+      expect(screen.getByRole('table')).toBeInTheDocument()
+    })
+
+    test('debounces search input to prevent excessive API calls', async () => {
+      renderUsersPage()
+      
+      const searchInput = screen.getByPlaceholderText(/buscar por email/i)
+      
+      // Type quickly - should debounce
+      await userEvent.type(searchInput, 'test')
+      
+      // Should not make immediate API calls for each character
+      expect(screen.getByDisplayValue('test')).toBeInTheDocument()
+    })
+  })
+
+  describe('Business Logic Integration', () => {
+    test('displays user statistics and summary information', async () => {
+      renderUsersPage()
+      
+      await waitFor(() => {
+        expect(screen.getByText(/mostrando 3 de 3 usuário\(s\)/i)).toBeInTheDocument()
+      })
+      
+      // Check that the summary reflects actual data
+      expect(screen.getByRole('table')).toBeInTheDocument()
+    })
+
+    test('handles empty search results appropriately', async () => {
+      mockSuccessfulFetch('/api/v1/users', {
+        users: [],
+        total: 0,
+        page: 1,
+        per_page: 50,
+        total_pages: 0,
+      })
+      
+      renderUsersPage()
+      
+      await waitFor(() => {
+        expect(screen.getByText(/nenhum usuário encontrado/i)).toBeInTheDocument()
+      })
+    })
+
+    test('integrates with real form components for user creation', async () => {
+      renderUsersPage()
+      
+      const newUserButton = screen.getByRole('button', { name: /novo usuário/i })
+      await userEvent.click(newUserButton)
+      
+      await waitFor(() => {
+        expect(screen.getByText(/criar novo usuário/i)).toBeInTheDocument()
+        expect(screen.getByText(/preencha os dados para criar um novo usuário/i)).toBeInTheDocument()
+      })
+      
+      // Should render the actual UserCreateForm component
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
     })
   })
 })

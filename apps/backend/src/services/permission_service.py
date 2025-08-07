@@ -503,10 +503,10 @@ class PermissionService:
             change_reason: Optional reason for the permission change
 
         Returns:
-            True if permission was revoked, False if it didn't exist
+            True if permission was revoked
 
         Raises:
-            NotFoundError: If user doesn't exist
+            NotFoundError: If user doesn't exist or permission doesn't exist
             AuthorizationError: If revoker doesn't have permission
             DatabaseError: If database operation fails
         """
@@ -564,7 +564,7 @@ class PermissionService:
                 permission = permission_result.scalar_one_or_none()
 
                 if not permission:
-                    return False
+                    raise NotFoundError(f"Permission for user {user_id} on agent {agent_name.value} not found")
 
                 old_permissions = permission.permissions.copy()
                 session.delete(permission)

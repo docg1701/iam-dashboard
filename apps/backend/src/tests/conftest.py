@@ -253,7 +253,6 @@ def test_user(test_session: Session) -> User:
         role=UserRole.ADMIN,
         is_active=True,
         password_hash=auth_service.get_password_hash("password123"),
-        full_name="Test Admin User",
     )
     test_session.add(user)
     test_session.commit()
@@ -270,7 +269,6 @@ def test_sysadmin(test_session: Session) -> User:
         role=UserRole.SYSADMIN,
         is_active=True,
         password_hash=auth_service.get_password_hash("password123"),
-        full_name="Test Sysadmin User",
     )
     test_session.add(user)
     test_session.commit()
@@ -287,7 +285,6 @@ def test_regular_user(test_session: Session) -> User:
         role=UserRole.USER,
         is_active=True,
         password_hash=auth_service.get_password_hash("password123"),
-        full_name="Test Regular User",
     )
     test_session.add(user)
     test_session.commit()

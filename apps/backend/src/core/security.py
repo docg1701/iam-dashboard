@@ -69,30 +69,37 @@ class TokenResponse(BaseModel):
 class SecureAuthService:
     """Enhanced authentication service with session tracking and JWT blacklisting."""
 
-    def __init__(self) -> None:
+    def __init__(self, redis_client=None) -> None:
         self.secret_key = settings.SECRET_KEY
         self.algorithm = "HS256"
         self.access_token_expire_minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
         self.session_expire_hours = 24
 
-        # Skip Redis initialization in test environment
-        self._is_testing = "pytest" in sys.modules or "test" in sys.argv[0] if sys.argv else False
-
-        if self._is_testing:
-            self.redis_client = None
-            logger.debug("AuthService initialized in testing mode - Redis disabled")
+        # Use provided Redis client (for testing) or initialize new one
+        if redis_client is not None:
+            self.redis_client = redis_client
+            logger.debug("AuthService initialized with provided Redis client")
         else:
-            # Initialize Redis client
-            try:
-                self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)  # type: ignore[no-untyped-call]
-                # Test connection
-                self.redis_client.ping()
-                logger.debug("AuthService initialized with Redis connection")
-            except (redis.ConnectionError, redis.RedisError) as e:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Redis connection failed",
-                ) from e
+            # Check if we're in testing mode
+            self._is_testing = "pytest" in sys.modules or "test" in sys.argv[0] if sys.argv else False
+            
+            if self._is_testing:
+                # In testing mode, create a mock-like Redis client that fails gracefully
+                # This allows tests to override it with proper mocks when needed
+                self.redis_client = None
+                logger.debug("AuthService initialized in testing mode - Redis will be mocked by tests")
+            else:
+                # Initialize real Redis client
+                try:
+                    self.redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)  # type: ignore[no-untyped-call]
+                    # Test connection
+                    self.redis_client.ping()
+                    logger.debug("AuthService initialized with Redis connection")
+                except (redis.ConnectionError, redis.RedisError) as e:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Redis connection failed",
+                    ) from e
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a plain password against its hash."""
@@ -294,8 +301,8 @@ class SecureAuthService:
             last_activity=datetime.utcnow().isoformat(),
         )
 
-        # Skip Redis storage in testing mode
-        if not self._is_testing and self.redis_client is not None:
+        # Store session in Redis if client is available (including mocked client in tests)
+        if self.redis_client is not None:
             try:
                 # Store temporary session with short expiration for 2FA
                 self.redis_client.setex(

@@ -1,0 +1,171 @@
+src/tests/security/conftest.py:def mock_redis_for_security():
+src/tests/security/conftest.py:    mock_redis = Mock()
+src/tests/security/conftest.py:    mock_redis.get.return_value = None  # Simulate cache miss
+src/tests/security/conftest.py:    mock_redis.setex.return_value = True
+src/tests/security/conftest.py:    mock_redis.delete.return_value = True
+src/tests/security/conftest.py:    mock_redis.exists.return_value = False  # Not blacklisted
+src/tests/security/conftest.py:    mock_redis.ping.return_value = True
+src/tests/security/conftest.py:    return mock_redis
+src/tests/security/test_permission_escalation_security.py:        mock_redis,
+src/tests/security/test_permission_escalation_security.py:        mock_redis.get.return_value = json.dumps({
+src/tests/security/test_authentication_security.py:        mock_redis,
+src/tests/security/test_authentication_security.py:        mock_redis.get.side_effect = Exception("Redis connection failed")
+src/tests/security/test_authentication_security.py:        mock_redis.setex.side_effect = Exception("Redis connection failed")
+src/tests/security/test_authentication_security.py:        mock_redis_for_security
+src/tests/security/test_authentication_security.py:        mock_redis,
+src/tests/security/test_authentication_security.py:        mock_redis.get.return_value = json.dumps({
+src/tests/performance/test_permission_performance.py:    def mock_redis(self) -> MagicMock:
+src/tests/performance/test_permission_performance.py:    def fast_permission_service(self, test_session: Session, mock_redis: MagicMock) -> PermissionService:
+src/tests/performance/test_permission_performance.py:        service.redis_client = mock_redis
+src/tests/performance/test_permission_performance.py:        mock_redis: MagicMock,
+src/tests/performance/test_permission_performance.py:        mock_redis.get.return_value = json.dumps(permissions)
+src/tests/performance/test_permission_performance.py:        mock_redis: MagicMock,
+src/tests/performance/test_permission_performance.py:        mock_redis.get.return_value = json.dumps(permissions)
+src/tests/performance/test_permission_performance.py:        mock_redis: MagicMock,
+src/tests/performance/test_permission_performance.py:        mock_redis.get.return_value = None
+src/tests/performance/test_permission_performance.py:        with patch.object(fast_permission_service.redis_client, "delete") as mock_redis_delete:
+src/tests/performance/test_permission_performance.py:            mock_redis_delete.return_value = True  # Mock external Redis response
+src/tests/performance/test_permission_performance.py:        with patch.object(fast_permission_service.redis_client, "delete") as mock_redis_delete:
+src/tests/performance/test_permission_performance.py:            mock_redis_delete.return_value = True  # Mock external Redis response
+src/tests/performance/test_permission_performance.py:        mock_redis: MagicMock,
+src/tests/performance/test_permission_performance.py:        mock_redis.keys.return_value = cache_keys
+src/tests/performance/test_permission_performance.py:        mock_redis.delete.assert_called_once_with(*cache_keys)
+src/tests/performance/test_permission_performance.py:        mock_redis: MagicMock,
+src/tests/performance/test_permission_performance.py:        mock_redis.get.side_effect = Exception("Redis connection failed")
+src/tests/performance/test_permission_performance.py:        mock_redis: MagicMock,
+src/tests/performance/test_permission_performance.py:        mock_redis.get.return_value = json.dumps(permissions)
+src/tests/performance/test_permission_performance.py:        mock_redis: MagicMock,
+src/tests/performance/test_permission_performance.py:        mock_redis.get.return_value = json.dumps(permissions)
+src/tests/performance/test_permission_performance.py:        with patch.object(fast_permission_service.redis_client, "delete") as mock_redis_delete:
+src/tests/performance/test_permission_performance.py:            mock_redis_delete.return_value = True  # Mock external Redis response
+src/tests/integration/conftest.py:        from src.tests.conftest import mock_redis_client
+src/tests/integration/conftest.py:        yield mock_redis_client()
+src/tests/MOCK_REFACTORING_GUIDE.md:async def test_list_users_success_with_pagination(self, mock_datetime, mock_redis) -> None:
+src/tests/MOCK_REFACTORING_GUIDE.md:    mock_redis.from_url.return_value.get = AsyncMock(return_value=None)
+src/tests/MOCK_REFACTORING_GUIDE.md:async def test_method(self, mock_datetime, mock_redis):
+src/tests/MOCK_REFACTORING_GUIDE.md:mock_redis.from_url.return_value.get = AsyncMock(return_value=None)
+src/tests/MOCK_REFACTORING_GUIDE.md:async def test_business_logic(self, mock_datetime, mock_redis):
+src/tests/MOCK_REFACTORING_GUIDE.md:async def test_api_endpoint(self, mock_datetime, mock_redis) -> None:
+src/tests/MOCK_REFACTORING_GUIDE.md:    mock_redis.from_url.return_value.get = AsyncMock(return_value=None)
+src/tests/MOCK_REFACTORING_GUIDE.md:async def test_service_complex_logic(self, mock_datetime, mock_http, mock_redis):
+src/tests/MOCK_REFACTORING_GUIDE.md:    mock_redis.from_url.return_value.get = AsyncMock(return_value=None)
+src/tests/MOCK_REFACTORING_GUIDE.md:async def test_permission_decorator_real_logic(self, mock_redis, test_session):
+src/tests/MOCK_REFACTORING_GUIDE.md:    mock_redis.from_url.return_value.get = AsyncMock(return_value=None)
+src/tests/README.md:- `mock_redis_client`: Mocked Redis client with in-memory storage
+src/tests/conftest.py:@pytest.fixture(name="mock_redis_client")
+src/tests/conftest.py:def mock_redis_client() -> MagicMock:
+src/tests/unit/conftest.py:    mock_redis_client,
+src/tests/unit/test_password_security.py:        self, mock_redis_client: Any, monkeypatch: pytest.MonkeyPatch
+src/tests/unit/test_password_security.py:        monkeypatch.setattr(ps_module.auth_service, "redis_client", mock_redis_client)  # type: ignore[attr-defined]
+src/tests/unit/test_password_security.py:        mock_redis_client: Any,
+src/tests/unit/test_password_security.py:        assert token_key in mock_redis_client.data
+src/tests/unit/test_password_security.py:        stored_data = PasswordResetToken.model_validate_json(mock_redis_client.data[token_key])
+src/tests/unit/test_password_security.py:        mock_redis_client: Any,
+src/tests/unit/test_password_security.py:        mock_redis_client.data[f"password_reset:{token}"] = token_data.model_dump_json()
+src/tests/unit/test_password_security.py:        mock_redis_client: Any,
+src/tests/unit/test_password_security.py:        assert token_key in mock_redis_client.data
+src/tests/unit/test_password_security.py:        assert token_key not in mock_redis_client.data
+src/tests/unit/test_password_security.py:        mock_redis_client: Any,
+src/tests/unit/test_password_security.py:        assert attempts_key in mock_redis_client.lists
+src/tests/unit/test_password_security.py:        assert len(mock_redis_client.lists[attempts_key]) == 1
+src/tests/unit/test_password_security.py:        attempt_data = LoginAttempt.model_validate_json(mock_redis_client.lists[attempts_key][0])
+src/tests/unit/test_password_security.py:        mock_redis_client: Any,
+src/tests/unit/test_password_security.py:        assert attempts_key in mock_redis_client.lists
+src/tests/unit/test_password_security.py:        assert attempts_key not in mock_redis_client.lists
+src/tests/unit/test_password_security.py:        mock_redis_client: Any,
+src/tests/unit/test_password_security.py:        assert history_key in mock_redis_client.lists
+src/tests/unit/test_password_security.py:        assert mock_redis_client.lists[history_key][0] == password_hash
+src/tests/unit/test_password_security.py:        mock_redis_client: Any,
+src/tests/unit/test_password_security.py:        assert len(mock_redis_client.lists[history_key]) == 5
+src/tests/unit/test_password_security.py:        assert mock_redis_client.lists[history_key][0] == "$2b$12$test_hash_6"
+src/tests/unit/test_permission_service.py:    def mock_redis(self) -> MagicMock:
+src/tests/unit/test_permission_service.py:        self, test_session: Session, mock_redis: MagicMock
+src/tests/unit/test_permission_service.py:        service.redis_client = mock_redis
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis.get.return_value = json.dumps(permissions)
+src/tests/unit/test_permission_service.py:        mock_redis.get.assert_called_once()
+src/tests/unit/test_permission_service.py:        mock_redis.get.assert_called_with(expected_cache_key)
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis.get.return_value = None
+src/tests/unit/test_permission_service.py:        mock_redis.get.assert_called_once()
+src/tests/unit/test_permission_service.py:        mock_redis.setex.assert_called_once()  # Should cache the result
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis.get.return_value = None
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis.get.return_value = json.dumps(expected_permissions)
+src/tests/unit/test_permission_service.py:        mock_redis.get.assert_called_once()
+src/tests/unit/test_permission_service.py:        mock_redis.get.assert_called_with(expected_cache_key)
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis.get.return_value = None
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis.keys.return_value = keys_to_delete
+src/tests/unit/test_permission_service.py:        mock_redis.keys.assert_called_once_with(f"permission:user:{regular_user.user_id}:*")
+src/tests/unit/test_permission_service.py:        mock_redis.delete.assert_called_once_with(*keys_to_delete)
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis.keys.side_effect = Exception("Redis connection failed")
+src/tests/unit/test_permission_service.py:        mock_redis.keys.assert_called_once_with(f"permission:user:{regular_user.user_id}:*")
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis.get.return_value = json.dumps(permissions)
+src/tests/unit/test_permission_service.py:        mock_redis: MagicMock,
+src/tests/unit/test_permission_service.py:        mock_redis.close.assert_called_once()
+src/tests/e2e/test_auth_api.py:        self, client: TestClient, test_session: Session, mock_redis_client, monkeypatch: pytest.MonkeyPatch
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(security.auth_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(password_security.auth_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(password_security.password_security_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(auth_module.password_security_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        self, client: TestClient, test_session: Session, mock_redis_client, monkeypatch: pytest.MonkeyPatch
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(security.auth_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(password_security.auth_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(password_security.password_security_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(auth_module.password_security_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        self, client: TestClient, test_session: Session, mock_redis_client, monkeypatch: pytest.MonkeyPatch
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(security.auth_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(password_security.auth_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(password_security.password_security_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr(auth_module.password_security_service, "redis_client", mock_redis_client)
+src/tests/e2e/test_auth_api.py:        def mock_redis_failure(*args, **kwargs):
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr("redis.Redis.setex", mock_redis_failure)
+src/tests/e2e/test_auth_api.py:        monkeypatch.setattr("redis.Redis.delete", mock_redis_failure)
+src/tests/unit/test_users_api.py:    async def test_list_users_success_with_pagination(self, mock_datetime, mock_redis) -> None:
+src/tests/unit/test_users_api.py:        mock_redis.from_url.return_value.get = AsyncMock(return_value=None)
+src/tests/unit/test_users_api.py:    async def test_list_users_empty_result(self, mock_datetime, mock_redis) -> None:
+src/tests/unit/test_users_api.py:        mock_redis.from_url.return_value.get = AsyncMock(return_value=None)
+src/tests/unit/test_security.py:        self, mock_redis_client: MagicMock
+src/tests/unit/test_security.py:        service.redis_client = mock_redis_client
+src/tests/unit/test_security.py:        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
+src/tests/unit/test_security.py:        assert session_key in mock_redis_client.data
+src/tests/unit/test_security.py:        session_json = mock_redis_client.data[session_key]
+src/tests/unit/test_security.py:        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
+src/tests/unit/test_security.py:        del mock_redis_client.data[session_key]
+src/tests/unit/test_security.py:        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
+src/tests/unit/test_security.py:        mock_redis_client.data[f"blacklist:{jti}"] = "1"
+src/tests/unit/test_security.py:        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
+src/tests/unit/test_security.py:        mock_redis_client.data[f"blacklist:{jti}"] = "1"
+src/tests/unit/test_security.py:        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
+src/tests/unit/test_security.py:        assert f"blacklist:{jti}" in mock_redis_client.data
+src/tests/unit/test_security.py:        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
+src/tests/unit/test_security.py:        assert f"blacklist:{jti}" not in mock_redis_client.data
+src/tests/unit/test_security.py:        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
+src/tests/unit/test_security.py:        assert session_key in mock_redis_client.data
+src/tests/unit/test_security.py:        assert session_key not in mock_redis_client.data
+src/tests/unit/test_security.py:        self, secure_auth_service: SecureAuthService, mock_redis_client: MagicMock
+src/tests/unit/test_security.py:        initial_session_json = mock_redis_client.data[session_key]
+src/tests/unit/test_security.py:        updated_session_json = mock_redis_client.data[session_key]
+src/tests/unit/test_security.py:    def test_redis_connection_failure_graceful_handling(self, mock_redis_client: MagicMock) -> None:
+src/tests/unit/test_security.py:        mock_redis_client.setex = failing_setex
+src/tests/security/test_input_validation_security.py:    @patch('os.path.exists')
+src/tests/security/test_input_validation_security.py:    @patch('os.system')
+src/tests/MOCK_REFACTORING_GUIDE.md:@patch('os.makedirs')                        # File system
+src/tests/MOCK_REFACTORING_GUIDE.md:@patch('datetime.datetime')  # Mock external time dependency  
+src/tests/MOCK_REFACTORING_GUIDE.md:@patch('datetime.datetime')                  # Time functions
+src/tests/MOCK_REFACTORING_GUIDE.md:@patch('datetime.datetime')
+src/tests/MOCK_REFACTORING_GUIDE.md:@patch('datetime.datetime')  
+src/tests/MOCK_REFACTORING_GUIDE.md:@patch('datetime.datetime')
+src/tests/MOCK_REFACTORING_GUIDE.md:@patch('datetime.datetime')
+src/tests/unit/test_users_api.py:    @patch('datetime.datetime')  # Mock external time dependency
+src/tests/unit/test_users_api.py:    @patch('datetime.datetime')  # Mock external time dependency

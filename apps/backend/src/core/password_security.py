@@ -135,25 +135,28 @@ class PasswordSecurityService:
             if not attempts_json:
                 return False
 
-            recent_failed_attempts = []
+            consecutive_failed_count = 0
             cutoff_time = datetime.utcnow() - timedelta(minutes=self.lockout_duration_minutes)
 
+            # Process attempts from most recent to oldest (lpush stores newest at index 0)
             for attempt_json in attempts_json:
                 try:
                     attempt = LoginAttempt.model_validate_json(attempt_json)
                     attempt_time = datetime.fromisoformat(attempt.attempted_at)
 
-                    # Only consider recent attempts
+                    # Only consider recent attempts within lockout window
                     if attempt_time > cutoff_time:
                         if not attempt.success:
-                            recent_failed_attempts.append(attempt)
+                            consecutive_failed_count += 1
                         else:
-                            # If there's a successful login, break the chain of failed attempts
+                            # Found a successful login - stop counting consecutive failures
+                            # This breaks the chain of consecutive failures
                             break
+                    # Ignore attempts outside the lockout window
                 except Exception:
                     continue
 
-            return len(recent_failed_attempts) >= self.max_failed_attempts
+            return consecutive_failed_count >= self.max_failed_attempts
 
         except Exception:
             # If Redis is unavailable, don't lock accounts

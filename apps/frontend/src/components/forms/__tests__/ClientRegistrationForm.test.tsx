@@ -3,55 +3,37 @@
  * Tests client registration form behavior and user interactions
  * Following CLAUDE.md rules: no internal mocking, only external API mocking
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  renderWithProviders,
+  screen,
+  waitFor,
+  userEvent,
+  useTestSetup,
+  mockSuccessfulFetch,
+  mockFailedFetch,
+  act,
+} from '@/test/test-template'
 import { ClientRegistrationForm } from '../ClientRegistrationForm'
 import type { ClientCreate, ClientResponse } from '@iam-dashboard/shared'
 
-// Mock only external fetch API
-const mockFetch = vi.fn()
-global.fetch = mockFetch
-
-// Test wrapper for providers
-const createTestQueryClient = () => {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
-      mutations: { retry: false }
-    },
-    logger: { log: () => {}, warn: () => {}, error: () => {} }
-  })
-}
-
-const TestWrapper = ({ children }: { children: React.ReactNode }) => {
-  const queryClient = createTestQueryClient()
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
-}
-
-// Helper functions to get form fields reliably
-const getNameField = () => screen.getByPlaceholderText(/joão silva santos/i)
-const getSsnField = () => screen.getByPlaceholderText(/123-45-6789/i)
-const getBirthDateField = () => document.querySelector('input[name="birth_date"]') as HTMLInputElement
-const getNotesField = () => screen.getByPlaceholderText(/informações adicionais/i)
-const getSubmitButton = () => screen.getByRole('button', { name: /criar cliente/i })
-const getClearButton = () => screen.getByRole('button', { name: /limpar formulário/i })
-
-beforeEach(() => {
-  vi.clearAllMocks()
-  mockFetch.mockReset()
-})
-
-afterEach(() => {
-  vi.restoreAllMocks()
-})
-
 describe('ClientRegistrationForm', () => {
+  useTestSetup()
+
+  // Helper functions to get form fields reliably
+  const getNameField = () => screen.getByPlaceholderText(/joão silva santos/i)
+  const getSsnField = () => screen.getByPlaceholderText(/123-45-6789/i)
+  const getBirthDateField = () => document.querySelector('input[type="date"]') as HTMLInputElement
+  const getNotesField = () => screen.getByPlaceholderText(/informações adicionais/i)
+  const getSubmitButton = () => screen.getByRole('button', { name: /criar cliente/i })
+  const getClearButton = () => screen.getByRole('button', { name: /limpar formulário/i })
+
+  // Mock callback functions
   const mockOnSubmit = vi.fn()
   const mockOnSuccess = vi.fn()
   const mockOnError = vi.fn()
@@ -64,11 +46,7 @@ describe('ClientRegistrationForm', () => {
 
   // Basic Rendering Tests
   it('should render all form fields correctly', () => {
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     expect(getNameField()).toBeInTheDocument()
     expect(getSsnField()).toBeInTheDocument()
@@ -79,11 +57,7 @@ describe('ClientRegistrationForm', () => {
   })
 
   it('should render form with proper accessibility attributes', () => {
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -98,11 +72,7 @@ describe('ClientRegistrationForm', () => {
   it('should validate required full name field', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const submitButton = getSubmitButton()
     
@@ -119,11 +89,7 @@ describe('ClientRegistrationForm', () => {
   it('should validate name minimum length', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const submitButton = getSubmitButton()
@@ -140,11 +106,7 @@ describe('ClientRegistrationForm', () => {
   it('should validate name with invalid characters', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const submitButton = getSubmitButton()
@@ -161,11 +123,7 @@ describe('ClientRegistrationForm', () => {
   it('should validate CPF format correctly', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -186,11 +144,7 @@ describe('ClientRegistrationForm', () => {
   it('should validate birth date is required', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -209,40 +163,46 @@ describe('ClientRegistrationForm', () => {
   it('should validate minimum age requirement (13 years)', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    // Make sure onSubmit rejects if called to catch any issues
+    mockOnSubmit.mockRejectedValue(new Error('Should not be called - form validation should prevent submission'))
+    
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
     const birthDateField = getBirthDateField()
     const submitButton = getSubmitButton()
     
-    // Use a date that's clearly less than 13 years old (5 years ago)
+    // Use a date that's clearly less than 13 years old (today's date)
+    // This should definitely fail the age validation
     const today = new Date()
-    const underAge = new Date(today.getFullYear() - 5, today.getMonth(), today.getDate())
-    const underAgeStr = underAge.toISOString().split('T')[0]
+    const todayStr = today.toISOString().split('T')[0]
     
+    // Fill all required fields to trigger age validation specifically
     await user.type(nameField, 'João Silva')
     await user.type(ssnField, '123456789')
-    await user.type(birthDateField, underAgeStr)
+    
+    // Set the birth date to today's date (0 years old)
+    await user.type(birthDateField, todayStr)
+    
+    // Click submit to trigger validation
     await user.click(submitButton)
     
-    await waitFor(() => {
-      expect(screen.getByText(/idade deve estar entre 13 e 120 anos/i)).toBeInTheDocument()
-    })
+    // Wait for form validation - form should not submit and show error
+    await waitFor(
+      () => {
+        expect(screen.getByText(/idade deve estar entre 13 e 120 anos/i)).toBeInTheDocument()
+      },
+      { timeout: 3000 }
+    )
+    
+    expect(mockOnSubmit).not.toHaveBeenCalled()
   })
 
   it('should validate maximum age requirement (120 years)', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -256,22 +216,21 @@ describe('ClientRegistrationForm', () => {
     
     await user.type(nameField, 'João Silva')
     await user.type(ssnField, '123-45-6789')
+    await user.clear(birthDateField)
     await user.type(birthDateField, overAgeStr)
     await user.click(submitButton)
     
     await waitFor(() => {
       expect(screen.getByText(/idade deve estar entre 13 e 120 anos/i)).toBeInTheDocument()
-    })
+    }, { timeout: 3000 })
+    
+    expect(mockOnSubmit).not.toHaveBeenCalled()
   })
 
   it('should validate notes maximum length', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -297,11 +256,7 @@ describe('ClientRegistrationForm', () => {
   it('should format CPF as user types', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const ssnField = getSsnField()
     
@@ -316,11 +271,7 @@ describe('ClientRegistrationForm', () => {
   it('should limit CPF input to 9 digits', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const ssnField = getSsnField()
     
@@ -332,11 +283,7 @@ describe('ClientRegistrationForm', () => {
   it('should handle non-numeric characters in CPF input', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const ssnField = getSsnField()
     
@@ -363,14 +310,10 @@ describe('ClientRegistrationForm', () => {
     
     mockOnSubmit.mockResolvedValue(mockClientResponse)
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm
+    renderWithProviders(<ClientRegistrationForm
           onSubmit={mockOnSubmit}
           onSuccess={mockOnSuccess}
-        />
-      </TestWrapper>
-    )
+ />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -415,14 +358,10 @@ describe('ClientRegistrationForm', () => {
     
     mockOnSubmit.mockResolvedValue(mockClientResponse)
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm
+    renderWithProviders(<ClientRegistrationForm
           onSubmit={mockOnSubmit}
           onSuccess={mockOnSuccess}
-        />
-      </TestWrapper>
-    )
+ />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -468,11 +407,7 @@ describe('ClientRegistrationForm', () => {
       )
     )
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -507,14 +442,10 @@ describe('ClientRegistrationForm', () => {
     
     mockOnSubmit.mockRejectedValue(new Error(errorMessage))
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm
+    renderWithProviders(<ClientRegistrationForm
           onSubmit={mockOnSubmit}
           onError={mockOnError}
-        />
-      </TestWrapper>
-    )
+ />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -538,11 +469,7 @@ describe('ClientRegistrationForm', () => {
   it('should clear form when clear button is clicked', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -588,11 +515,7 @@ describe('ClientRegistrationForm', () => {
     
     mockOnSubmit.mockResolvedValue(mockClientResponse)
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -625,11 +548,7 @@ describe('ClientRegistrationForm', () => {
   it('should handle keyboard navigation correctly', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
     const ssnField = getSsnField()
@@ -661,11 +580,7 @@ describe('ClientRegistrationForm', () => {
 
   // Form Field Descriptions Tests
   it('should display helpful field descriptions', () => {
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     expect(screen.getByText(/nome completo do cliente conforme documento de identidade/i)).toBeInTheDocument()
     expect(screen.getByText(/cpf no formato xxx-xx-xxxx \(apenas números\)/i)).toBeInTheDocument()
@@ -677,11 +592,7 @@ describe('ClientRegistrationForm', () => {
   it('should announce validation errors to screen readers', async () => {
     const user = userEvent.setup()
     
-    render(
-      <TestWrapper>
-        <ClientRegistrationForm onSubmit={mockOnSubmit} />
-      </TestWrapper>
-    )
+    renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const submitButton = getSubmitButton()
     

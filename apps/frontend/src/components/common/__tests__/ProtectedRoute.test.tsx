@@ -3,87 +3,28 @@
  * Tests route protection, authentication guards, and role-based access control
  * Following CLAUDE.md rules: no internal mocking, only external API mocking
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, act } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ProtectedRoute, withAuth, useAuth } from '../ProtectedRoute'
 import useAuthStore from '@/store/authStore'
 import type { User } from '@/types/auth'
-
-// Mock only external fetch API for token refresh
-const mockFetch = vi.fn()
-global.fetch = mockFetch
+import {
+  describe, it, expect, vi, beforeEach, afterEach,
+  renderWithProviders, screen, waitFor, act, userEvent,
+  useTestSetup, mockSuccessfulFetch, mockFailedFetch
+} from '@/test/test-template'
+import {
+  createMockUser, createMockAdmin, createMockSysAdmin,
+  setupTestAuth, clearTestAuth, setupAuthenticatedUser,
+  createMockJWTToken, createExpiredJWTToken
+} from '@/test/auth-helpers'
 
 // Track navigation actions via window.location (real behavior)
 const originalLocation = window.location
 
-// Test wrapper for providers
-const createTestQueryClient = () => {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
-      mutations: { retry: false }
-    },
-    logger: { log: () => {}, warn: () => {}, error: () => {} }
-  })
-}
+// Use standardized test setup
+useTestSetup()
 
-const TestWrapper = ({ children }: { children: React.ReactNode }) => {
-  const queryClient = createTestQueryClient()
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  )
-}
-
-// Helper function to create mock users with different roles
-const createMockUser = (role: 'sysadmin' | 'admin' | 'user'): User => ({
-  user_id: `user-${role}-123`,
-  email: `${role}@example.com`,
-  full_name: `Test ${role}`,
-  role,
-  is_active: true,
-  totp_enabled: false,
-  created_at: '2023-01-01T00:00:00Z',
-  updated_at: '2023-01-01T00:00:00Z',
-})
-
-// Helper to create valid JWT token
-const createValidToken = (userId: string, role: string): string => {
-  const payload = {
-    sub: userId,
-    role: role,
-    exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
-  }
-  return `header.${btoa(JSON.stringify(payload))}.signature`
-}
-
-// Helper to create expired JWT token
-const createExpiredToken = (userId: string, role: string): string => {
-  const payload = {
-    sub: userId,
-    role: role,
-    exp: Math.floor(Date.now() / 1000) - 3600 // 1 hour ago
-  }
-  return `header.${btoa(JSON.stringify(payload))}.signature`
-}
-
+// Preserve original location for navigation testing
 beforeEach(() => {
-  vi.clearAllMocks()
-  mockFetch.mockReset()
-  
-  // Reset auth store to clean state
-  useAuthStore.setState({
-    user: null,
-    token: null,
-    isAuthenticated: false,
-    isLoading: false,
-    requires2FA: false,
-    tempToken: null
-  })
-  
   // Reset window.location for navigation testing - no vi.fn() mocks
   Object.defineProperty(window, 'location', {
     value: originalLocation,
@@ -93,7 +34,6 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  vi.restoreAllMocks()
   window.location = originalLocation
 })
 
@@ -101,12 +41,10 @@ describe('ProtectedRoute', () => {
   it('should redirect to login when user is not authenticated', async () => {
     const TestComponent = () => <div>Protected Content</div>
     
-    render(
-      <TestWrapper>
-        <ProtectedRoute>
+    renderWithProviders(
+      <ProtectedRoute>
           <TestComponent />
         </ProtectedRoute>
-      </TestWrapper>
     )
     
     await waitFor(() => {
@@ -118,23 +56,20 @@ describe('ProtectedRoute', () => {
   })
 
   it('should render protected content when user is authenticated', async () => {
-    const mockUser = createMockUser('admin')
-    const validToken = createValidToken(mockUser.user_id, mockUser.role)
+    const mockUser = createMockAdmin()
+    const validToken = createMockJWTToken({ role: 'admin', user_id: mockUser.user_id })
     
     const TestComponent = () => <div>Protected Content</div>
     
     // Set authenticated user in store
     act(() => {
-      useAuthStore.getState().setUser(mockUser)
-      useAuthStore.getState().setToken(validToken)
+      setupTestAuth(mockUser, validToken)
     })
     
-    render(
-      <TestWrapper>
-        <ProtectedRoute>
+    renderWithProviders(
+      <ProtectedRoute>
           <TestComponent />
         </ProtectedRoute>
-      </TestWrapper>
     )
     
     await waitFor(() => {
@@ -150,12 +85,10 @@ describe('ProtectedRoute', () => {
       useAuthStore.setState({ isLoading: true })
     })
     
-    render(
-      <TestWrapper>
-        <ProtectedRoute>
+    renderWithProviders(
+      <ProtectedRoute>
           <TestComponent />
         </ProtectedRoute>
-      </TestWrapper>
     )
     
     expect(screen.getByText(/verificando autenticação/i)).toBeInTheDocument()
@@ -165,12 +98,10 @@ describe('ProtectedRoute', () => {
   it('should support custom redirect path', async () => {
     const TestComponent = () => <div>Protected Content</div>
     
-    render(
-      <TestWrapper>
-        <ProtectedRoute redirectTo="/custom-login">
+    renderWithProviders(
+      <ProtectedRoute redirectTo="/custom-login">
           <TestComponent />
         </ProtectedRoute>
-      </TestWrapper>
     )
     
     await waitFor(() => {
@@ -186,12 +117,10 @@ describe('ProtectedRoute', () => {
       useAuthStore.setState({ isLoading: true })
     })
     
-    render(
-      <TestWrapper>
-        <ProtectedRoute fallback={<CustomFallback />}>
+    renderWithProviders(
+      <ProtectedRoute fallback={<CustomFallback />}>
           <TestComponent />
         </ProtectedRoute>
-      </TestWrapper>
     )
     
     expect(screen.getByText('Custom Loading')).toBeInTheDocument()
@@ -199,22 +128,19 @@ describe('ProtectedRoute', () => {
 
   describe('Role-based Access Control', () => {
     it('should allow sysadmin to access any role requirement', async () => {
-      const mockUser = createMockUser('sysadmin')
-      const validToken = createValidToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockSysAdmin()
+      const validToken = createMockJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       const TestComponent = () => <div>Sysadmin Content</div>
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <ProtectedRoute requiredRole="sysadmin">
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       await waitFor(() => {
@@ -223,22 +149,19 @@ describe('ProtectedRoute', () => {
     })
 
     it('should allow admin to access admin and user routes', async () => {
-      const mockUser = createMockUser('admin')
-      const validToken = createValidToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockAdmin()
+      const validToken = createMockJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       const TestComponent = () => <div>Admin Content</div>
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <ProtectedRoute requiredRole="admin">
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       await waitFor(() => {
@@ -247,22 +170,19 @@ describe('ProtectedRoute', () => {
     })
 
     it('should deny admin access to sysadmin routes', async () => {
-      const mockUser = createMockUser('admin')
-      const validToken = createValidToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockAdmin()
+      const validToken = createMockJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       const TestComponent = () => <div>Sysadmin Content</div>
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <ProtectedRoute requiredRole="sysadmin">
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       await waitFor(() => {
@@ -273,22 +193,19 @@ describe('ProtectedRoute', () => {
     })
 
     it('should allow user to access user routes only', async () => {
-      const mockUser = createMockUser('user')
-      const validToken = createValidToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockUser()
+      const validToken = createMockJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       const TestComponent = () => <div>User Content</div>
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <ProtectedRoute requiredRole="user">
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       await waitFor(() => {
@@ -297,22 +214,19 @@ describe('ProtectedRoute', () => {
     })
 
     it('should deny user access to admin routes', async () => {
-      const mockUser = createMockUser('user')
-      const validToken = createValidToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockUser()
+      const validToken = createMockJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       const TestComponent = () => <div>Admin Content</div>
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <ProtectedRoute requiredRole="admin">
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       await waitFor(() => {
@@ -325,33 +239,27 @@ describe('ProtectedRoute', () => {
 
   describe('Token Expiration Handling', () => {
     it('should refresh expired token and continue to protected content', async () => {
-      const mockUser = createMockUser('admin')
-      const expiredToken = createExpiredToken(mockUser.user_id, mockUser.role)
-      const newToken = createValidToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockAdmin()
+      const expiredToken = createExpiredJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
+      const newToken = createMockJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       const TestComponent = () => <div>Protected Content</div>
       
       // Mock successful token refresh
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({
-          access_token: newToken,
-          token_type: 'bearer',
-          expires_in: 3600
-        })
-      } as Response)
-      
-      act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(expiredToken)
+      mockSuccessfulFetch('/auth/refresh', {
+        access_token: newToken,
+        token_type: 'bearer',
+        expires_in: 3600
       })
       
-      render(
-        <TestWrapper>
+      act(() => {
+        setupTestAuth(mockUser, expiredToken)
+      })
+      
+      renderWithProviders(
           <ProtectedRoute>
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       // Should show loading while refreshing token
@@ -363,32 +271,29 @@ describe('ProtectedRoute', () => {
       })
       
       // Verify token refresh was called
-      expect(mockFetch).toHaveBeenCalledWith(
+      expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/auth/refresh'),
         expect.any(Object)
       )
     })
 
     it('should logout and redirect when token refresh fails', async () => {
-      const mockUser = createMockUser('admin')
-      const expiredToken = createExpiredToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockAdmin()
+      const expiredToken = createExpiredJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       const TestComponent = () => <div>Protected Content</div>
       
       // Mock failed token refresh
-      mockFetch.mockRejectedValueOnce(new Error('Token refresh failed'))
+      mockFailedFetch('/auth/refresh', 'Token refresh failed', 401)
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(expiredToken)
+        setupTestAuth(mockUser, expiredToken)
       })
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <ProtectedRoute>
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       await waitFor(() => {
@@ -401,25 +306,22 @@ describe('ProtectedRoute', () => {
     })
 
     it('should handle network errors during token refresh', async () => {
-      const mockUser = createMockUser('admin')
-      const expiredToken = createExpiredToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockAdmin()
+      const expiredToken = createExpiredJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       const TestComponent = () => <div>Protected Content</div>
       
       // Mock network error
-      mockFetch.mockRejectedValueOnce(new Error('Network Error'))
+      mockFailedFetch('/auth/refresh', 'Network Error', 500)
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(expiredToken)
+        setupTestAuth(mockUser, expiredToken)
       })
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <ProtectedRoute>
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       await waitFor(() => {
@@ -433,18 +335,15 @@ describe('ProtectedRoute', () => {
       const TestComponent = () => <div>Wrapped Component</div>
       const WrappedComponent = withAuth(TestComponent)
       
-      const mockUser = createMockUser('admin')
-      const validToken = createValidToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockAdmin()
+      const validToken = createMockJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
       
-      render(
-        <TestWrapper>
-          <WrappedComponent />
-        </TestWrapper>
+      renderWithProviders(
+        <WrappedComponent />
       )
       
       await waitFor(() => {
@@ -456,18 +355,15 @@ describe('ProtectedRoute', () => {
       const TestComponent = ({ message }: { message: string }) => <div>{message}</div>
       const WrappedComponent = withAuth(TestComponent)
       
-      const mockUser = createMockUser('admin')
-      const validToken = createValidToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockAdmin()
+      const validToken = createMockJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
       
-      render(
-        <TestWrapper>
-          <WrappedComponent message="Prop Message" />
-        </TestWrapper>
+      renderWithProviders(
+        <WrappedComponent message="Prop Message" />
       )
       
       await waitFor(() => {
@@ -489,18 +385,15 @@ describe('ProtectedRoute', () => {
         )
       }
       
-      const mockUser = createMockUser('admin')
-      const validToken = createValidToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockAdmin()
+      const validToken = createMockJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <TestComponent />
-        </TestWrapper>
       )
       
       expect(screen.getByText('Authenticated: Yes')).toBeInTheDocument()
@@ -514,22 +407,19 @@ describe('ProtectedRoute', () => {
         return <div>Authenticated: {isAuthenticated ? 'Yes' : 'No'}</div>
       }
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <TestComponent />
-        </TestWrapper>
       )
       
       // Initially not authenticated
       expect(screen.getByText('Authenticated: No')).toBeInTheDocument()
       
       // Login user
-      const mockUser = createMockUser('admin')
-      const validToken = createValidToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockAdmin()
+      const validToken = createMockJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(validToken)
+        setupTestAuth(mockUser, validToken)
       })
       
       await waitFor(() => {
@@ -540,21 +430,19 @@ describe('ProtectedRoute', () => {
 
   describe('Edge Cases', () => {
     it('should handle missing user with valid token', async () => {
-      const validToken = createValidToken('user-123', 'admin')
+      const validToken = createMockJWTToken({ role: 'admin', user_id: 'user-123' })
       
       const TestComponent = () => <div>Protected Content</div>
       
       // Set token but no user
       act(() => {
-        useAuthStore.getState().setToken(validToken)
+        useAuthStore.setState({ token: validToken, user: null, isAuthenticated: false })
       })
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <ProtectedRoute>
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       await waitFor(() => {
@@ -563,22 +451,19 @@ describe('ProtectedRoute', () => {
     })
 
     it('should handle malformed JWT token', async () => {
-      const mockUser = createMockUser('admin')
+      const mockUser = createMockAdmin()
       const malformedToken = 'invalid.token.here'
       
       const TestComponent = () => <div>Protected Content</div>
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(malformedToken)
+        setupTestAuth(mockUser, malformedToken)
       })
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <ProtectedRoute>
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       await waitFor(() => {
@@ -587,22 +472,19 @@ describe('ProtectedRoute', () => {
     })
 
     it('should handle component unmounting during async operations', async () => {
-      const mockUser = createMockUser('admin')
-      const expiredToken = createExpiredToken(mockUser.user_id, mockUser.role)
+      const mockUser = createMockAdmin()
+      const expiredToken = createExpiredJWTToken({ role: mockUser.role, user_id: mockUser.user_id })
       
       const TestComponent = () => <div>Protected Content</div>
       
       act(() => {
-        useAuthStore.getState().setUser(mockUser)
-        useAuthStore.getState().setToken(expiredToken)
+        setupTestAuth(mockUser, expiredToken)
       })
       
-      const { unmount } = render(
-        <TestWrapper>
-          <ProtectedRoute>
-            <TestComponent />
-          </ProtectedRoute>
-        </TestWrapper>
+      const { unmount } = renderWithProviders(
+        <ProtectedRoute>
+          <TestComponent />
+        </ProtectedRoute>
       )
       
       // Unmount before token refresh completes
@@ -617,23 +499,20 @@ describe('ProtectedRoute', () => {
         return <div>Role: {user?.role || 'none'}</div>
       }
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <ProtectedRoute>
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       // Rapid role changes
-      const adminUser = createMockUser('admin')
-      const userUser = createMockUser('user')
-      const adminToken = createValidToken(adminUser.user_id, adminUser.role)
-      const userToken = createValidToken(userUser.user_id, userUser.role)
+      const adminUser = createMockAdmin()
+      const userUser = createMockUser()
+      const adminToken = createMockJWTToken({ role: adminUser.role, user_id: adminUser.user_id })
+      const userToken = createMockJWTToken({ role: userUser.role, user_id: userUser.user_id })
       
       act(() => {
-        useAuthStore.getState().setUser(adminUser)
-        useAuthStore.getState().setToken(adminToken)
+        setupTestAuth(adminUser, adminToken)
       })
       
       await waitFor(() => {
@@ -641,8 +520,7 @@ describe('ProtectedRoute', () => {
       })
       
       act(() => {
-        useAuthStore.getState().setUser(userUser)
-        useAuthStore.getState().setToken(userToken)
+        setupTestAuth(userUser, userToken)
       })
       
       await waitFor(() => {
@@ -658,12 +536,10 @@ describe('ProtectedRoute', () => {
         useAuthStore.setState({ isLoading: true })
       })
       
-      render(
-        <TestWrapper>
+      renderWithProviders(
           <ProtectedRoute fallback={<CustomFallback message="Custom Loading Message" />}>
             <TestComponent />
           </ProtectedRoute>
-        </TestWrapper>
       )
       
       expect(screen.getByText('Custom Loading Message')).toBeInTheDocument()
