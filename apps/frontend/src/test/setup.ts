@@ -61,6 +61,25 @@ window.getComputedStyle = vi.fn(() => ({
   getPropertyValue: vi.fn(() => ''),
 })) as any
 
+// Mock WebSocket - API externa
+global.WebSocket = vi.fn().mockImplementation((url) => ({
+  url,
+  readyState: 1, // OPEN
+  CONNECTING: 0,
+  OPEN: 1,
+  CLOSING: 2,
+  CLOSED: 3,
+  close: vi.fn(),
+  send: vi.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
+  onopen: null,
+  onclose: null,
+  onmessage: null,
+  onerror: null,
+})) as any
+
 // Mock console.warn para suprimir warnings esperados em testes
 const originalWarn = console.warn
 beforeAll(() => {

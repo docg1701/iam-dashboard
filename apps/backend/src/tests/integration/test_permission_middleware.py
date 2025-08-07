@@ -6,11 +6,13 @@ authorization logic, performance requirements, and error handling.
 Follows CLAUDE.md directives: Use real PermissionService, never mock business logic.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+# External dependency mocking only - no internal business logic mocks
+# from unittest.mock import patch  # Currently unused but kept for future external dependency mocks
 from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException
+from sqlmodel import Session
 
 from src.core.permissions import (
     PermissionChecker,
@@ -125,7 +127,7 @@ class TestPermissionChecker:
     async def test_permission_checker_service_error(
         self, test_user: User, test_session: Session
     ) -> None:
-        """Test permission service error handling using real database error."""
+        """Test permission service error handling using real database connection issues."""
         # Add user to database
         test_session.add(test_user)
         test_session.commit()
@@ -135,16 +137,21 @@ class TestPermissionChecker:
 
         checker = PermissionChecker(AgentName.CLIENT_MANAGEMENT, "read")
 
-        # Mock the database connection to simulate a database error (external system failure)
-        with patch.object(test_session, "exec", side_effect=Exception("Database connection error")):
+        # Simulate a database connection error by closing the database connection
+        # This creates a real external system failure scenario
+        try:
+            # Close the connection to force a real database error
+            test_session.close()
+            
+            # This should raise an exception due to closed connection
             with pytest.raises(HTTPException) as exc_info:
                 await checker(test_user, real_permission_service)
 
             assert exc_info.value.status_code == 500
             assert "Permission check failed" in exc_info.value.detail
-        
-        # Clean up service
-        await real_permission_service.close()
+        finally:
+            # Clean up service (will handle the closed session gracefully)
+            await real_permission_service.close()
 
 
 class TestRoleCheckers:

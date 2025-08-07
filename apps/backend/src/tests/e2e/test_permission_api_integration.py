@@ -71,8 +71,8 @@ class TestPermissionAPIIntegration:
                 session.close()
 
         app.dependency_overrides[get_permission_service] = get_real_permission_service
-        # Override the current user to use our test admin
-        app.dependency_overrides[get_current_user] = get_mock_current_user
+        # E2E tests should use real authentication - NO AUTH BYPASS
+        # Use real JWT tokens from authenticated_admin_headers fixture
         app.dependency_overrides[get_session] = get_test_session_for_service
 
     @pytest.mark.usefixtures("test_admin")

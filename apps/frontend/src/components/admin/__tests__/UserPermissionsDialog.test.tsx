@@ -1,21 +1,25 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { vi } from 'vitest'
+import { vi, beforeEach, afterEach, describe, it, expect } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import React from 'react'
 
 import { UserPermissionsDialog } from '../UserPermissionsDialog'
-// Mock apenas APIs externas - NUNCA componentes internos
-// VIOLAÇÃO REMOVIDA: Não fazer mock de hooks internos ou componentes
-// Usar implementações reais de useUserPermissions, toast e PermissionGuard
+import useAuthStore from '@/store/authStore'
+
+// Test utilities
+const createTestQueryClient = () => {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0, staleTime: 0 },
+      mutations: { retry: false }
+    },
+    logger: { log: () => {}, warn: () => {}, error: () => {} }
+  })
+}
 
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false }
-    }
-  })
-  
+  const queryClient = createTestQueryClient()
   return (
     <QueryClientProvider client={queryClient}>
       {children}
@@ -23,31 +27,64 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => {
   )
 }
 
+// Mock data
+const mockAdminUser = {
+  user_id: 'admin-123',
+  email: 'admin@test.com',
+  role: 'admin',
+  is_active: true,
+  totp_enabled: false,
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-01-01T00:00:00Z',
+  full_name: 'Admin User'
+}
+
+const mockTestUser = {
+  user_id: '123',
+  email: 'joao@example.com',
+  role: 'user',
+  is_active: true,
+  totp_enabled: false,
+  created_at: '2023-01-01T00:00:00Z',
+  updated_at: '2023-01-01T00:00:00Z',
+  full_name: 'João Silva'
+}
+
+const mockPermissions = {
+  client_management: { create: true, read: true, update: true, delete: false },
+  pdf_processing: { create: false, read: true, update: false, delete: false },
+  reports_analysis: { create: false, read: true, update: false, delete: false },
+  audio_recording: { create: false, read: false, update: false, delete: false },
+}
+
+const mockFetch = vi.fn()
+
+beforeEach(() => {
+  global.fetch = mockFetch
+  
+  // Mock ResizeObserver (external API)
+  global.ResizeObserver = vi.fn().mockImplementation(() => ({
+    observe: vi.fn(),
+    unobserve: vi.fn(),
+    disconnect: vi.fn(),
+  }))
+})
+
+afterEach(() => {
+  vi.clearAllMocks()
+})
+
 describe('UserPermissionsDialog', () => {
-  const mockUser = {
-    user_id: '123',
-    name: 'João Silva',
-    email: 'joao@example.com',
-    role: 'admin' as const,
-    is_active: true,
-    created_at: '2023-01-01T00:00:00Z',
-    last_login: '2023-01-02T00:00:00Z'
-  }
-
-  const mockPermissions = {
-    client_management: { create: true, read: true, update: true, delete: false },
-    pdf_processing: { create: false, read: true, update: false, delete: false },
-    reports_analysis: { create: false, read: true, update: false, delete: false },
-    audio_recording: { create: false, read: false, update: false, delete: false },
-  }
-
   const mockOnOpenChange = vi.fn()
   const mockOnPermissionsChanged = vi.fn()
+  
   beforeEach(() => {
     vi.clearAllMocks()
+    mockOnOpenChange.mockClear()
+    mockOnPermissionsChanged.mockClear()
   })
 
-  const renderComponent = (user = mockUser, open = true) => {
+  const renderComponent = (user = mockTestUser, open = true) => {
     return render(
       <TestWrapper>
         <UserPermissionsDialog
@@ -68,7 +105,7 @@ describe('UserPermissionsDialog', () => {
     })
 
     it('should not render when dialog is closed', () => {
-      renderComponent(mockUser, false)
+      renderComponent(mockTestUser, false)
 
       expect(screen.queryByText(/permissões de/i)).not.toBeInTheDocument()
     })
@@ -76,7 +113,7 @@ describe('UserPermissionsDialog', () => {
     it('should render dialog header with user name', () => {
       renderComponent()
 
-      expect(screen.getByText(`Permissões de ${mockUser.name}`)).toBeInTheDocument()
+      expect(screen.getByText(`Permissões de ${mockTestUser.full_name}`)).toBeInTheDocument()
       expect(screen.getByText(/gerencie as permissões de acesso aos agentes/i)).toBeInTheDocument()
     })
 
@@ -84,79 +121,121 @@ describe('UserPermissionsDialog', () => {
       renderComponent()
 
       expect(screen.getByText(/nome completo/i)).toBeInTheDocument()
-      expect(screen.getByText(mockUser.name)).toBeInTheDocument()
-      expect(screen.getByText(mockUser.email)).toBeInTheDocument()
-      expect(screen.getByText(mockUser.role)).toBeInTheDocument()
+      expect(screen.getByText(mockTestUser.full_name!)).toBeInTheDocument()
+      expect(screen.getByText(mockTestUser.email)).toBeInTheDocument()
+      expect(screen.getByText(mockTestUser.role)).toBeInTheDocument()
     })
   })
 
   describe('Permissions Loading States', () => {
-    it('should display loading state while fetching permissions', () => {
-      // VIOLAÇÃO REMOVIDA: Não fazer mock de useUserPermissions
-      // Testa usando implementação real do hook
+    beforeEach(() => {
+      // Reset fetch mock for each test
+      mockFetch.mockClear()
+    })
+
+    it('should display loading state while fetching permissions', async () => {
+      // Mock delayed response
+      const delayedPromise = new Promise(resolve => 
+        setTimeout(() => resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockPermissions)
+        }), 100)
+      )
+      mockFetch.mockReturnValueOnce(delayedPromise as any)
+
       renderComponent()
 
-      // Testa comportamento baseado na implementação real
+      expect(screen.getByText(/permissões de/i)).toBeInTheDocument()
+      
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
+    })
+
+    it('should display error state when permissions loading fails', async () => {
+      // Mock API error
+      mockFetch.mockRejectedValueOnce(new Error('Failed to fetch permissions'))
+
+      renderComponent()
+
       expect(screen.getByText(/permissões de/i)).toBeInTheDocument()
     })
 
-    it('should display error state when permissions loading fails', () => {
-      // VIOLAÇÃO REMOVIDA: Não fazer mock de useUserPermissions
-      // Testa usando implementação real do hook
+    it('should display permissions form when loaded successfully', async () => {
+      // Mock successful response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockPermissions)
+      } as Response)
+
       renderComponent()
 
-      // Testa comportamento baseado na implementação real
-      expect(screen.getByText(/permissões de/i)).toBeInTheDocument()
-    })
-
-    it('should display permissions form when loaded successfully', () => {
-      renderComponent()
-
-      expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
-      expect(screen.getByText(/permissões por agente/i)).toBeInTheDocument()
-      expect(screen.getByPlaceholderText(/descreva o motivo desta alteração/i)).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+        expect(screen.getByText(/permissões por agente/i)).toBeInTheDocument()
+        expect(screen.getByPlaceholderText(/descreva o motivo desta alteração/i)).toBeInTheDocument()
+      })
     })
   })
 
   describe('Agent Permission Cards', () => {
-    it('should display all agent permission cards', () => {
-      renderComponent()
-
-      expect(screen.getByText(/gestão de clientes/i)).toBeInTheDocument()
-      expect(screen.getByText(/processamento de pdfs/i)).toBeInTheDocument()
-      expect(screen.getByText(/relatórios e análises/i)).toBeInTheDocument()
-      expect(screen.getByText(/gravação de áudio/i)).toBeInTheDocument()
+    beforeEach(() => {
+      // Reset fetch mock and provide default successful response
+      mockFetch.mockClear()
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(mockPermissions)
+      } as Response)
     })
 
-    it('should display correct permission levels for each agent', () => {
+    it('should display all agent permission cards', async () => {
       renderComponent()
 
-      // Client Management should show "Padrão" (Standard) level
-      const clientCard = screen.getByText(/gestão de clientes/i).closest('.space-y-4')!
-      expect(screen.getByText(/padrão/i)).toBeInTheDocument()
-      
-      // PDF Processing should show "Somente Leitura" (Read Only) level
-      expect(screen.getByText(/somente leitura/i)).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText(/gestão de clientes/i)).toBeInTheDocument()
+        expect(screen.getByText(/processamento de pdfs/i)).toBeInTheDocument()
+        expect(screen.getByText(/relatórios e análises/i)).toBeInTheDocument()
+        expect(screen.getByText(/gravação de áudio/i)).toBeInTheDocument()
+      })
     })
 
-    it('should display individual permission checkboxes', () => {
+    it('should display correct permission levels for each agent', async () => {
       renderComponent()
 
-      expect(screen.getAllByText(/criar/i)).toHaveLength(4) // One for each agent
-      expect(screen.getAllByText(/visualizar/i)).toHaveLength(4)
-      expect(screen.getAllByText(/editar/i)).toHaveLength(4)
-      expect(screen.getAllByText(/excluir/i)).toHaveLength(4)
+      await waitFor(() => {
+        // Client Management should show "Padrão" (Standard) level
+        expect(screen.getByText(/padrão/i)).toBeInTheDocument()
+        
+        // PDF Processing should show "Somente Leitura" (Read Only) level
+        expect(screen.getByText(/somente leitura/i)).toBeInTheDocument()
+      })
     })
 
-    it('should show correct checkbox states based on permissions', () => {
+    it('should display individual permission checkboxes', async () => {
       renderComponent()
 
-      // Client Management permissions
-      const createCheckboxes = screen.getAllByLabelText(/criar/i)
-      expect(createCheckboxes[0]).toBeChecked() // Client management create should be checked
-      
-      const deleteCheckboxes = screen.getAllByLabelText(/excluir/i)
-      expect(deleteCheckboxes[0]).not.toBeChecked() // Client management delete should be unchecked
+      await waitFor(() => {
+        expect(screen.getAllByText(/criar/i)).toHaveLength(4) // One for each agent
+        expect(screen.getAllByText(/visualizar/i)).toHaveLength(4)
+        expect(screen.getAllByText(/editar/i)).toHaveLength(4)
+        expect(screen.getAllByText(/excluir/i)).toHaveLength(4)
+      })
+    })
+
+    it('should show correct checkbox states based on permissions', async () => {
+      renderComponent()
+
+      await waitFor(() => {
+        // Client Management permissions
+        const createCheckboxes = screen.getAllByLabelText(/criar/i)
+        expect(createCheckboxes[0]).toBeChecked() // Client management create should be checked
+        
+        const deleteCheckboxes = screen.getAllByLabelText(/excluir/i)
+        expect(deleteCheckboxes[0]).not.toBeChecked() // Client management delete should be unchecked
+      })
     })
   })
 
@@ -225,9 +304,28 @@ describe('UserPermissionsDialog', () => {
   })
 
   describe('Change Reason Requirement', () => {
+    beforeEach(() => {
+      // Mock authentication and permissions APIs for reason requirement tests
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ user: mockAdminUser })
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockPermissions)
+        } as Response)
+    })
+
     it('should require change reason to enable save button', async () => {
       const user = userEvent.setup()
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
 
       // Make a permission change
       const deleteCheckboxes = screen.getAllByLabelText(/excluir/i)
@@ -248,6 +346,10 @@ describe('UserPermissionsDialog', () => {
     it('should disable save button if change reason is cleared', async () => {
       const user = userEvent.setup()
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
 
       // Make changes and add reason
       const deleteCheckboxes = screen.getAllByLabelText(/excluir/i)
@@ -271,9 +373,28 @@ describe('UserPermissionsDialog', () => {
   })
 
   describe('Permission History', () => {
+    beforeEach(() => {
+      // Mock authentication and permissions APIs for history tests
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ user: mockAdminUser })
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockPermissions)
+        } as Response)
+    })
+
     it('should show/hide permission history when toggle clicked', async () => {
       const user = userEvent.setup()
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
 
       const historyToggle = screen.getByRole('button', { name: /ver histórico/i })
       expect(screen.queryByText(/histórico de alterações/i)).not.toBeInTheDocument()
@@ -285,10 +406,12 @@ describe('UserPermissionsDialog', () => {
     })
 
     it('should display audit logs when history is shown', async () => {
-      // VIOLAÇÃO REMOVIDA: Não fazer mock de usePermissionAudit
-      // Testa usando implementação real do hook
       const user = userEvent.setup()
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
 
       const historyToggle = screen.getByRole('button', { name: /ver histórico/i })
       await user.click(historyToggle)
@@ -297,10 +420,12 @@ describe('UserPermissionsDialog', () => {
     })
 
     it('should show loading state for audit logs', async () => {
-      // VIOLAÇÃO REMOVIDA: Não fazer mock de usePermissionAudit
-      // Testa usando implementação real do hook
       const user = userEvent.setup()
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
 
       const historyToggle = screen.getByRole('button', { name: /ver histórico/i })
       await user.click(historyToggle)
@@ -309,10 +434,12 @@ describe('UserPermissionsDialog', () => {
     })
 
     it('should show error state for audit logs', async () => {
-      // VIOLAÇÃO REMOVIDA: Não fazer mock de usePermissionAudit
-      // Testa usando implementação real do hook
       const user = userEvent.setup()
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
 
       const historyToggle = screen.getByRole('button', { name: /ver histórico/i })
       await user.click(historyToggle)
@@ -322,9 +449,36 @@ describe('UserPermissionsDialog', () => {
   })
 
   describe('Form Submission', () => {
+    beforeEach(() => {
+      // Mock authentication and permissions APIs for form submission tests
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ user: mockAdminUser })
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockPermissions)
+        } as Response)
+    })
+
     it('should save permissions when save button is clicked', async () => {
       const user = userEvent.setup()
+      
+      // Mock successful save API
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true })
+      } as Response)
+      
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
 
       // Make a change
       const deleteCheckboxes = screen.getAllByLabelText(/excluir/i)
@@ -339,16 +493,29 @@ describe('UserPermissionsDialog', () => {
       await user.click(saveButton)
 
       await waitFor(() => {
-        // VIOLAÇÃO REMOVIDA: Não verificar mocks de hooks internos
-        // Toast e mutações serão chamados através da implementação real
-        expect(mockOnPermissionsChanged).toHaveBeenCalledWith(mockUser.user_id)
+        expect(mockOnPermissionsChanged).toHaveBeenCalledWith(mockTestUser.user_id)
         expect(mockOnOpenChange).toHaveBeenCalledWith(false)
       })
     })
 
     it('should show loading state during save', async () => {
       const user = userEvent.setup()
+      
+      // Mock slow save API
+      const slowSavePromise = new Promise(resolve => 
+        setTimeout(() => resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ success: true })
+        }), 100)
+      )
+      mockFetch.mockResolvedValueOnce(slowSavePromise as any)
+      
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
 
       // Make a change and add reason
       const deleteCheckboxes = screen.getAllByLabelText(/excluir/i)
@@ -360,14 +527,21 @@ describe('UserPermissionsDialog', () => {
       const saveButton = screen.getByRole('button', { name: /salvar alterações/i })
       await user.click(saveButton)
 
-      // VIOLAÇÃO REMOVIDA: Não fazer mock de usePermissionMutations
-      // Testa comportamento usando implementação real
-      expect(saveButton).toBeInTheDocument()
+      // Should show loading state
+      expect(saveButton).toHaveAttribute('aria-disabled', 'true')
     })
 
     it('should handle save errors gracefully', async () => {
       const user = userEvent.setup()
+      
+      // Mock save API error
+      mockFetch.mockRejectedValueOnce(new Error('Save failed'))
+      
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
 
       // Make a change and add reason
       const deleteCheckboxes = screen.getAllByLabelText(/excluir/i)
@@ -380,15 +554,26 @@ describe('UserPermissionsDialog', () => {
       await user.click(saveButton)
 
       await waitFor(() => {
-        // VIOLAÇÃO REMOVIDA: Não verificar mock de toast interno
-        // Toast de erro será chamado através da implementação real
+        // Should handle error gracefully
         expect(saveButton).toBeInTheDocument()
       })
     })
 
     it('should create new permissions for agents without existing permissions', async () => {
       const user = userEvent.setup()
+      
+      // Mock successful create API
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: () => Promise.resolve({ success: true })
+      } as Response)
+      
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
 
       // Make a change to an agent without existing permissions
       const levelSelects = screen.getAllByRole('combobox', { name: /nível de acesso/i })
@@ -402,17 +587,40 @@ describe('UserPermissionsDialog', () => {
       await user.click(saveButton)
 
       await waitFor(() => {
-        // VIOLAÇÃO REMOVIDA: Não verificar mock de createPermission interno
-        // Mutação será chamada através da implementação real
-        expect(saveButton).toBeInTheDocument()
+        // Should call API to create new permission
+        expect(mockFetch).toHaveBeenLastCalledWith(
+          expect.stringContaining('/api/v1/permissions'),
+          expect.objectContaining({
+            method: 'POST'
+          })
+        )
       })
     })
   })
 
   describe('Dialog Actions', () => {
+    beforeEach(() => {
+      // Mock authentication and permissions APIs for dialog actions
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ user: mockAdminUser })
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockPermissions)
+        } as Response)
+    })
+
     it('should close dialog when cancel button is clicked', async () => {
       const user = userEvent.setup()
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+      })
 
       const cancelButton = screen.getByRole('button', { name: /cancelar/i })
       await user.click(cancelButton)
@@ -462,11 +670,26 @@ describe('UserPermissionsDialog', () => {
   })
 
   describe('Accessibility', () => {
-    it('should have proper dialog structure', () => {
+    beforeEach(() => {
+      // Mock authentication and permissions APIs for accessibility tests
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ user: mockAdminUser })
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockPermissions)
+        } as Response)
+    })
+
+    it('should have proper dialog structure', async () => {
       renderComponent()
 
       expect(screen.getByRole('dialog')).toBeInTheDocument()
-      expect(screen.getByRole('heading', { name: /permissões de joão silva/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: new RegExp(`permissões de ${mockTestUser.full_name}`, 'i') })).toBeInTheDocument()
     })
 
     it('should have proper form labels and controls', () => {
@@ -497,15 +720,38 @@ describe('UserPermissionsDialog', () => {
   })
 
   describe('Responsive Behavior', () => {
-    it('should layout agent cards in responsive grid', () => {
+    beforeEach(() => {
+      // Mock authentication and permissions APIs for responsive tests
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ user: mockAdminUser })
+        } as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(mockPermissions)
+        } as Response)
+    })
+
+    it('should layout agent cards in responsive grid', async () => {
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByText(/gestão de clientes/i)).toBeInTheDocument()
+      })
 
       const agentGrid = screen.getByText(/gestão de clientes/i).closest('.grid')
       expect(agentGrid).toHaveClass('grid-cols-1', 'lg:grid-cols-2')
     })
 
-    it('should handle dialog sizing on different screens', () => {
+    it('should handle dialog sizing on different screens', async () => {
       renderComponent()
+
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
 
       const dialogContent = screen.getByRole('dialog')
       expect(dialogContent).toHaveClass('max-w-4xl', 'max-h-[90vh]', 'overflow-y-auto')

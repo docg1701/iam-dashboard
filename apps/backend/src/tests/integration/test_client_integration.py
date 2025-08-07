@@ -61,32 +61,31 @@ class TestClientServiceIntegration:
 
         # Test creation
         try:
-            # Mock the audit logging to avoid issues
-            with unittest.mock.patch("src.services.client_service.log_database_action"):
-                created_client = await service.create_client(
-                    client_data,
-                    user.user_id,
-                    mock_request,  # type: ignore[arg-type]
-                )
+            # Do NOT mock audit logging - it's internal business logic
+            created_client = await service.create_client(
+                client_data,
+                user.user_id,
+                mock_request,  # type: ignore[arg-type]
+            )
 
-                # Verify creation
-                assert created_client.full_name == client_data.full_name
-                assert created_client.ssn == client_data.ssn
-                assert created_client.birth_date == client_data.birth_date
-                assert created_client.notes == client_data.notes
-                assert created_client.status == "active"
+            # Verify creation
+            assert created_client.full_name == client_data.full_name
+            assert created_client.ssn == client_data.ssn
+            assert created_client.birth_date == client_data.birth_date
+            assert created_client.notes == client_data.notes
+            assert created_client.status == "active"
 
-                # Test retrieval
-                retrieved_client = await service.get_client_by_id(
-                    created_client.client_id,
-                    user.user_id,
-                    mock_request,  # type: ignore[arg-type]
-                )
+            # Test retrieval
+            retrieved_client = await service.get_client_by_id(
+                created_client.client_id,
+                user.user_id,
+                mock_request,  # type: ignore[arg-type]
+            )
 
-                # Verify retrieval
-                assert retrieved_client.client_id == created_client.client_id
-                assert retrieved_client.full_name == created_client.full_name
-                assert retrieved_client.ssn == created_client.ssn
+            # Verify retrieval
+            assert retrieved_client.client_id == created_client.client_id
+            assert retrieved_client.full_name == created_client.full_name
+            assert retrieved_client.ssn == created_client.ssn
 
         except Exception as e:
             # If service methods aren't fully implemented, we expect specific errors

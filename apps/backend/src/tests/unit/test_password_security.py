@@ -13,6 +13,7 @@ from src.core.password_security import (
     PasswordSecurityService,
     password_security_service,
 )
+from src.core.security import auth_service
 
 
 class TestPasswordSecurityService:
@@ -272,23 +273,18 @@ class TestPasswordSecurityService:
     def test_is_password_reused_true(
         self,
         password_security_service_instance: PasswordSecurityService,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test password reuse detection when password is reused."""
         user_id = uuid4()
         password = "test_password"
-        password_hash = "$2b$12$test_hash"
+        
+        # Create a real password hash using the auth service
+        password_hash = auth_service.get_password_hash(password)
 
-        # Store password in history
+        # Store the real password hash in history
         password_security_service_instance.store_password_hash(user_id, password_hash)
 
-        # Mock password verification to return True
-        def mock_verify_password(plain_password: str, hashed_password: str) -> bool:
-            return plain_password == "test_password" and hashed_password == password_hash
-
-        monkeypatch.setattr(ps_module.auth_service, "verify_password", mock_verify_password)  # type: ignore[attr-defined]
-
-        # Check if password is reused
+        # Check if the same password is reused (should return True)
         is_reused = password_security_service_instance.is_password_reused(user_id, password)
 
         assert is_reused is True
@@ -296,23 +292,19 @@ class TestPasswordSecurityService:
     def test_is_password_reused_false(
         self,
         password_security_service_instance: PasswordSecurityService,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test password reuse detection when password is not reused."""
         user_id = uuid4()
-        new_password = "new_password"
-        old_password_hash = "$2b$12$old_hash"
+        old_password = "old_password"
+        new_password = "new_different_password"
+        
+        # Create a real password hash for the old password
+        old_password_hash = auth_service.get_password_hash(old_password)
 
-        # Store old password in history
+        # Store the old password hash in history
         password_security_service_instance.store_password_hash(user_id, old_password_hash)
 
-        # Mock password verification to return False for different passwords
-        def mock_verify_password(plain_password: str, hashed_password: str) -> bool:
-            return False
-
-        monkeypatch.setattr(ps_module.auth_service, "verify_password", mock_verify_password)  # type: ignore[attr-defined]
-
-        # Check if password is reused
+        # Check if the new (different) password is reused (should return False)
         is_reused = password_security_service_instance.is_password_reused(user_id, new_password)
 
         assert is_reused is False

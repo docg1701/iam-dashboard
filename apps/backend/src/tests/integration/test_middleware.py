@@ -7,7 +7,7 @@ role-based access control, and security logging.
 
 import json
 import uuid
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi import FastAPI, HTTPException, Request, Response, status
@@ -32,7 +32,8 @@ class TestAuthenticationMiddleware:
     @pytest.mark.asyncio
     async def test_public_paths_bypass_auth(self) -> None:
         """Test that public endpoints bypass authentication."""
-        middleware = AuthenticationMiddleware(app=MagicMock())
+        app = FastAPI()
+        middleware = AuthenticationMiddleware(app=app)
 
         public_paths = [
             "/api/v1/auth/login",
@@ -43,34 +44,54 @@ class TestAuthenticationMiddleware:
         ]
 
         for path in public_paths:
-            mock_request = MagicMock()
-            mock_request.url.path = path
+            # Create real FastAPI Request with ASGI scope
+            scope = {
+                "type": "http",
+                "method": "GET",
+                "path": path,
+                "query_string": b"",
+                "headers": [],
+                "scheme": "http",
+                "server": ("127.0.0.1", 8000),
+                "client": ("127.0.0.1", 12345),
+                "root_path": "",
+            }
+            real_request = Request(scope)
 
             # Mock call_next to simulate passing through
             mock_call_next = AsyncMock(return_value=Response())
 
             # Should not raise any exceptions
-            result = await middleware.dispatch(mock_request, mock_call_next)
+            result = await middleware.dispatch(real_request, mock_call_next)
             assert result is not None
 
     @pytest.mark.asyncio
     async def test_protected_paths_require_auth(self) -> None:
         """Test that protected endpoints require authentication."""
-        middleware = AuthenticationMiddleware(app=MagicMock())
+        app = FastAPI()
+        middleware = AuthenticationMiddleware(app=app)
 
-        # Mock request without authorization header
-        mock_request = MagicMock()
-        mock_request.url.path = "/api/v1/users"
-        mock_request.headers.get.return_value = None
-        mock_request.state = MagicMock()
-        mock_request.state.request_id = "test-request-id"
-        mock_request.method = "GET"
-        mock_request.client.host = "127.0.0.1"
+        # Create real FastAPI Request without authorization header
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/v1/users",
+            "query_string": b"",
+            "headers": [],
+            "scheme": "http",
+            "server": ("127.0.0.1", 8000),
+            "client": ("127.0.0.1", 12345),
+            "root_path": "",
+        }
+        real_request = Request(scope)
+        
+        # Set request_id in state (would normally be set by another middleware)
+        real_request.state.request_id = "test-request-id"
 
         mock_call_next = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await middleware.dispatch(mock_request, mock_call_next)
+            await middleware.dispatch(real_request, mock_call_next)
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Authorization header required" in exc_info.value.detail
@@ -78,7 +99,8 @@ class TestAuthenticationMiddleware:
     @pytest.mark.asyncio
     async def test_valid_token_authentication(self) -> None:
         """Test successful authentication with valid token."""
-        middleware = AuthenticationMiddleware(app=MagicMock())
+        app = FastAPI()
+        middleware = AuthenticationMiddleware(app=app)
 
         # Create a valid token
         user_id = uuid.uuid4()
@@ -86,102 +108,152 @@ class TestAuthenticationMiddleware:
             user_id=user_id, user_role="admin", user_email="admin@example.com"
         )
 
-        # Mock request with valid authorization header
-        mock_request = MagicMock()
-        mock_request.url.path = "/api/v1/users"
-        mock_request.headers.get.return_value = f"Bearer {token_data.access_token}"
-        mock_request.state = MagicMock()
-        mock_request.state.request_id = "test-request-id"
-        mock_request.method = "GET"
-        mock_request.client.host = "127.0.0.1"
+        # Create real FastAPI Request with valid authorization header
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/v1/users",
+            "query_string": b"",
+            "headers": [
+                (b"authorization", f"Bearer {token_data.access_token}".encode())
+            ],
+            "scheme": "http",
+            "server": ("127.0.0.1", 8000),
+            "client": ("127.0.0.1", 12345),
+            "root_path": "",
+        }
+        real_request = Request(scope)
+        
+        # Set request_id in state (would normally be set by another middleware)
+        real_request.state.request_id = "test-request-id"
 
         mock_call_next = AsyncMock(return_value=Response())
 
         # Should not raise exceptions and set user data
-        result = await middleware.dispatch(mock_request, mock_call_next)
+        result = await middleware.dispatch(real_request, mock_call_next)
 
         assert result is not None
-        assert mock_request.state.is_authenticated is True
-        assert mock_request.state.user.user_id == user_id
-        assert mock_request.state.user.role == "admin"
+        assert real_request.state.is_authenticated is True
+        assert real_request.state.user.user_id == user_id
+        assert real_request.state.user.role == "admin"
 
     @pytest.mark.asyncio
     async def test_invalid_token_authentication(self) -> None:
         """Test authentication failure with invalid token."""
-        middleware = AuthenticationMiddleware(app=MagicMock())
+        app = FastAPI()
+        middleware = AuthenticationMiddleware(app=app)
 
-        # Mock request with invalid authorization header
-        mock_request = MagicMock()
-        mock_request.url.path = "/api/v1/users"
-        mock_request.headers.get.return_value = "Bearer invalid_token"
-        mock_request.state = MagicMock()
-        mock_request.state.request_id = "test-request-id"
-        mock_request.method = "GET"
-        mock_request.client.host = "127.0.0.1"
+        # Create real FastAPI Request with invalid authorization header
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/v1/users",
+            "query_string": b"",
+            "headers": [
+                (b"authorization", b"Bearer invalid_token")
+            ],
+            "scheme": "http",
+            "server": ("127.0.0.1", 8000),
+            "client": ("127.0.0.1", 12345),
+            "root_path": "",
+        }
+        real_request = Request(scope)
+        
+        # Set request_id in state (would normally be set by another middleware)
+        real_request.state.request_id = "test-request-id"
 
         mock_call_next = AsyncMock()
 
         with pytest.raises(HTTPException) as exc_info:
-            await middleware.dispatch(mock_request, mock_call_next)
+            await middleware.dispatch(real_request, mock_call_next)
 
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_get_client_ip_with_proxy(self) -> None:
         """Test client IP extraction with proxy headers."""
-        middleware = AuthenticationMiddleware(app=MagicMock())
+        app = FastAPI()
+        middleware = AuthenticationMiddleware(app=app)
 
         # Test X-Forwarded-For header
-        mock_request = MagicMock()
-        mock_request.headers.get.side_effect = lambda header: {
-            "X-Forwarded-For": "192.168.1.1, 10.0.0.1",
-            "X-Real-IP": None,
-        }.get(header)
-        mock_request.client = None
+        scope1 = {
+            "type": "http",
+            "method": "GET",
+            "path": "/test",
+            "query_string": b"",
+            "headers": [
+                (b"x-forwarded-for", b"192.168.1.1, 10.0.0.1")
+            ],
+            "scheme": "http",
+            "server": ("127.0.0.1", 8000),
+            "root_path": "",
+        }
+        real_request1 = Request(scope1)
 
-        ip = middleware._get_client_ip(mock_request)
+        ip = middleware._get_client_ip(real_request1)
         assert ip == "192.168.1.1"
 
-        # Test X-Real-IP header - create new mock
-        mock_request2 = MagicMock()
-        mock_request2.headers.get.side_effect = lambda header: {
-            "X-Forwarded-For": None,
-            "X-Real-IP": "192.168.1.2",
-        }.get(header)
-        mock_request2.client = None
+        # Test X-Real-IP header
+        scope2 = {
+            "type": "http",
+            "method": "GET",
+            "path": "/test",
+            "query_string": b"",
+            "headers": [
+                (b"x-real-ip", b"192.168.1.2")
+            ],
+            "scheme": "http",
+            "server": ("127.0.0.1", 8000),
+            "root_path": "",
+        }
+        real_request2 = Request(scope2)
 
-        ip = middleware._get_client_ip(mock_request2)
+        ip = middleware._get_client_ip(real_request2)
         assert ip == "192.168.1.2"
 
-        # Test direct client IP - create new mock
-        mock_request3 = MagicMock()
-        mock_request3.headers.get.return_value = None
-        mock_client = MagicMock()
-        mock_client.host = "192.168.1.3"
-        mock_request3.client = mock_client
+        # Test direct client IP
+        scope3 = {
+            "type": "http",
+            "method": "GET",
+            "path": "/test",
+            "query_string": b"",
+            "headers": [],
+            "scheme": "http",
+            "server": ("127.0.0.1", 8000),
+            "client": ("192.168.1.3", 12345),
+            "root_path": "",
+        }
+        real_request3 = Request(scope3)
 
-        ip = middleware._get_client_ip(mock_request3)
+        ip = middleware._get_client_ip(real_request3)
         assert ip == "192.168.1.3"
 
     @patch("src.core.middleware.security_logger")
     def test_security_event_logging(self, mock_logger: Mock) -> None:
         """Test security event logging functionality."""
-        middleware = AuthenticationMiddleware(app=MagicMock())
+        app = FastAPI()
+        middleware = AuthenticationMiddleware(app=app)
 
-        mock_request = MagicMock()
-        mock_request.url.path = "/api/v1/users"
-        mock_request.method = "GET"
-        mock_request.headers.get.side_effect = lambda header, default=None: {
-            "user-agent": "Mozilla/5.0",
-            "X-Forwarded-For": None,
-            "X-Real-IP": None,
-        }.get(header, default)
-        mock_request.client = MagicMock()
-        mock_request.client.host = "127.0.0.1"
-        mock_request.state = MagicMock()
-        mock_request.state.request_id = "test-request-id"
+        # Create real FastAPI Request
+        scope = {
+            "type": "http",
+            "method": "GET",
+            "path": "/api/v1/users",
+            "query_string": b"",
+            "headers": [
+                (b"user-agent", b"Mozilla/5.0")
+            ],
+            "scheme": "http",
+            "server": ("127.0.0.1", 8000),
+            "client": ("127.0.0.1", 12345),
+            "root_path": "",
+        }
+        real_request = Request(scope)
+        
+        # Set request_id in state (would normally be set by another middleware)
+        real_request.state.request_id = "test-request-id"
 
         middleware._log_security_event(
-            mock_request, "TEST_EVENT", "Test security event", {"extra": "data"}
+            real_request, "TEST_EVENT", "Test security event", {"extra": "data"}
         )
 
         # Verify logger was called

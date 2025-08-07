@@ -388,28 +388,3 @@ def mock_uuid() -> MagicMock:
     return mock
 
 
-@pytest.fixture(name="mock_permission_service") 
-def mock_permission_service() -> MagicMock:
-    """Mock permission service for E2E tests.
-    
-    NOTE: This mocks the service interface but tests using this fixture should
-    NOT mock business logic - only external dependencies like audit logging, email, etc.
-    """
-    from src.services.permission_service import PermissionService
-    mock_service = MagicMock(spec=PermissionService)
-    
-    # Set up reasonable defaults for common operations
-    mock_service.check_user_permission = AsyncMock(return_value=False)
-    mock_service.get_user_permissions = AsyncMock(return_value={})
-    mock_service.assign_permission = AsyncMock()
-    mock_service.revoke_permission = AsyncMock()
-    mock_service.bulk_assign_permissions = AsyncMock(return_value={})
-    mock_service.apply_template_to_users = AsyncMock(return_value={"successful": 0, "failed": 0, "errors": []})
-    mock_service.list_templates = AsyncMock(return_value=([], 0))
-    mock_service.create_template = AsyncMock()
-    mock_service.update_template = AsyncMock()
-    mock_service.delete_template = AsyncMock(return_value=False)
-    mock_service.get_audit_log = AsyncMock(return_value=([], 0))
-    mock_service.get_permission_stats = AsyncMock(return_value={})
-    
-    return mock_service

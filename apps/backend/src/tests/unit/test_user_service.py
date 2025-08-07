@@ -79,27 +79,21 @@ class TestUserService:
         test_session.add(sysadmin_user)
         test_session.commit()
         
-        # Mock ONLY external dependencies (password hashing, audit logging)
-        with patch("src.services.user_service.log_database_action") as mock_audit:
-            # Mock password hashing (external dependency)
-            with patch.object(
-                user_service.auth_service, "get_password_hash", return_value="hashed_password"
-            ):
-                # Call method - this will use real database operations
-                result = await user_service.create_user(
-                    user_data=user_create_request,
-                    created_by_user_id=sysadmin_user.user_id,
-                    request=mock_request,
-                )
+        # Use real password hashing - no mocking of internal business logic
+        # Real audit logging will execute and create audit records
+        result = await user_service.create_user(
+            user_data=user_create_request,
+            created_by_user_id=sysadmin_user.user_id,
+            request=mock_request,
+        )
 
-                # Verify user was created with real database operations
-                assert result.email == user_create_request.email
-                assert result.role == user_create_request.role
-                assert result.is_active == user_create_request.is_active
-                assert result.password_hash == "hashed_password"
-                
-                # Verify audit logging (external dependency) was called
-                mock_audit.assert_called_once()
+        # Verify user was created with real database operations
+        assert result.email == user_create_request.email
+        assert result.role == user_create_request.role
+        assert result.is_active == user_create_request.is_active
+        assert result.password_hash is not None  # Real password hash was created
+            
+            # Real audit logging will execute and create audit records
 
     async def test_create_user_duplicate_email(
         self,
@@ -227,25 +221,18 @@ class TestUserService:
         
         update_data = UserUpdateRequest(email="updated@example.com", password="NewSecurePass456!")
 
-        with patch("src.services.user_service.log_database_action") as mock_audit:
-            # Mock password hashing (external dependency)
-            with patch.object(
-                user_service.auth_service,
-                "get_password_hash",
-                return_value="new_hashed_password",
-            ):
-                result = await user_service.update_user(
-                    user_id=regular_user.user_id,
-                    user_data=update_data,
-                    updated_by_user_id=regular_user.user_id,
-                    request=mock_request,
-                )
+        # Use real password hashing - no mocking of internal business logic
+        result = await user_service.update_user(
+            user_id=regular_user.user_id,
+            user_data=update_data,
+            updated_by_user_id=regular_user.user_id,
+            request=mock_request,
+        )
 
-            # Verify user was updated with real database operations
-            assert result.email == "updated@example.com"
-            assert result.password_hash == "new_hashed_password"
-            # Verify audit logging (external dependency) was called
-            mock_audit.assert_called_once()
+        # Verify user was updated with real database operations
+        assert result.email == "updated@example.com"
+        assert result.password_hash is not None  # Real password hash was created
+        # Real audit logging will execute and create audit records
 
     @pytest.mark.asyncio
     async def test_update_user_role_permission_denied(
@@ -280,23 +267,24 @@ class TestUserService:
         sysadmin_user: User,
         regular_user: User,
         mock_request: MagicMock,
-        mock_session: MagicMock,
+        test_session: Session,
     ) -> None:
-        """Test sysadmin can deactivate user."""
-        with patch("src.services.user_service.log_database_action") as mock_audit:
-            # Mock user lookups
-            mock_session.exec.return_value.first.side_effect = [regular_user, sysadmin_user]
+        """Test sysadmin can deactivate user using real database operations."""
+        # Add both users to database
+        test_session.add_all([sysadmin_user, regular_user])
+        test_session.commit()
+        
+        # Do NOT mock audit logging - it's internal business logic
+        result = await user_service.deactivate_user(
+            user_id=regular_user.user_id,
+            deactivated_by_user_id=sysadmin_user.user_id,
+            request=mock_request,
+        )
 
-            _result = await user_service.deactivate_user(
-                user_id=regular_user.user_id,
-                deactivated_by_user_id=sysadmin_user.user_id,
-                request=mock_request,
-            )
-
-            # Verify user was deactivated
-            assert regular_user.is_active is False
-            mock_session.commit.assert_called_once()
-            mock_audit.assert_called_once()
+        # Verify user was deactivated with real database operations
+        assert result.is_active is False
+        assert result.updated_at is not None
+        # Real audit logging will execute and create audit records
 
     @pytest.mark.asyncio
     async def test_deactivate_user_self_deactivation_denied(
@@ -304,11 +292,12 @@ class TestUserService:
         user_service: UserService,
         sysadmin_user: User,
         mock_request: MagicMock,
-        mock_session: MagicMock,
+        test_session: Session,
     ) -> None:
-        """Test user cannot deactivate themselves."""
-        # Mock user lookup
-        mock_session.exec.return_value.first.return_value = sysadmin_user
+        """Test user cannot deactivate themselves using real database operations."""
+        # Add sysadmin to database
+        test_session.add(sysadmin_user)
+        test_session.commit()
 
         with pytest.raises(ValidationError) as excinfo:
             await user_service.deactivate_user(
@@ -327,11 +316,12 @@ class TestUserService:
         admin_user: User,
         regular_user: User,
         mock_request: MagicMock,
-        mock_session: MagicMock,
+        test_session: Session,
     ) -> None:
-        """Test non-sysadmin cannot deactivate users."""
-        # Mock user lookups
-        mock_session.exec.return_value.first.side_effect = [regular_user, admin_user]
+        """Test non-sysadmin cannot deactivate users using real database operations."""
+        # Add both users to database
+        test_session.add_all([admin_user, regular_user])
+        test_session.commit()
 
         with pytest.raises(ValidationError) as excinfo:
             await user_service.deactivate_user(
@@ -348,16 +338,14 @@ class TestUserService:
         self,
         user_service: UserService,
         sysadmin_user: User,
-        mock_session: MagicMock,
+        test_session: Session,
     ) -> None:
-        """Test listing users with pagination."""
-        # Mock requesting user and user list
-        users_list = [UserFactory.build() for _ in range(5)]
-        mock_session.exec.return_value.first.return_value = sysadmin_user
-        mock_session.exec.return_value.all.side_effect = [
-            [user.user_id for user in users_list],  # count query
-            users_list,  # actual query
-        ]
+        """Test listing users with pagination using real database operations."""
+        # Create users and add to database
+        users_list = [cast("User", UserFactory.build()) for _ in range(5)]
+        test_session.add(sysadmin_user)
+        test_session.add_all(users_list)
+        test_session.commit()
 
         search_params = UserSearchParams()
         result_items, total_count = await user_service.list_users(
@@ -367,30 +355,27 @@ class TestUserService:
             requesting_user_id=sysadmin_user.user_id,
         )
 
-        assert len(result_items) == 5
-        assert total_count == 5
+        # Should include sysadmin + 5 users = 6 total
+        assert len(result_items) == 6
+        assert total_count == 6
 
     @pytest.mark.asyncio
     async def test_list_users_with_filters(
         self,
         user_service: UserService,
         sysadmin_user: User,
-        mock_session: MagicMock,
+        test_session: Session,
     ) -> None:
-        """Test listing users with search filters."""
-        filtered_users = [UserFactory.build(role=UserRole.ADMIN)]
-        mock_session.exec.return_value.first.return_value = sysadmin_user
-        mock_session.exec.return_value.all.side_effect = [
-            [user.user_id for user in filtered_users],  # count query
-            filtered_users,  # actual query
-        ]
+        """Test listing users with search filters using real database operations."""
+        # Create admin user with specific email and regular user
+        admin_user = cast("User", UserFactory.build(role=UserRole.ADMIN, email="admin@example.com", is_active=True))
+        regular_user = cast("User", UserFactory.build(role=UserRole.USER, email="user@example.com", is_active=True))
+        
+        test_session.add_all([sysadmin_user, admin_user, regular_user])
+        test_session.commit()
 
-        search_params = UserSearchParams(
-            query="admin@example.com",
-            role=UserRole.ADMIN,
-            is_active=True,
-        )
-
+        # Test role filter
+        search_params = UserSearchParams(role=UserRole.ADMIN)
         result_items, total_count = await user_service.list_users(
             search_params=search_params,
             page=1,
@@ -401,17 +386,31 @@ class TestUserService:
         assert len(result_items) == 1
         assert total_count == 1
         assert result_items[0].role == UserRole.ADMIN
+        
+        # Test email query filter
+        search_params = UserSearchParams(query="admin")
+        result_items, total_count = await user_service.list_users(
+            search_params=search_params,
+            page=1,
+            per_page=10,
+            requesting_user_id=sysadmin_user.user_id,
+        )
+
+        assert len(result_items) == 1
+        assert total_count == 1
+        assert "admin" in result_items[0].email
 
     @pytest.mark.asyncio
     async def test_list_users_permission_denied(
         self,
         user_service: UserService,
         regular_user: User,
-        mock_session: MagicMock,
+        test_session: Session,
     ) -> None:
-        """Test non-admin cannot list users."""
-        # Mock requesting user
-        mock_session.exec.return_value.first.return_value = regular_user
+        """Test non-admin cannot list users using real database operations."""
+        # Add regular user to database
+        test_session.add(regular_user)
+        test_session.commit()
 
         search_params = UserSearchParams()
 

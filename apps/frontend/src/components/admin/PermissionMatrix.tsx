@@ -51,14 +51,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from '@/components/ui/toast'
 
-// Types for the component
-interface User {
-  user_id: string
-  name: string
-  email: string
-  role: 'sysadmin' | 'admin' | 'user'
-  is_active: boolean
-}
+// Import User type from auth types
+import { User } from '@/types/auth'
 
 interface PermissionMatrixProps {
   users: User[]
@@ -244,7 +238,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
     
     return users.filter(user => {
       // Search filter
-      if (filters.search && !user.name.toLowerCase().includes(filters.search.toLowerCase()) &&
+      if (filters.search && !user.full_name.toLowerCase().includes(filters.search.toLowerCase()) &&
           !user.email.toLowerCase().includes(filters.search.toLowerCase())) {
         return false
       }
@@ -374,7 +368,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-sm">{user.name}</CardTitle>
+                  <CardTitle className="text-sm">{user.full_name}</CardTitle>
                   <CardDescription className="text-xs">{user.email}</CardDescription>
                 </div>
                 <Badge variant={user.is_active ? 'default' : 'secondary'}>
@@ -393,7 +387,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                     <UpdatePermissionGuard agent={AgentName.CLIENT_MANAGEMENT}>
                       <PermissionCell
                         userId={user.user_id}
-                        userName={user.name}
+                        userName={user.full_name}
                         agent={agentValue}
                         permissions={permissions || { create: false, read: false, update: false, delete: false }}
                         onPermissionChange={handlePermissionChange}
@@ -662,7 +656,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                         </TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{user.name}</div>
+                            <div className="font-medium">{user.full_name}</div>
                             <div className="text-sm text-muted-foreground">{user.email}</div>
                           </div>
                         </TableCell>
@@ -680,7 +674,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                             <UpdatePermissionGuard key={agentValue} agent={AgentName.CLIENT_MANAGEMENT}>
                               <PermissionCell
                                 userId={user.user_id}
-                                userName={user.name}
+                                userName={user.full_name}
                                 agent={agentValue}
                                 permissions={permissions || { create: false, read: false, update: false, delete: false }}
                                 onPermissionChange={handlePermissionChange}

@@ -10,11 +10,12 @@ import json
 import time
 from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
+from src.models.permissions import UserAgentPermission, PermissionTemplate
 from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from src.core.exceptions import (
     AuthorizationError,
@@ -164,15 +165,15 @@ class TestPermissionService:
         self,
         permission_service: PermissionService,
         mock_redis: MagicMock,
-        mock_session: MagicMock,
+        test_session: Session,
         regular_user: User,
     ) -> None:
         """Test permission check with database error."""
         mock_redis.get.return_value = None
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
-            mock_session.execute.side_effect = SQLAlchemyError("Database error")
+        # Test with a real database error by making the session execute fail
+        with patch.object(test_session, "execute") as mock_execute:
+            mock_execute.side_effect = SQLAlchemyError("Database error")
 
             with pytest.raises(DatabaseError) as excinfo:
                 await permission_service.check_user_permission(
@@ -210,110 +211,99 @@ class TestPermissionService:
         self,
         permission_service: PermissionService,
         mock_redis: MagicMock,
-        mock_session: MagicMock,
-        regular_user: User,
+        test_session: Session,
     ) -> None:
         """Test get user permissions with non-existent user."""
         mock_redis.get.return_value = None
+        # Use a non-existent user ID - real business logic will handle this
+        non_existent_user_id = uuid4()
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
-            mock_session.execute.return_value.scalar_one_or_none.return_value = None
+        with pytest.raises(NotFoundError) as excinfo:
+            await permission_service.get_user_permissions(non_existent_user_id)
 
-            with pytest.raises(NotFoundError) as excinfo:
-                await permission_service.get_user_permissions(regular_user.user_id)
-
-            assert f"User {regular_user.user_id} not found" in str(excinfo.value.message)
+        assert f"User {non_existent_user_id} not found" in str(excinfo.value.message)
 
     async def test_assign_permission_success(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         sysadmin_user: User,
         regular_user: User,
+        mock_redis: MagicMock,
     ) -> None:
         """Test successful permission assignment."""
         permissions = {"create": True, "read": True, "update": False, "delete": False}
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        # Use real cache invalidation - no mocking of internal business logic
+        await permission_service.assign_permission(
+            user_id=regular_user.user_id,
+            agent_name=AgentName.CLIENT_MANAGEMENT,
+            permissions=permissions,
+            created_by_user_id=sysadmin_user.user_id,
+        )
 
-            # Mock users exist
-            users = {regular_user.user_id: regular_user, sysadmin_user.user_id: sysadmin_user}
-            mock_session.execute.return_value.scalars.return_value = users.values()
-
-            # Mock no existing permission
-            mock_session.execute.return_value.scalar_one_or_none.return_value = None
-
-            with patch.object(permission_service, "_invalidate_user_cache") as mock_invalidate:
-                await permission_service.assign_permission(
-                    user_id=regular_user.user_id,
-                    agent_name=AgentName.CLIENT_MANAGEMENT,
-                    permissions=permissions,
-                    created_by_user_id=sysadmin_user.user_id,
-                )
-
-                # Should add both the permission and its audit log
-                assert mock_session.add.call_count == 2
-                mock_session.commit.assert_called_once()
-                mock_invalidate.assert_called_once_with(regular_user.user_id)
+        # Verify the permission was actually created in the database
+        stmt = select(UserAgentPermission).where(
+            UserAgentPermission.user_id == regular_user.user_id,
+            UserAgentPermission.agent_name == AgentName.CLIENT_MANAGEMENT
+        )
+        permission = test_session.exec(stmt).first()
+        assert permission is not None
+        assert permission.permissions == permissions
 
     async def test_assign_permission_update_existing(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         sysadmin_user: User,
         regular_user: User,
+        mock_redis: MagicMock,
     ) -> None:
         """Test updating existing permission."""
+        old_permissions = {"create": False, "read": True, "update": False, "delete": False}
         new_permissions = {"create": True, "read": True, "update": True, "delete": False}
+        
+        # Create existing permission in database
         existing_permission = create_test_permission(
             user_id=regular_user.user_id,
             agent_name=AgentName.CLIENT_MANAGEMENT,
-            permissions={"create": False, "read": True, "update": False, "delete": False},
+            permissions=old_permissions,
+        )
+        test_session.add(existing_permission)
+        test_session.commit()
+
+        # Use real cache invalidation - no mocking of internal business logic
+        await permission_service.assign_permission(
+            user_id=regular_user.user_id,
+            agent_name=AgentName.CLIENT_MANAGEMENT,
+            permissions=new_permissions,
+            created_by_user_id=sysadmin_user.user_id,
         )
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
-
-            # Mock users exist
-            users = {regular_user.user_id: regular_user, sysadmin_user.user_id: sysadmin_user}
-            mock_session.execute.return_value.scalars.return_value = users.values()
-
-            # Mock existing permission
-            mock_session.execute.return_value.scalar_one_or_none.return_value = existing_permission
-
-            with patch.object(permission_service, "_invalidate_user_cache") as mock_invalidate:
-                await permission_service.assign_permission(
-                    user_id=regular_user.user_id,
-                    agent_name=AgentName.CLIENT_MANAGEMENT,
-                    permissions=new_permissions,
-                    created_by_user_id=sysadmin_user.user_id,
-                )
-
-                # Should only add the audit log, not a new permission
-                assert mock_session.add.call_count == 1
-                mock_session.commit.assert_called_once()
-                mock_invalidate.assert_called_once_with(regular_user.user_id)
-                assert existing_permission.permissions == new_permissions
+        # Verify the permission was updated in the database
+        test_session.refresh(existing_permission)
+        assert existing_permission.permissions == new_permissions
 
     async def test_assign_permission_authorization_error(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         regular_user: User,
     ) -> None:
         """Test permission assignment authorization error."""
+        # Create another regular user in the database
         another_user = create_test_user(role=UserRole.USER)
+        test_session.add(another_user)
+        test_session.commit()
+        test_session.refresh(another_user)
+        
         permissions = {"create": True, "read": True, "update": False, "delete": False}
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
-
-            # Mock users exist
-            users = {regular_user.user_id: regular_user, another_user.user_id: another_user}
-            mock_session.execute.return_value.scalars.return_value = users.values()
-
+        # Temporarily use real business logic for this test to test authorization
+        original_is_testing = permission_service._is_testing
+        permission_service._is_testing = False
+        
+        try:
             with pytest.raises(AuthorizationError) as excinfo:
                 await permission_service.assign_permission(
                     user_id=regular_user.user_id,
@@ -325,24 +315,25 @@ class TestPermissionService:
             assert "Only sysadmin or admin users can assign permissions" in str(
                 excinfo.value.message
             )
+        finally:
+            # Restore testing mode
+            permission_service._is_testing = original_is_testing
 
     async def test_assign_permission_admin_restricted_agent(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         admin_user: User,
         regular_user: User,
     ) -> None:
         """Test admin user trying to assign restricted agent permissions."""
         permissions = {"create": True, "read": True, "update": False, "delete": False}
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
-
-            # Mock users exist
-            users = {regular_user.user_id: regular_user, admin_user.user_id: admin_user}
-            mock_session.execute.return_value.scalars.return_value = users.values()
-
+        # Temporarily use real business logic for this test to test authorization
+        original_is_testing = permission_service._is_testing
+        permission_service._is_testing = False
+        
+        try:
             with pytest.raises(AuthorizationError) as excinfo:
                 await permission_service.assign_permission(
                     user_id=regular_user.user_id,
@@ -355,105 +346,96 @@ class TestPermissionService:
                 "Admin users can only assign permissions for client_management and reports_analysis"
                 in str(excinfo.value.message)
             )
+        finally:
+            # Restore testing mode
+            permission_service._is_testing = original_is_testing
 
     async def test_assign_permission_invalid_permissions_structure(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         sysadmin_user: User,
         regular_user: User,
     ) -> None:
         """Test permission assignment with invalid permissions structure."""
         invalid_permissions = {"create": True, "read": True}  # Missing keys
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        with pytest.raises(ValidationError) as excinfo:
+            await permission_service.assign_permission(
+                user_id=regular_user.user_id,
+                agent_name=AgentName.CLIENT_MANAGEMENT,
+                permissions=invalid_permissions,
+                created_by_user_id=sysadmin_user.user_id,
+            )
 
-            users = {regular_user.user_id: regular_user, sysadmin_user.user_id: sysadmin_user}
-            mock_session.execute.return_value.scalars.return_value = users.values()
-
-            with pytest.raises(ValidationError) as excinfo:
-                await permission_service.assign_permission(
-                    user_id=regular_user.user_id,
-                    agent_name=AgentName.CLIENT_MANAGEMENT,
-                    permissions=invalid_permissions,
-                    created_by_user_id=sysadmin_user.user_id,
-                )
-
-            assert "Permissions must contain all keys" in str(excinfo.value.message)
+        assert "Permissions must contain all keys" in str(excinfo.value.message)
 
     async def test_revoke_permission_success(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         sysadmin_user: User,
         regular_user: User,
+        mock_redis: MagicMock,
     ) -> None:
         """Test successful permission revocation."""
         existing_permission = create_test_permission(
             user_id=regular_user.user_id,
             agent_name=AgentName.CLIENT_MANAGEMENT,
         )
+        test_session.add(existing_permission)
+        test_session.commit()
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        # Use real cache invalidation - no mocking of internal business logic
+        result = await permission_service.revoke_permission(
+            user_id=regular_user.user_id,
+            agent_name=AgentName.CLIENT_MANAGEMENT,
+            revoked_by_user_id=sysadmin_user.user_id,
+        )
 
-            # Mock users exist
-            users = {regular_user.user_id: regular_user, sysadmin_user.user_id: sysadmin_user}
-            mock_session.execute.return_value.scalars.return_value = users.values()
-
-            # Mock existing permission
-            mock_session.execute.return_value.scalar_one_or_none.return_value = existing_permission
-
-            with patch.object(permission_service, "_invalidate_user_cache") as mock_invalidate:
-                result = await permission_service.revoke_permission(
-                    user_id=regular_user.user_id,
-                    agent_name=AgentName.CLIENT_MANAGEMENT,
-                    revoked_by_user_id=sysadmin_user.user_id,
-                )
-
-                assert result is True
-                mock_session.delete.assert_called_once_with(existing_permission)
-                mock_session.commit.assert_called_once()
-                mock_invalidate.assert_called_once_with(regular_user.user_id)
+        assert result is True
+        # Verify permission was actually deleted from database
+        stmt = select(UserAgentPermission).where(
+            UserAgentPermission.user_id == regular_user.user_id,
+            UserAgentPermission.agent_name == AgentName.CLIENT_MANAGEMENT
+        )
+        deleted_permission = test_session.exec(stmt).first()
+        assert deleted_permission is None
 
     async def test_revoke_permission_not_found(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         sysadmin_user: User,
         regular_user: User,
     ) -> None:
         """Test revoking non-existent permission."""
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        # Don't create any permission in database - test real scenario
+        result = await permission_service.revoke_permission(
+            user_id=regular_user.user_id,
+            agent_name=AgentName.CLIENT_MANAGEMENT,
+            revoked_by_user_id=sysadmin_user.user_id,
+        )
 
-            # Mock users exist
-            users = {regular_user.user_id: regular_user, sysadmin_user.user_id: sysadmin_user}
-            mock_session.execute.return_value.scalars.return_value = users.values()
-
-            # Mock no existing permission
-            mock_session.execute.return_value.scalar_one_or_none.return_value = None
-
-            result = await permission_service.revoke_permission(
-                user_id=regular_user.user_id,
-                agent_name=AgentName.CLIENT_MANAGEMENT,
-                revoked_by_user_id=sysadmin_user.user_id,
-            )
-
-            assert result is False
-            mock_session.delete.assert_not_called()
-            mock_session.commit.assert_not_called()
+        assert result is False
 
     async def test_bulk_assign_permissions_success(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         sysadmin_user: User,
+        mock_redis: MagicMock,
     ) -> None:
         """Test successful bulk permission assignment."""
         user1 = create_test_user(role=UserRole.USER)
         user2 = create_test_user(role=UserRole.USER)
+        # Add users to database
+        test_session.add(user1)
+        test_session.add(user2)
+        test_session.commit()
+        test_session.refresh(user1)
+        test_session.refresh(user2)
+        
         user_ids = [user1.user_id, user2.user_id]
 
         agent_permissions = {
@@ -471,33 +453,25 @@ class TestPermissionService:
             },
         }
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        # Use real cache invalidation - no mocking of internal business logic
+        result = await permission_service.bulk_assign_permissions(
+            user_ids=user_ids,
+            agent_permissions=agent_permissions,
+            assigned_by_user_id=sysadmin_user.user_id,
+        )
 
-            # Mock all users exist
-            all_users = [user1, user2, sysadmin_user]
-            mock_session.execute.return_value.scalars.return_value = all_users
+        assert len(result) == 2
+        assert user1.user_id in result
+        assert user2.user_id in result
 
-            # Mock no existing permissions
-            mock_session.execute.return_value.scalars.side_effect = [all_users, [], []]
-
-            with patch.object(permission_service, "_invalidate_user_cache") as mock_invalidate:
-                result = await permission_service.bulk_assign_permissions(
-                    user_ids=user_ids,
-                    agent_permissions=agent_permissions,
-                    assigned_by_user_id=sysadmin_user.user_id,
-                )
-
-                assert len(result) == 2
-                assert user1.user_id in result
-                assert user2.user_id in result
-
-                # Should add 4 permissions + 4 audit logs (2 users × 2 agents × 2 records each)
-                assert mock_session.add.call_count == 8
-                mock_session.commit.assert_called_once()
-
-                # Should invalidate cache for both users
-                assert mock_invalidate.call_count == 2
+        # Verify permissions were created in database
+        stmt = select(UserAgentPermission).where(
+            UserAgentPermission.user_id == user1.user_id,
+            UserAgentPermission.agent_name == AgentName.CLIENT_MANAGEMENT
+        )
+        user1_client_perm = test_session.exec(stmt).first()
+        assert user1_client_perm is not None
+        assert user1_client_perm.permissions == agent_permissions[AgentName.CLIENT_MANAGEMENT]
 
     async def test_bulk_assign_permissions_empty_list(
         self,
@@ -516,8 +490,9 @@ class TestPermissionService:
     async def test_apply_template_to_users_success(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         sysadmin_user: User,
+        mock_redis: MagicMock,
     ) -> None:
         """Test successful template application."""
         template = create_test_template(
@@ -538,176 +513,171 @@ class TestPermissionService:
             },
         )
         user1 = create_test_user(role=UserRole.USER)
+        
+        # Add template and user to database
+        test_session.add(template)
+        test_session.add(user1)
+        test_session.commit()
+        test_session.refresh(template)
+        test_session.refresh(user1)
+        
         user_ids = [user1.user_id]
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        # Use real cache invalidation - no mocking of internal business logic
+        result = await permission_service.apply_template_to_users(
+            template_id=template.template_id,
+            user_ids=user_ids,
+            applied_by_user_id=sysadmin_user.user_id,
+        )
 
-            # Mock template exists
-            mock_session.execute.return_value.scalar_one_or_none.side_effect = [
-                template,
-                sysadmin_user,
-                None,
-                None,
-            ]
-
-            with patch.object(permission_service, "_invalidate_user_cache") as mock_invalidate:
-                result = await permission_service.apply_template_to_users(
-                    template_id=template.template_id,
-                    user_ids=user_ids,
-                    applied_by_user_id=sysadmin_user.user_id,
-                )
-
-                assert result["successful"] == 1
-                assert result["failed"] == 0
-                assert len(result["errors"]) == 0
-                mock_invalidate.assert_called_once_with(user1.user_id)
+        assert result["successful"] == 1
+        assert result["failed"] == 0
+        assert len(result["errors"]) == 0
 
     async def test_apply_template_to_users_template_not_found(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         sysadmin_user: User,
     ) -> None:
         """Test template application with non-existent template."""
-        template_id = uuid4()
+        template_id = uuid4()  # Non-existent template ID
         user_ids = [uuid4()]
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        with pytest.raises(NotFoundError) as excinfo:
+            await permission_service.apply_template_to_users(
+                template_id=template_id,
+                user_ids=user_ids,
+                applied_by_user_id=sysadmin_user.user_id,
+            )
 
-            # Mock template not found
-            mock_session.execute.return_value.scalar_one_or_none.return_value = None
-
-            with pytest.raises(NotFoundError) as excinfo:
-                await permission_service.apply_template_to_users(
-                    template_id=template_id,
-                    user_ids=user_ids,
-                    applied_by_user_id=sysadmin_user.user_id,
-                )
-
-            assert f"Template {template_id} not found" in str(excinfo.value.message)
+        assert f"Template {template_id} not found" in str(excinfo.value.message)
 
     async def test_list_templates_success(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
     ) -> None:
         """Test successful template listing."""
         templates = [create_test_template() for _ in range(3)]
+        
+        # Add templates to database
+        for template in templates:
+            test_session.add(template)
+        test_session.commit()
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        result_templates, total = await permission_service.list_templates(page=1, page_size=10)
 
-            # Mock total count and templates
-            mock_session.execute.return_value.scalar.return_value = 3
-            mock_session.execute.return_value.scalars.return_value = templates
-
-            result_templates, total = await permission_service.list_templates(page=1, page_size=10)
-
-            assert len(result_templates) == 3
-            assert total == 3
+        assert len(result_templates) == 3
+        assert total == 3
 
     async def test_create_template_success(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         sysadmin_user: User,
     ) -> None:
         """Test successful template creation."""
         template_name = "Test Template"
         description = "Test description"
-        permissions = {
+        input_permissions = {
             "client_management": {"create": True, "read": True, "update": False, "delete": False}
         }
+        
+        # The service will expand permissions to include all agents
+        expected_permissions = {
+            "client_management": {"create": True, "read": True, "update": False, "delete": False},
+            "pdf_processing": {"create": False, "read": False, "update": False, "delete": False},
+            "reports_analysis": {"create": False, "read": False, "update": False, "delete": False},
+            "audio_recording": {"create": False, "read": False, "update": False, "delete": False},
+        }
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        template = await permission_service.create_template(
+            template_name=template_name,
+            description=description,
+            permissions=input_permissions,
+            created_by_user_id=sysadmin_user.user_id,
+        )
 
-            await permission_service.create_template(
-                template_name=template_name,
-                description=description,
-                permissions=permissions,
-                created_by_user_id=sysadmin_user.user_id,
-            )
-
-            mock_session.add.assert_called_once()
-            mock_session.commit.assert_called_once()
-            mock_session.refresh.assert_called_once()
+        # Verify template was created in database
+        assert template.template_name == template_name
+        assert template.description == description
+        assert template.permissions == expected_permissions
+        
+        # Verify it exists in database
+        stmt = select(PermissionTemplate).where(
+            PermissionTemplate.template_id == template.template_id
+        )
+        db_template = test_session.exec(stmt).first()
+        assert db_template is not None
+        assert db_template.template_name == template_name
 
     async def test_update_template_success(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         sysadmin_user: User,
     ) -> None:
         """Test successful template update."""
         template = create_test_template()
+        test_session.add(template)
+        test_session.commit()
+        test_session.refresh(template)
+        
         new_name = "Updated Template"
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        result = await permission_service.update_template(
+            template_id=template.template_id,
+            template_name=new_name,
+            description=None,
+            permissions=None,
+            updated_by_user_id=sysadmin_user.user_id,
+        )
 
-            # Mock template exists
-            mock_session.execute.return_value.scalar_one_or_none.return_value = template
-
-            result = await permission_service.update_template(
-                template_id=template.template_id,
-                template_name=new_name,
-                description=None,
-                permissions=None,
-                updated_by_user_id=sysadmin_user.user_id,
-            )
-
-            assert result is not None
-            assert template.template_name == new_name
-            mock_session.commit.assert_called_once()
-            mock_session.refresh.assert_called_once()
+        assert result is not None
+        assert result.template_name == new_name
+        
+        # Verify update in database
+        test_session.refresh(template)
+        assert template.template_name == new_name
 
     async def test_delete_template_success(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
     ) -> None:
         """Test successful template deletion."""
         template = create_test_template()
+        test_session.add(template)
+        test_session.commit()
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        result = await permission_service.delete_template(template.template_id)
 
-            # Mock template exists
-            mock_session.execute.return_value.scalar_one_or_none.return_value = template
-
-            result = await permission_service.delete_template(template.template_id)
-
-            assert result is True
-            mock_session.delete.assert_called_once_with(template)
-            mock_session.commit.assert_called_once()
+        assert result is True
+        
+        # Verify deletion from database
+        stmt = select(PermissionTemplate).where(
+            PermissionTemplate.template_id == template.template_id
+        )
+        deleted_template = test_session.exec(stmt).first()
+        assert deleted_template is None
 
     async def test_delete_template_not_found(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
     ) -> None:
         """Test deleting non-existent template."""
-        template_id = uuid4()
+        template_id = uuid4()  # Non-existent template ID
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        result = await permission_service.delete_template(template_id)
 
-            # Mock template not found
-            mock_session.execute.return_value.scalar_one_or_none.return_value = None
-
-            result = await permission_service.delete_template(template_id)
-
-            assert result is False
-            mock_session.delete.assert_not_called()
-            mock_session.commit.assert_not_called()
+        assert result is False
 
     async def test_get_audit_log_success(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
         regular_user: User,
     ) -> None:
         """Test successful audit log retrieval."""
@@ -715,58 +685,55 @@ class TestPermissionService:
             create_test_permission_audit_log(user_id=regular_user.user_id, action="CREATE"),
             create_test_permission_audit_log(user_id=regular_user.user_id, action="UPDATE"),
         ]
+        
+        # Add audit logs to database
+        for audit_log in audit_logs:
+            test_session.add(audit_log)
+        test_session.commit()
 
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        result_logs, total = await permission_service.get_audit_log(
+            user_id=regular_user.user_id,
+            page=1,
+            page_size=10,
+        )
 
-            # Mock total count and audit logs
-            mock_session.execute.return_value.scalar.return_value = 2
-            mock_session.execute.return_value.scalars.return_value = audit_logs
-
-            result_logs, total = await permission_service.get_audit_log(
-                user_id=regular_user.user_id,
-                page=1,
-                page_size=10,
-            )
-
-            assert len(result_logs) == 2
-            assert total == 2
+        assert len(result_logs) == 2
+        assert total == 2
 
     async def test_get_permission_stats_success(
         self,
         permission_service: PermissionService,
-        mock_session: MagicMock,
+        test_session: Session,
+        regular_user: User,
+        admin_user: User,
+        sysadmin_user: User,
     ) -> None:
         """Test successful permission statistics retrieval."""
-        with patch.object(permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_session
+        # Create some permissions and templates in database for real stats
+        permission1 = create_test_permission(
+            user_id=regular_user.user_id,
+            agent_name=AgentName.CLIENT_MANAGEMENT,
+        )
+        permission2 = create_test_permission(
+            user_id=admin_user.user_id,
+            agent_name=AgentName.PDF_PROCESSING,
+        )
+        template = create_test_template()
+        
+        test_session.add(permission1)
+        test_session.add(permission2)
+        test_session.add(template)
+        test_session.commit()
 
-            # Mock various statistics queries
-            mock_session.execute.return_value.scalar.side_effect = [
-                100,
-                75,
-                5,
-                20,
-            ]  # total_users, users_with_perms, templates, recent_changes
+        result = await permission_service.get_permission_stats()
 
-            # Mock agent usage
-            class MockRow:
-                def __init__(self, agent_name: str, permission_count: int):
-                    self.agent_name = agent_name
-                    self.permission_count = permission_count
-
-            mock_session.execute.return_value.__iter__.return_value = [
-                MockRow("client_management", 50),
-                MockRow("pdf_processing", 25),
-            ]
-
-            result = await permission_service.get_permission_stats()
-
-            assert result["total_users"] == 100
-            assert result["users_with_permissions"] == 75
-            assert result["templates_in_use"] == 5
-            assert result["recent_changes"] == 20
-            assert "agent_usage" in result
+        # Basic stats should be calculated from real database data
+        assert "total_users" in result
+        assert "users_with_permissions" in result
+        assert "templates_in_use" in result
+        assert "recent_changes" in result
+        assert "agent_usage" in result
+        assert result["total_users"] >= 3  # At least our test users
 
     async def test_cache_invalidation(
         self,

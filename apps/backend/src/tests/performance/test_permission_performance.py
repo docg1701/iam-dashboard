@@ -37,47 +37,48 @@ class TestPermissionPerformance:
         return redis_mock
 
     @pytest.fixture
-    def fast_permission_service(self, mock_redis: MagicMock) -> PermissionService:
+    def fast_permission_service(self, test_session: Session, mock_redis: MagicMock) -> PermissionService:
         """Create PermissionService optimized for performance testing."""
-        service = PermissionService()
+        service = PermissionService(session=test_session)
         service.redis_client = mock_redis
         service._is_testing = False  # Enable Redis operations for performance testing
         return service
 
-    @pytest.fixture
-    def mock_fast_session(self) -> MagicMock:
-        """Create a fast mock database session."""
-        session = MagicMock(spec=Session)
-        # Mock fast database responses
-        session.execute.return_value.scalar.return_value = True
-        session.execute.return_value.scalar_one_or_none.return_value = None
-        session.execute.return_value.scalars.return_value = []
-        session.execute.return_value.fetchall.return_value = []
-        session.close = MagicMock()
-        return session
+    # Removed mock_fast_session - use real test_session for accurate performance testing
 
     async def test_single_permission_check_performance(
         self,
         fast_permission_service: PermissionService,
-        mock_fast_session: MagicMock,
+        test_session: Session,
     ) -> None:
         """Test that a single permission check completes within 50ms."""
         user_id = uuid4()
+        
+        # Create test user and permission in database
+        from src.tests.factories import create_test_user, create_test_permission
+        user = create_test_user()
+        user.user_id = user_id
+        test_session.add(user)
+        
+        permission = create_test_permission(
+            user_id=user_id,
+            agent_name=AgentName.CLIENT_MANAGEMENT,
+            permissions={"read": True, "create": False, "update": False, "delete": False}
+        )
+        test_session.add(permission)
+        test_session.commit()
 
-        with patch.object(fast_permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_fast_session
+        start_time = time.time()
 
-            start_time = time.time()
+        result = await fast_permission_service.check_user_permission(
+            user_id=user_id, agent_name=AgentName.CLIENT_MANAGEMENT, operation="read"
+        )
 
-            result = await fast_permission_service.check_user_permission(
-                user_id=user_id, agent_name=AgentName.CLIENT_MANAGEMENT, operation="read"
-            )
+        end_time = time.time()
+        duration_ms = (end_time - start_time) * 1000
 
-            end_time = time.time()
-            duration_ms = (end_time - start_time) * 1000
-
-            assert result is True
-            assert duration_ms < 50, f"Permission check took {duration_ms}ms, should be <50ms"
+        assert result is True
+        assert duration_ms < 50, f"Permission check took {duration_ms}ms, should be <50ms"
 
     async def test_cached_permission_check_performance(
         self,
@@ -143,94 +144,85 @@ class TestPermissionPerformance:
         self,
         fast_permission_service: PermissionService,
         mock_redis: MagicMock,
-        mock_fast_session: MagicMock,
+        test_session: Session,
     ) -> None:
         """Test that permission matrix retrieval is fast."""
         user_id = uuid4()
 
-        # Mock cache miss
+        # Mock cache miss (external dependency)
         mock_redis.get.return_value = None
 
-        # Mock user exists
+        # Create real user and permissions in database
         user = create_test_user()
         user.user_id = user_id
-        mock_fast_session.execute.return_value.scalar_one_or_none.return_value = user
-
-        # Mock matrix data
-        matrix_rows = [
-            MagicMock(
-                agent_name=agent.value,
-                create_permission=True,
-                read_permission=True,
-                update_permission=False,
-                delete_permission=False,
+        test_session.add(user)
+        
+        # Create permissions for all agents
+        for agent in AgentName:
+            permission = create_test_permission(
+                user_id=user_id,
+                agent_name=agent,
+                permissions={"create": True, "read": True, "update": False, "delete": False}
             )
-            for agent in AgentName
-        ]
-        mock_fast_session.execute.return_value.fetchall.return_value = matrix_rows
+            test_session.add(permission)
+        
+        test_session.commit()
 
-        with patch.object(fast_permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_fast_session
+        start_time = time.time()
 
-            start_time = time.time()
+        result = await fast_permission_service.get_user_permissions(user_id)
 
-            result = await fast_permission_service.get_user_permissions(user_id)
+        end_time = time.time()
+        duration_ms = (end_time - start_time) * 1000
 
-            end_time = time.time()
-            duration_ms = (end_time - start_time) * 1000
-
-            assert len(result) == 4  # All 4 agents
-            assert duration_ms < 100, (
-                f"Permission matrix retrieval took {duration_ms}ms, should be <100ms"
-            )
+        assert len(result) == 4  # All 4 agents
+        assert duration_ms < 100, (
+            f"Permission matrix retrieval took {duration_ms}ms, should be <100ms"
+        )
 
     async def test_permission_assignment_performance(
         self,
         fast_permission_service: PermissionService,
-        mock_fast_session: MagicMock,
+        test_session: Session,
     ) -> None:
         """Test that permission assignment completes quickly."""
         user_id = uuid4()
         admin_id = uuid4()
         permissions = {"create": True, "read": True, "update": False, "delete": False}
 
-        # Mock users exist
+        # Create real users in database
         user = create_test_user(role=UserRole.USER)
         user.user_id = user_id
         admin = create_test_user(role=UserRole.SYSADMIN)
         admin.user_id = admin_id
+        
+        test_session.add(user)
+        test_session.add(admin)
+        test_session.commit()
 
-        users = {user_id: user, admin_id: admin}
-        mock_fast_session.execute.return_value.scalars.return_value = users.values()
+        # Mock cache invalidation only (external dependency)
+        with patch.object(fast_permission_service, "_invalidate_user_cache"):
+            start_time = time.time()
 
-        # Mock no existing permission
-        mock_fast_session.execute.return_value.scalar_one_or_none.return_value = None
+            result = await fast_permission_service.assign_permission(
+                user_id=user_id,
+                agent_name=AgentName.CLIENT_MANAGEMENT,
+                permissions=permissions,
+                created_by_user_id=admin_id,
+            )
 
-        with patch.object(fast_permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_fast_session
+            end_time = time.time()
+            duration_ms = (end_time - start_time) * 1000
 
-            with patch.object(fast_permission_service, "_invalidate_user_cache"):
-                start_time = time.time()
-
-                result = await fast_permission_service.assign_permission(
-                    user_id=user_id,
-                    agent_name=AgentName.CLIENT_MANAGEMENT,
-                    permissions=permissions,
-                    created_by_user_id=admin_id,
-                )
-
-                end_time = time.time()
-                duration_ms = (end_time - start_time) * 1000
-
-                assert result is not None
-                assert duration_ms < 200, (
-                    f"Permission assignment took {duration_ms}ms, should be <200ms"
-                )
+            assert result is not None
+            assert duration_ms < 200, (
+                f"Permission assignment took {duration_ms}ms, should be <200ms"
+            )
 
     async def test_bulk_permission_assignment_performance(
         self,
         fast_permission_service: PermissionService,
-        mock_fast_session: MagicMock,
+        test_session: Session,
     ) -> None:
         """Test that bulk permission assignment scales well."""
         user_ids = [uuid4() for _ in range(50)]
@@ -251,47 +243,41 @@ class TestPermissionPerformance:
             },
         }
 
-        # Mock users exist
-        users = []
+        # Create real users in database
         for user_id in user_ids:
             user = create_test_user(role=UserRole.USER)
             user.user_id = user_id
-            users.append(user)
+            test_session.add(user)
 
         admin = create_test_user(role=UserRole.SYSADMIN)
         admin.user_id = admin_id
-        users.append(admin)
+        test_session.add(admin)
+        test_session.commit()
 
-        mock_fast_session.execute.return_value.scalars.side_effect = [
-            users,  # All users query
-        ] + [[] for _ in user_ids]  # Empty existing permissions for each user
+        # Mock cache invalidation only (external dependency)
+        with patch.object(fast_permission_service, "_invalidate_user_cache"):
+            start_time = time.time()
 
-        with patch.object(fast_permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_fast_session
+            result = await fast_permission_service.bulk_assign_permissions(
+                user_ids=user_ids,
+                agent_permissions=agent_permissions,
+                assigned_by_user_id=admin_id,
+            )
 
-            with patch.object(fast_permission_service, "_invalidate_user_cache"):
-                start_time = time.time()
+            end_time = time.time()
+            duration_ms = (end_time - start_time) * 1000
 
-                result = await fast_permission_service.bulk_assign_permissions(
-                    user_ids=user_ids,
-                    agent_permissions=agent_permissions,
-                    assigned_by_user_id=admin_id,
-                )
+            assert len(result) == 50
+            # Bulk operations should be efficient
+            assert duration_ms < 2000, (
+                f"Bulk assignment took {duration_ms}ms, should be <2000ms"
+            )
 
-                end_time = time.time()
-                duration_ms = (end_time - start_time) * 1000
-
-                assert len(result) == 50
-                # Bulk operations should be efficient
-                assert duration_ms < 2000, (
-                    f"Bulk assignment took {duration_ms}ms, should be <2000ms"
-                )
-
-                # Check per-user performance
-                avg_per_user_ms = duration_ms / len(user_ids)
-                assert avg_per_user_ms < 40, (
-                    f"Average per-user bulk assignment took {avg_per_user_ms}ms, should be <40ms"
-                )
+            # Check per-user performance
+            avg_per_user_ms = duration_ms / len(user_ids)
+            assert avg_per_user_ms < 40, (
+                f"Average per-user bulk assignment took {avg_per_user_ms}ms, should be <40ms"
+            )
 
     async def test_cache_invalidation_performance(
         self,
@@ -320,17 +306,13 @@ class TestPermissionPerformance:
     async def test_database_error_handling_performance(
         self,
         fast_permission_service: PermissionService,
-        mock_fast_session: MagicMock,
+        test_session: Session,
     ) -> None:
         """Test that error handling doesn't significantly impact performance."""
         user_id = uuid4()
 
-        # Mock database error
-        mock_fast_session.execute.side_effect = DatabaseError("Database timeout")
-
-        with patch.object(fast_permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_fast_session
-
+        # Mock database connection failure (external system failure)
+        with patch.object(test_session, "execute", side_effect=DatabaseError("Database timeout")):
             start_time = time.time()
 
             with pytest.raises(DatabaseError):
@@ -348,38 +330,39 @@ class TestPermissionPerformance:
         self,
         fast_permission_service: PermissionService,
         mock_redis: MagicMock,
-        mock_fast_session: MagicMock,
+        test_session: Session,
     ) -> None:
         """Test performance when Redis is unavailable (fallback to database)."""
         user_id = uuid4()
 
-        # Mock Redis failure
+        # Mock Redis failure (external system failure)
         mock_redis.get.side_effect = Exception("Redis connection failed")
 
-        # Mock database success
-        mock_fast_session.execute.return_value.scalar.return_value = True
+        # Create real permission in database
+        user = create_test_user()
+        user.user_id = user_id
+        test_session.add(user)
+        
         permission = create_test_permission(
             user_id=user_id,
             agent_name=AgentName.CLIENT_MANAGEMENT,
             permissions={"create": True, "read": True, "update": False, "delete": False},
         )
-        mock_fast_session.execute.return_value.scalar_one_or_none.return_value = permission
+        test_session.add(permission)
+        test_session.commit()
 
-        with patch.object(fast_permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_fast_session
+        start_time = time.time()
 
-            start_time = time.time()
+        result = await fast_permission_service.check_user_permission(
+            user_id=user_id, agent_name=AgentName.CLIENT_MANAGEMENT, operation="read"
+        )
 
-            result = await fast_permission_service.check_user_permission(
-                user_id=user_id, agent_name=AgentName.CLIENT_MANAGEMENT, operation="read"
-            )
+        end_time = time.time()
+        duration_ms = (end_time - start_time) * 1000
 
-            end_time = time.time()
-            duration_ms = (end_time - start_time) * 1000
-
-            assert result is True
-            # Even without Redis, should still be reasonably fast
-            assert duration_ms < 100, f"Database fallback took {duration_ms}ms, should be <100ms"
+        assert result is True
+        # Even without Redis, should still be reasonably fast
+        assert duration_ms < 100, f"Database fallback took {duration_ms}ms, should be <100ms"
 
     def test_synchronous_performance_with_threading(
         self,
@@ -441,7 +424,6 @@ class TestPermissionPerformance:
         self,
         fast_permission_service: PermissionService,
         mock_redis: MagicMock,
-        mock_fast_session: MagicMock,  # noqa: ARG002  # Mock fixture not used in this test
     ) -> None:
         """Test that memory usage remains reasonable with large permission matrices."""
         # Create a large user set
@@ -478,14 +460,14 @@ class TestPermissionPerformance:
     async def test_template_application_performance(
         self,
         fast_permission_service: PermissionService,
-        mock_fast_session: MagicMock,
+        test_session: Session,
     ) -> None:
         """Test that template application to multiple users is efficient."""
         template_id = uuid4()
         user_ids = [uuid4() for _ in range(25)]
         admin_id = uuid4()
 
-        # Mock template exists
+        # Create real template in database
         template = create_test_template(
             template_name="Performance Test Template",
             permissions={
@@ -494,39 +476,40 @@ class TestPermissionPerformance:
             },
         )
         template.template_id = template_id
+        test_session.add(template)
 
-        # Mock admin user
+        # Create real users in database
+        for user_id in user_ids:
+            user = create_test_user(role=UserRole.USER)
+            user.user_id = user_id
+            test_session.add(user)
+
         admin = create_test_user(role=UserRole.SYSADMIN)
         admin.user_id = admin_id
+        test_session.add(admin)
+        test_session.commit()
 
-        mock_fast_session.execute.return_value.scalar_one_or_none.side_effect = [
-            template,  # Template lookup
-            admin,  # Admin user lookup
-        ] + [None] * (len(user_ids) * len(AgentName))  # No existing permissions
+        # Mock cache invalidation only (external dependency)
+        with patch.object(fast_permission_service, "_invalidate_user_cache"):
+            start_time = time.time()
 
-        with patch.object(fast_permission_service, "get_db_session") as mock_get_session:
-            mock_get_session.return_value.__enter__.return_value = mock_fast_session
+            result = await fast_permission_service.apply_template_to_users(
+                template_id=template_id,
+                user_ids=user_ids,
+                applied_by_user_id=admin_id,
+            )
 
-            with patch.object(fast_permission_service, "_invalidate_user_cache"):
-                start_time = time.time()
+            end_time = time.time()
+            duration_ms = (end_time - start_time) * 1000
 
-                result = await fast_permission_service.apply_template_to_users(
-                    template_id=template_id,
-                    user_ids=user_ids,
-                    applied_by_user_id=admin_id,
-                )
+            assert result["successful"] == len(user_ids)
+            assert result["failed"] == 0
 
-                end_time = time.time()
-                duration_ms = (end_time - start_time) * 1000
-
-                assert result["successful"] == len(user_ids)
-                assert result["failed"] == 0
-
-                # Template application should be efficient
-                avg_per_user_ms = duration_ms / len(user_ids)
-                assert avg_per_user_ms < 50, (
-                    f"Average template application per user took {avg_per_user_ms}ms, should be <50ms"
-                )
-                assert duration_ms < 1500, (
-                    f"Total template application took {duration_ms}ms, should be <1500ms"
-                )
+            # Template application should be efficient
+            avg_per_user_ms = duration_ms / len(user_ids)
+            assert avg_per_user_ms < 50, (
+                f"Average template application per user took {avg_per_user_ms}ms, should be <50ms"
+            )
+            assert duration_ms < 1500, (
+                f"Total template application took {duration_ms}ms, should be <1500ms"
+            )
