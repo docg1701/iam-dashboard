@@ -24,7 +24,7 @@ class TestClientSearchParams:
         search = ClientSearchParams()
 
         assert search.full_name is None
-        assert search.ssn is None
+        assert search.cpf is None
         assert search.status is None
         assert search.created_after is None
         assert search.created_before is None
@@ -36,7 +36,7 @@ class TestClientSearchParams:
 
         assert search.full_name == "John"
         assert search.status == ClientStatus.ACTIVE
-        assert search.ssn is None
+        assert search.cpf is None
         assert search.created_after is None
         assert search.created_before is None
 
@@ -48,14 +48,14 @@ class TestClientSearchParams:
 
         search = ClientSearchParams(
             full_name="John Doe",
-            ssn="123-45-6789",
+            cpf="123.456.789-09",
             status=ClientStatus.ACTIVE,
             created_after=created_after,
             created_before=created_before,
         )
 
         assert search.full_name == "John Doe"
-        assert search.ssn == "123-45-6789"
+        assert search.cpf == "123.456.789-09"
         assert search.status == ClientStatus.ACTIVE
         assert search.created_after == created_after
         assert search.created_before == created_before
@@ -77,11 +77,11 @@ class TestClientCreate:
     def test_client_create_minimal(self) -> None:
         """Test ClientCreate with minimal required fields."""
         client_create = ClientCreate(
-            full_name="John Doe", ssn="123-45-6789", birth_date=date(1990, 1, 1)
+            full_name="John Doe", cpf="123.456.789-09", birth_date=date(1990, 1, 1)
         )
 
         assert client_create.full_name == "John Doe"
-        assert client_create.ssn == "123-45-6789"
+        assert client_create.cpf == "123.456.789-09"
         assert client_create.birth_date == date(1990, 1, 1)
         assert client_create.notes is None
 
@@ -91,52 +91,46 @@ class TestClientCreate:
         notes = "Important client notes"
 
         client_create = ClientCreate(
-            full_name="Jane Smith", ssn="987-65-4321", birth_date=birth_date, notes=notes
+            full_name="Jane Smith", cpf="987.654.321-00", birth_date=birth_date, notes=notes
         )
 
         assert client_create.full_name == "Jane Smith"
-        assert client_create.ssn == "987-65-4321"
+        assert client_create.cpf == "987.654.321-00"
         assert client_create.birth_date == birth_date
         assert client_create.notes == notes
 
-    def test_client_create_ssn_validation_valid(self) -> None:
-        """Test ClientCreate SSN validation with valid SSNs."""
-        valid_ssns = [
-            "123-45-6789",
-            "987-65-4321",
-            "555-12-3456",
-            "111-11-1111",  # Valid format
+    def test_client_create_cpf_validation_valid(self) -> None:
+        """Test ClientCreate CPF validation with valid CPFs."""
+        valid_cpfs = [
+            "123.456.789-09",
+            "987.654.321-00",
         ]
 
-        for ssn in valid_ssns:
-            client = ClientCreate(full_name="Test Client", ssn=ssn, birth_date=date(1990, 1, 1))
-            assert client.ssn == ssn
+        for cpf in valid_cpfs:
+            client = ClientCreate(full_name="Test Client", cpf=cpf, birth_date=date(1990, 1, 1))
+            assert client.cpf == cpf
 
-    def test_client_create_ssn_validation_invalid(self) -> None:
-        """Test ClientCreate SSN validation with invalid SSNs."""
-        invalid_ssns = [
-            "123456789",  # No dashes
-            "123-456-789",  # Wrong dash placement
-            "12-45-6789",  # Too short area
-            "123-4-6789",  # Too short group
-            "123-45-789",  # Too short serial
-            "abc-de-fghi",  # Letters
-            "123-45-67890",  # Too long serial
+    def test_client_create_cpf_validation_invalid(self) -> None:
+        """Test ClientCreate CPF validation with invalid CPFs."""
+        invalid_cpfs = [
+            "123456789",  # Too short
+            "123.456.789.09",  # Wrong separator
+            "123.456.789",  # Missing check digits
+            "abc.def.ghi-jk",  # Letters
+            "123.456.789-123",  # Too many check digits
             "",  # Empty
-            "123-45-XXXX",  # Letters in serial
+            "123.456.789-XX",  # Letters in check digits
         ]
 
-        for ssn in invalid_ssns:
+        for cpf in invalid_cpfs:
             with pytest.raises(ValidationError) as exc_info:
-                ClientCreate(full_name="Test Client", ssn=ssn, birth_date=date(1990, 1, 1))
+                ClientCreate(full_name="Test Client", cpf=cpf, birth_date=date(1990, 1, 1))
             error_msg = str(exc_info.value)
             # Accept either custom validation message or Pydantic regex mismatch
             assert (
-                "SSN must be in XXX-XX-XXXX format" in error_msg
+                "CPF must be in XXX.XXX.XXX-XX format" in error_msg
                 or "String should match pattern" in error_msg
-                or "area number cannot be 000" in error_msg
-                or "group number cannot be 00" in error_msg
-                or "serial number cannot be 0000" in error_msg
+                or "Invalid CPF" in error_msg
             )
 
     def test_client_create_birth_date_validation_valid(self) -> None:
@@ -154,7 +148,7 @@ class TestClientCreate:
             # Only test dates that should actually be valid (at least 13 years old)
             if birth_date <= date(today.year - 13, today.month, today.day):
                 client = ClientCreate(
-                    full_name="Test Client", ssn="123-45-6789", birth_date=birth_date
+                    full_name="Test Client", cpf="123.456.789-09", birth_date=birth_date
                 )
                 assert client.birth_date == birth_date
 
@@ -170,7 +164,7 @@ class TestClientCreate:
 
         for birth_date in invalid_dates:
             with pytest.raises(ValidationError) as exc_info:
-                ClientCreate(full_name="Test Client", ssn="123-45-6789", birth_date=birth_date)
+                ClientCreate(full_name="Test Client", cpf="123.456.789-09", birth_date=birth_date)
             error_message = str(exc_info.value)
             assert (
                 "Client must be at least 13 years old" in error_message
@@ -183,7 +177,7 @@ class TestClientCreate:
         with pytest.raises(ValidationError) as exc_info:
             ClientCreate(
                 full_name="A",  # Only 1 character
-                ssn="123-45-6789",
+                cpf="123.456.789-09",
                 birth_date=date(1990, 1, 1),
             )
         assert "at least 2 characters" in str(exc_info.value)
@@ -191,7 +185,7 @@ class TestClientCreate:
         # Too long
         long_name = "A" * 256  # 256 characters
         with pytest.raises(ValidationError) as exc_info:
-            ClientCreate(full_name=long_name, ssn="123-45-6789", birth_date=date(1990, 1, 1))
+            ClientCreate(full_name=long_name, cpf="123.456.789-09", birth_date=date(1990, 1, 1))
         assert "at most 255 characters" in str(exc_info.value)
 
     def test_client_create_notes_validation(self) -> None:
@@ -206,7 +200,7 @@ class TestClientCreate:
 
         for notes in valid_notes:
             client = ClientCreate(
-                full_name="Test Client", ssn="123-45-6789", birth_date=date(1990, 1, 1), notes=notes
+                full_name="Test Client", cpf="123.456.789-09", birth_date=date(1990, 1, 1), notes=notes
             )
             assert client.notes == notes
 
@@ -215,25 +209,24 @@ class TestClientCreate:
         with pytest.raises(ValidationError) as exc_info:
             ClientCreate(
                 full_name="Test Client",
-                ssn="123-45-6789",
+                cpf="123.456.789-09",
                 birth_date=date(1990, 1, 1),
                 notes=long_notes,
             )
         assert "at most 1000 characters" in str(exc_info.value)
 
-    def test_client_create_ssn_edge_cases(self) -> None:
-        """Test ClientCreate SSN validation edge cases to improve coverage."""
-        # Test all invalid SSN patterns that trigger specific validation errors
-        invalid_ssn_cases = [
-            ("000-12-3456", "area number cannot be 000"),
-            ("123-00-4567", "group number cannot be 00"),
-            ("123-45-0000", "serial number cannot be 0000"),
-            ("000-00-0000", "SSN cannot be all zeros"),
+    def test_client_create_cpf_edge_cases(self) -> None:
+        """Test ClientCreate CPF validation edge cases to improve coverage."""
+        # Test all invalid CPF patterns that trigger specific validation errors
+        invalid_cpf_cases = [
+            ("000.000.000-00", "Invalid CPF"),
+            ("111.111.111-11", "Invalid CPF"),
+            ("123.456.789-10", "Invalid CPF"),  # Wrong check digits
         ]
 
-        for ssn, expected_error in invalid_ssn_cases:
+        for cpf, expected_error in invalid_cpf_cases:
             with pytest.raises(ValidationError) as exc_info:
-                ClientCreate(full_name="Test Client", ssn=ssn, birth_date=date(1990, 1, 1))
+                ClientCreate(full_name="Test Client", cpf=cpf, birth_date=date(1990, 1, 1))
             error_msg = str(exc_info.value)
             assert expected_error in error_msg
 
@@ -242,7 +235,7 @@ class TestClientCreate:
         # Test name trimming
         client = ClientCreate(
             full_name="  John Doe  ",  # Name with spaces
-            ssn="123-45-6789",
+            cpf="123.456.789-09",
             birth_date=date(1990, 1, 1),
         )
         assert client.full_name == "John Doe"  # Should be trimmed
@@ -259,7 +252,7 @@ class TestClientCreate:
             with pytest.raises(ValidationError) as exc_info:
                 ClientCreate(
                     full_name=invalid_name,
-                    ssn="123-45-6789",
+                    cpf="123.456.789-09",
                     birth_date=date(1990, 1, 1),
                 )
             error_msg = str(exc_info.value)
@@ -276,7 +269,7 @@ class TestClientCreate:
         for valid_name in valid_names:
             client = ClientCreate(
                 full_name=valid_name,
-                ssn="123-45-6789",
+                cpf="123.456.789-09",
                 birth_date=date(1990, 1, 1),
             )
             assert client.full_name == valid_name
@@ -289,7 +282,7 @@ class TestClientCreate:
         exactly_13_years = date(today.year - 13, today.month, today.day)
         client = ClientCreate(
             full_name="Boundary Test",
-            ssn="123-45-6789",
+            cpf="123.456.789-09",
             birth_date=exactly_13_years,
         )
         assert client.birth_date == exactly_13_years
@@ -298,7 +291,7 @@ class TestClientCreate:
         min_date = date(1900, 1, 1)
         client = ClientCreate(
             full_name="Old Test",
-            ssn="123-45-6789",
+            cpf="123.456.789-09",
             birth_date=min_date,
         )
         assert client.birth_date == min_date
@@ -312,7 +305,7 @@ class TestClientUpdate:
         client_update = ClientUpdate()
 
         assert client_update.full_name is None
-        assert client_update.ssn is None
+        assert client_update.cpf is None
         assert client_update.birth_date is None
         assert client_update.status is None
         assert client_update.notes is None
@@ -323,7 +316,7 @@ class TestClientUpdate:
 
         assert client_update.full_name == "Updated Name"
         assert client_update.status == "inactive"
-        assert client_update.ssn is None
+        assert client_update.cpf is None
         assert client_update.birth_date is None
         assert client_update.notes is None
 
@@ -333,52 +326,49 @@ class TestClientUpdate:
 
         client_update = ClientUpdate(
             full_name="Fully Updated Name",
-            ssn="555-12-3456",
+            cpf="683.005.360-94",
             birth_date=birth_date,
             status="archived",
             notes="Updated notes",
         )
 
         assert client_update.full_name == "Fully Updated Name"
-        assert client_update.ssn == "555-12-3456"
+        assert client_update.cpf == "683.005.360-94"
         assert client_update.birth_date == birth_date
         assert client_update.status == "archived"
         assert client_update.notes == "Updated notes"
 
-    def test_client_update_ssn_validation_valid(self) -> None:
-        """Test ClientUpdate SSN validation with valid SSNs and None."""
-        valid_ssns = [
+    def test_client_update_cpf_validation_valid(self) -> None:
+        """Test ClientUpdate CPF validation with valid CPFs and None."""
+        valid_cpfs = [
             None,  # None is allowed
-            "123-45-6789",
-            "987-65-4321",
-            "555-12-3456",
+            "123.456.789-09",
+            "987.654.321-00",
         ]
 
-        for ssn in valid_ssns:
-            client_update = ClientUpdate(ssn=ssn)
-            assert client_update.ssn == ssn
+        for cpf in valid_cpfs:
+            client_update = ClientUpdate(cpf=cpf)
+            assert client_update.cpf == cpf
 
-    def test_client_update_ssn_validation_invalid(self) -> None:
-        """Test ClientUpdate SSN validation with invalid SSNs."""
-        invalid_ssns = [
-            "123456789",  # No dashes
-            "123-456-789",  # Wrong format
-            "abc-de-fghi",  # Letters
+    def test_client_update_cpf_validation_invalid(self) -> None:
+        """Test ClientUpdate CPF validation with invalid CPFs."""
+        invalid_cpfs = [
+            "123456789",  # Too short
+            "123.456.789.09",  # Wrong separator
+            "abc.def.ghi-jk",  # Letters
             "",  # Empty string
-            "123-45-XXXX",  # Invalid characters
+            "123.456.789-XX",  # Invalid characters
         ]
 
-        for ssn in invalid_ssns:
+        for cpf in invalid_cpfs:
             with pytest.raises(ValidationError) as exc_info:
-                ClientUpdate(ssn=ssn)
+                ClientUpdate(cpf=cpf)
             error_msg = str(exc_info.value)
             # Accept either custom validation message or Pydantic regex mismatch
             assert (
-                "SSN must be in XXX-XX-XXXX format" in error_msg
+                "CPF must be in XXX.XXX.XXX-XX format" in error_msg
                 or "String should match pattern" in error_msg
-                or "area number cannot be 000" in error_msg
-                or "group number cannot be 00" in error_msg
-                or "serial number cannot be 0000" in error_msg
+                or "Invalid CPF" in error_msg
             )
 
     def test_client_update_birth_date_validation_valid(self) -> None:
@@ -415,19 +405,18 @@ class TestClientUpdate:
                 or "Birth date cannot be before 1900-01-01" in error_message
             )
 
-    def test_client_update_ssn_edge_cases(self) -> None:
-        """Test ClientUpdate SSN validation edge cases to improve coverage."""
-        # Test all invalid SSN patterns that trigger specific validation errors
-        invalid_ssn_cases = [
-            ("000-12-3456", "area number cannot be 000"),
-            ("123-00-4567", "group number cannot be 00"),
-            ("123-45-0000", "serial number cannot be 0000"),
-            ("000-00-0000", "SSN cannot be all zeros"),
+    def test_client_update_cpf_edge_cases(self) -> None:
+        """Test ClientUpdate CPF validation edge cases to improve coverage."""
+        # Test all invalid CPF patterns that trigger specific validation errors
+        invalid_cpf_cases = [
+            ("000.000.000-00", "Invalid CPF"),  # All zeros
+            ("111.111.111-11", "Invalid CPF"),  # All same digits
+            ("123.456.789-10", "Invalid CPF"),  # Wrong check digits
         ]
 
-        for ssn, expected_error in invalid_ssn_cases:
+        for cpf, expected_error in invalid_cpf_cases:
             with pytest.raises(ValidationError) as exc_info:
-                ClientUpdate(ssn=ssn)
+                ClientUpdate(cpf=cpf)
             error_msg = str(exc_info.value)
             assert expected_error in error_msg
 
@@ -483,7 +472,7 @@ class TestClientUpdate:
         with pytest.raises(ValidationError) as exc_info:
             ClientCreate(
                 full_name="  A  ",  # Only 1 character after trimming
-                ssn="123-45-6789",
+                cpf="123.456.789-09",
                 birth_date=date(1990, 1, 1),
             )
         assert "at least 2 characters after trimming" in str(exc_info.value)
@@ -495,29 +484,29 @@ class TestClientUpdate:
             ClientUpdate(full_name="  A  ")  # Only 1 character after trimming
         assert "at least 2 characters after trimming" in str(exc_info.value)
 
-    def test_client_create_ssn_invalid_format_edge_case(self) -> None:
-        """Test ClientCreate SSN validation with format edge case."""
+    def test_client_create_cpf_invalid_format_edge_case(self) -> None:
+        """Test ClientCreate CPF validation with format edge case."""
         # Test format that doesn't match regex before other validations
         with pytest.raises(ValidationError) as exc_info:
             ClientCreate(
                 full_name="Test Client",
-                ssn="12-345-6789",  # Wrong format - should trigger regex error
+                cpf="123456789-10",  # Wrong format - should trigger regex error
                 birth_date=date(1990, 1, 1),
             )
         error_msg = str(exc_info.value)
         assert (
-            "SSN must be in XXX-XX-XXXX format" in error_msg
+            "CPF must be in XXX.XXX.XXX-XX format" in error_msg
             or "String should match pattern" in error_msg
         )
 
-    def test_client_update_ssn_invalid_format_edge_case(self) -> None:
-        """Test ClientUpdate SSN validation with format edge case."""
+    def test_client_update_cpf_invalid_format_edge_case(self) -> None:
+        """Test ClientUpdate CPF validation with format edge case."""
         # Test format that doesn't match regex before other validations
         with pytest.raises(ValidationError) as exc_info:
-            ClientUpdate(ssn="12-345-6789")  # Wrong format - should trigger regex error
+            ClientUpdate(cpf="123456789-10")  # Wrong format - should trigger regex error
         error_msg = str(exc_info.value)
         assert (
-            "SSN must be in XXX-XX-XXXX format" in error_msg
+            "CPF must be in XXX.XXX.XXX-XX format" in error_msg
             or "String should match pattern" in error_msg
         )
 
@@ -537,7 +526,7 @@ class TestClientResponse:
         client_response = ClientResponse(
             client_id=client_id,
             full_name="John Doe",
-            ssn="123-45-6789",  # Will be masked
+            cpf="123.456.789-09",  # Will be masked
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             notes="Some notes",
@@ -549,7 +538,7 @@ class TestClientResponse:
 
         assert client_response.client_id == client_id
         assert client_response.full_name == "John Doe"
-        assert client_response.ssn == "***-**-6789"  # Masked
+        assert client_response.cpf == "***.***.***-09"  # Masked
         assert client_response.birth_date == date(1990, 1, 1)
         assert client_response.status == ClientStatus.ACTIVE
         assert client_response.notes == "Some notes"
@@ -558,14 +547,13 @@ class TestClientResponse:
         assert client_response.created_by == created_by
         assert client_response.updated_by == updated_by
 
-    def test_client_response_ssn_masking_normal(self) -> None:
+    def test_client_response_cpf_masking_normal(self) -> None:
         """Test ClientResponse SSN masking with normal SSNs."""
 
         test_cases = [
-            ("123-45-6789", "***-**-6789"),
-            ("987-65-4321", "***-**-4321"),
-            ("555-12-3456", "***-**-3456"),
-            ("000-00-0001", "***-**-0001"),
+            ("123.456.789-09", "***.***.***-09"),
+            ("987.654.321-00", "***.***.***-00"),
+            ("111.444.777-35", "***.***.***-35"),
         ]
 
         client_id = uuid4()
@@ -574,11 +562,11 @@ class TestClientResponse:
         created_at = datetime(2023, 1, 1)
         updated_at = datetime(2023, 1, 1)
 
-        for original_ssn, expected_masked in test_cases:
+        for original_cpf, expected_masked in test_cases:
             client_response = ClientResponse(
                 client_id=client_id,
                 full_name="Test Client",
-                ssn=original_ssn,
+                cpf=original_cpf,
                 birth_date=date(1990, 1, 1),
                 status=ClientStatus.ACTIVE,
                 notes=None,
@@ -587,16 +575,16 @@ class TestClientResponse:
                 created_by=created_by,
                 updated_by=updated_by,
             )
-            assert client_response.ssn == expected_masked
+            assert client_response.cpf == expected_masked
 
-    def test_client_response_ssn_masking_edge_cases(self) -> None:
+    def test_client_response_cpf_masking_edge_cases(self) -> None:
         """Test ClientResponse SSN masking with edge cases."""
 
         test_cases = [
-            ("123", "***-**-****"),  # Too short, fallback
-            ("12", "***-**-****"),  # Too short, fallback
-            ("1", "***-**-****"),  # Too short, fallback
-            ("", "***-**-****"),  # Empty, fallback
+            ("123", "***.***.***-**"),  # Too short, fallback
+            ("12", "***.***.***-**"),  # Too short, fallback
+            ("1", "***.***.***-**"),  # Too short, fallback
+            ("", "***.***.***-**"),  # Empty, fallback
         ]
 
         client_id = uuid4()
@@ -605,11 +593,11 @@ class TestClientResponse:
         created_at = datetime(2023, 1, 1)
         updated_at = datetime(2023, 1, 1)
 
-        for original_ssn, expected_masked in test_cases:
+        for original_cpf, expected_masked in test_cases:
             client_response = ClientResponse(
                 client_id=client_id,
                 full_name="Test Client",
-                ssn=original_ssn,
+                cpf=original_cpf,
                 birth_date=date(1990, 1, 1),
                 status=ClientStatus.ACTIVE,
                 notes=None,
@@ -618,7 +606,7 @@ class TestClientResponse:
                 created_by=created_by,
                 updated_by=updated_by,
             )
-            assert client_response.ssn == expected_masked
+            assert client_response.cpf == expected_masked
 
     def test_client_response_minimal(self) -> None:
         """Test ClientResponse with minimal required fields."""
@@ -632,7 +620,7 @@ class TestClientResponse:
         client_response = ClientResponse(
             client_id=client_id,
             full_name="Minimal Client",
-            ssn="123-45-6789",
+            cpf="123.456.789-09",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             notes=None,
@@ -644,7 +632,7 @@ class TestClientResponse:
 
         assert client_response.client_id == client_id
         assert client_response.full_name == "Minimal Client"
-        assert client_response.ssn == "***-**-6789"
+        assert client_response.cpf == "***.***.***-09"
         assert client_response.birth_date == date(1990, 1, 1)
         assert client_response.status == ClientStatus.ACTIVE
         assert client_response.notes is None  # Default
@@ -666,14 +654,14 @@ class TestClientListItem:
         client_list = ClientListItem(
             client_id=client_id,
             full_name="John Doe",
-            ssn_masked="***-**-6789",
+            cpf_masked="***.***.***-09",
             status=ClientStatus.ACTIVE,
             created_at=created_at,
         )
 
         assert client_list.client_id == client_id
         assert client_list.full_name == "John Doe"
-        assert client_list.ssn_masked == "***-**-6789"
+        assert client_list.cpf_masked == "***.***.***-09"
         assert client_list.status == ClientStatus.ACTIVE
         assert client_list.created_at == created_at
 
@@ -684,21 +672,21 @@ class TestClientListItem:
             {
                 "client_id": uuid4(),
                 "full_name": "Alice Johnson",
-                "ssn_masked": "***-**-1234",
+                "cpf_masked": "***.***.***-34",
                 "status": ClientStatus.ACTIVE,
                 "created_at": datetime(2023, 1, 1),
             },
             {
                 "client_id": uuid4(),
                 "full_name": "Bob Smith",
-                "ssn_masked": "***-**-5678",
+                "cpf_masked": "***.***.***-78",
                 "status": ClientStatus.INACTIVE,
                 "created_at": datetime(2023, 2, 1),
             },
             {
                 "client_id": uuid4(),
                 "full_name": "Carol Wilson",
-                "ssn_masked": "***-**-9012",
+                "cpf_masked": "***.***.***-12",
                 "status": ClientStatus.ARCHIVED,
                 "created_at": datetime(2023, 3, 1),
             },
@@ -708,7 +696,7 @@ class TestClientListItem:
             client_list = ClientListItem(**client_data)
             assert client_list.client_id == client_data["client_id"]
             assert client_list.full_name == client_data["full_name"]
-            assert client_list.ssn_masked == client_data["ssn_masked"]
+            assert client_list.cpf_masked == client_data["cpf_masked"]
             assert client_list.status == client_data["status"]
             assert client_list.created_at == client_data["created_at"]
 
@@ -723,7 +711,7 @@ class TestClientListItem:
             client_list = ClientListItem(
                 client_id=client_id,
                 full_name="Test Client",
-                ssn_masked="***-**-1234",
+                cpf_masked="***.***.***-34",
                 status=status,
                 created_at=created_at,
             )

@@ -26,7 +26,7 @@ class ClientSearchParams(BaseModel):
     """Client search and filter parameters for query string parsing."""
 
     full_name: str | None = Field(None, description="Search by client full name (partial match)")
-    ssn: str | None = Field(None, description="Search by exact SSN")
+    cpf: str | None = Field(None, description="Search by exact CPF")
     status: ClientStatus | None = Field(None, description="Filter by client status")
     created_after: date | None = Field(None, description="Filter clients created after this date")
     created_before: date | None = Field(None, description="Filter clients created before this date")
@@ -36,9 +36,9 @@ class ClientCreate(BaseModel):
     """Client creation schema with comprehensive validation matching SQLModel."""
 
     full_name: str = Field(min_length=2, max_length=255, description="Client's full legal name")
-    ssn: str = Field(
-        pattern=r"^\d{3}-\d{2}-\d{4}$",
-        description="Client's Social Security Number in XXX-XX-XXXX format",
+    cpf: str = Field(
+        pattern=r"^\d{3}\.\d{3}\.\d{3}-\d{2}$",
+        description="Client's Brazilian CPF in XXX.XXX.XXX-XX format",
     )
     birth_date: date = Field(description="Client's date of birth")
     notes: str | None = Field(
@@ -60,26 +60,23 @@ class ClientCreate(BaseModel):
 
         return v
 
-    @field_validator("ssn")
+    @field_validator("cpf")
     @classmethod
-    def validate_ssn_format(cls, v: str) -> str:
-        """Validate SSN format and check sum with same rules as SQLModel."""
+    def validate_cpf_format(cls, v: str) -> str:
+        """Validate Brazilian CPF format and check digits with same rules as SQLModel."""
+        # Import validation utility
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from src.utils.validation import validate_cpf
+        
         # Check format
-        if not re.match(r"^\d{3}-\d{2}-\d{4}$", v):
-            raise ValueError("SSN must be in XXX-XX-XXXX format")
+        if not re.match(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$", v):
+            raise ValueError("CPF must be in XXX.XXX.XXX-XX format")
 
-        # Extract digits for validation
-        digits = v.replace("-", "")
-
-        # Check for invalid SSN patterns
-        if digits == "000000000":
-            raise ValueError("SSN cannot be all zeros")
-        if digits[:3] == "000":
-            raise ValueError("SSN area number cannot be 000")
-        if digits[3:5] == "00":
-            raise ValueError("SSN group number cannot be 00")
-        if digits[5:] == "0000":
-            raise ValueError("SSN serial number cannot be 0000")
+        # Validate CPF using utility function
+        if not validate_cpf(v):
+            raise ValueError("Invalid CPF: failed check digit validation")
 
         return v
 
@@ -105,10 +102,10 @@ class ClientUpdate(BaseModel):
     full_name: str | None = Field(
         default=None, min_length=2, max_length=255, description="Updated client full name"
     )
-    ssn: str | None = Field(
+    cpf: str | None = Field(
         default=None,
-        pattern=r"^\d{3}-\d{2}-\d{4}$",
-        description="Updated SSN in XXX-XX-XXXX format",
+        pattern=r"^\d{3}\.\d{3}\.\d{3}-\d{2}$",
+        description="Updated CPF in XXX.XXX.XXX-XX format",
     )
     birth_date: date | None = Field(default=None, description="Updated birth date")
     status: ClientStatus | None = Field(default=None, description="Updated client status")
@@ -132,29 +129,26 @@ class ClientUpdate(BaseModel):
 
         return v
 
-    @field_validator("ssn")
+    @field_validator("cpf")
     @classmethod
-    def validate_ssn_format(cls, v: str | None) -> str | None:
-        """Validate SSN format if provided."""
+    def validate_cpf_format(cls, v: str | None) -> str | None:
+        """Validate Brazilian CPF format if provided."""
         if v is None:
             return v
 
+        # Import validation utility
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from src.utils.validation import validate_cpf
+        
         # Check format
-        if not re.match(r"^\d{3}-\d{2}-\d{4}$", v):
-            raise ValueError("SSN must be in XXX-XX-XXXX format")
+        if not re.match(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$", v):
+            raise ValueError("CPF must be in XXX.XXX.XXX-XX format")
 
-        # Extract digits for validation
-        digits = v.replace("-", "")
-
-        # Check for invalid SSN patterns
-        if digits == "000000000":
-            raise ValueError("SSN cannot be all zeros")
-        if digits[:3] == "000":
-            raise ValueError("SSN area number cannot be 000")
-        if digits[3:5] == "00":
-            raise ValueError("SSN group number cannot be 00")
-        if digits[5:] == "0000":
-            raise ValueError("SSN serial number cannot be 0000")
+        # Validate CPF using utility function
+        if not validate_cpf(v):
+            raise ValueError("Invalid CPF: failed check digit validation")
 
         return v
 
@@ -182,7 +176,7 @@ class ClientResponse(BaseModel):
 
     client_id: UUID = Field(description="Client unique identifier")
     full_name: str = Field(description="Client full name")
-    ssn: str = Field(description="Client Social Security Number")
+    cpf: str = Field(description="Client Brazilian CPF")
     birth_date: date = Field(description="Client birth date")
     status: ClientStatus = Field(description="Client status")
     notes: str | None = Field(description="Additional notes about the client")
@@ -193,13 +187,15 @@ class ClientResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
-    @field_validator("ssn")
+    @field_validator("cpf")
     @classmethod
-    def mask_ssn(cls, v: str) -> str:
-        """Mask SSN for security (show only last 4 digits)."""
-        if len(v) >= 4:
-            return f"***-**-{v[-4:]}"
-        return "***-**-****"
+    def mask_cpf(cls, v: str) -> str:
+        """Mask CPF for security (show only last 2 digits)."""
+        if len(v) >= 14 and v[11] == '-':  # Valid CPF format XXX.XXX.XXX-XX
+            # Extract the last 2 digits (check digits)
+            last_two = v[12:14]  # Characters after the hyphen
+            return f"***.***.***-{last_two}"
+        return "***.***.***-**"
 
 
 class ClientListItem(BaseModel):
@@ -207,7 +203,7 @@ class ClientListItem(BaseModel):
 
     client_id: UUID = Field(description="Client unique identifier")
     full_name: str = Field(description="Client full name")
-    ssn_masked: str = Field(description="Masked SSN for security")
+    cpf_masked: str = Field(description="Masked CPF for security")
     status: ClientStatus = Field(description="Client status")
     created_at: datetime = Field(description="Creation timestamp")
 

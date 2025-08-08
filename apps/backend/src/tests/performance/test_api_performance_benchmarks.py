@@ -159,7 +159,7 @@ class TestAPIPerformanceBenchmarks:
             for i in range(size):
                 client = create_test_client(
                     name=f"Performance Client {i}",
-                    ssn=f"1234567890{i:02d}"
+                    cpf=f"1234567890{i:02d}"
                 )
                 test_session.add(client)
             test_session.commit()
@@ -198,7 +198,7 @@ class TestAPIPerformanceBenchmarks:
         for i in range(15):
             client_data = {
                 "name": f"Performance Test Client {i}",
-                "ssn": f"9876543210{i:02d}",
+                "cpf": f"9876543210{i:02d}",
                 "birth_date": "1990-01-01"
             }
             
@@ -237,7 +237,7 @@ class TestAPIPerformanceBenchmarks:
         # Create a test client
         client = create_test_client(
             name="Performance Retrieval Test Client",
-            ssn="5555555555"
+            cpf="5555555555"
         )
         test_session.add(client)
         test_session.commit()
@@ -279,7 +279,7 @@ class TestAPIPerformanceBenchmarks:
         # Create test client
         client = create_test_client(
             name="Update Performance Test Client",
-            ssn="4444444444"
+            cpf="4444444444"
         )
         test_session.add(client)
         test_session.commit()
@@ -503,7 +503,7 @@ class TestAPIPerformanceBenchmarks:
         
         invalid_client_data = {
             "name": "",  # Invalid: empty name
-            "ssn": "invalid",  # Invalid: wrong format
+            "cpf": "invalid",  # Invalid: wrong format
             "birth_date": "not-a-date"  # Invalid: wrong format
         }
         
@@ -577,7 +577,7 @@ class TestAPIPerformanceBenchmarks:
         for i in range(200):
             client = create_test_client(
                 name=f"Pagination Test Client {i}",
-                ssn=f"8888{i:06d}"
+                cpf=f"8888{i:06d}"
             )
             test_session.add(client)
         test_session.commit()

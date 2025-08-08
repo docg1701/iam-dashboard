@@ -23,7 +23,7 @@ from src.tests.factories import (
     create_test_user,
     create_user_with_clients,
     generate_audit_values,
-    generate_valid_ssn,
+    generate_valid_cpf,
 )
 
 
@@ -79,26 +79,30 @@ class TestClientFactory:
         assert isinstance(client, Client)
         assert isinstance(client.client_id, UUID)
         assert len(client.full_name) >= 2
-        assert len(client.ssn) == 11  # XXX-XX-XXXX format
-        assert "-" in client.ssn
+        assert len(client.cpf) == 14  # XXX.XXX.XXX-XX format
+        assert "." in client.cpf and "-" in client.cpf
         assert isinstance(client.birth_date, date)
         assert client.status in [ClientStatus.ACTIVE, ClientStatus.INACTIVE, ClientStatus.ARCHIVED]
         assert isinstance(client.created_by, UUID)
         assert isinstance(client.updated_by, UUID)
 
-    def test_ssn_format_is_valid(self) -> None:
-        """Test that generated SSNs follow the correct format."""
+    def test_cpf_format_is_valid(self) -> None:
+        """Test that generated CPFs follow the correct format."""
         for _ in range(10):
             client = ClientFactory.build()
-            ssn_parts = client.ssn.split("-")
-
-            assert len(ssn_parts) == 3
-            assert len(ssn_parts[0]) == 3  # Area number
-            assert len(ssn_parts[1]) == 2  # Group number
-            assert len(ssn_parts[2]) == 4  # Serial number
-            assert ssn_parts[0] != "000"  # Invalid area
-            assert ssn_parts[1] != "00"  # Invalid group
-            assert ssn_parts[2] != "0000"  # Invalid serial
+            # CPF format: XXX.XXX.XXX-XX
+            assert len(client.cpf) == 14
+            assert client.cpf[3] == "."
+            assert client.cpf[7] == "."
+            assert client.cpf[11] == "-"
+            
+            # Extract parts for validation
+            digits = client.cpf.replace(".", "").replace("-", "")
+            assert len(digits) == 11
+            assert digits.isdigit()
+            
+            # Should not be all same digits (basic invalid CPF check)
+            assert not all(d == digits[0] for d in digits)
 
     def test_inactive_client_has_notes(self) -> None:
         """Test that inactive clients get explanatory notes."""
@@ -166,26 +170,30 @@ class TestAuditLogFactory:
 
         if client_audit.new_values:
             assert "full_name" in client_audit.new_values
-            assert "ssn" in client_audit.new_values
+            assert "cpf" in client_audit.new_values
 
 
 class TestUtilityFunctions:
     """Test utility functions."""
 
-    def test_generate_valid_ssn(self) -> None:
-        """Test SSN generation utility."""
+    def test_generate_valid_cpf(self) -> None:
+        """Test CPF generation utility."""
         for _ in range(20):
-            ssn = generate_valid_ssn()
-            parts = ssn.split("-")
-
-            assert len(parts) == 3
-            assert len(parts[0]) == 3
-            assert len(parts[1]) == 2
-            assert len(parts[2]) == 4
-            assert parts[0] != "000"
-            assert parts[0] != "666"
-            assert parts[1] != "00"
-            assert parts[2] != "0000"
+            cpf = generate_valid_cpf()
+            
+            # Check CPF format XXX.XXX.XXX-XX
+            assert len(cpf) == 14
+            assert cpf[3] == "."
+            assert cpf[7] == "."
+            assert cpf[11] == "-"
+            
+            # Extract digits and validate
+            digits = cpf.replace(".", "").replace("-", "")
+            assert len(digits) == 11
+            assert digits.isdigit()
+            
+            # Should not be all same digits
+            assert not all(d == digits[0] for d in digits)
 
     def test_generate_audit_values(self) -> None:
         """Test audit values generation."""
@@ -198,7 +206,7 @@ class TestUtilityFunctions:
 
         assert "client_id" in client_values
         assert "full_name" in client_values
-        assert "ssn" in client_values
+        assert "cpf" in client_values
 
     def test_create_test_user_with_role(self) -> None:
         """Test create_test_user function."""
@@ -342,13 +350,17 @@ class TestFactoryDataValidation:
             # Validate full name
             assert len(client.full_name.strip()) >= 2
 
-            # Validate SSN format
-            assert len(client.ssn) == 11
-            parts = client.ssn.split("-")
-            assert len(parts) == 3
-            assert parts[0] != "000"
-            assert parts[1] != "00"
-            assert parts[2] != "0000"
+            # Validate CPF format
+            assert len(client.cpf) == 14  # XXX.XXX.XXX-XX
+            assert client.cpf[3] == "."
+            assert client.cpf[7] == "."
+            assert client.cpf[11] == "-"
+            
+            # Extract digits
+            digits = client.cpf.replace(".", "").replace("-", "")
+            assert len(digits) == 11
+            assert digits.isdigit()
+            assert not all(d == digits[0] for d in digits)  # Not all same digits
 
             # Validate birth date
             today = date.today()

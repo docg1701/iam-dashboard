@@ -5,59 +5,62 @@ from datetime import date, timedelta
 from src.utils.validation import (
     sanitize_filename,
     validate_birth_date,
+    validate_cpf,
     validate_email,
     validate_name,
     validate_password_strength,
-    validate_ssn,
 )
 
 
-class TestValidateSSN:
-    """Test SSN validation function."""
+class TestValidateCPF:
+    """Test CPF validation function."""
 
-    def test_valid_ssn_formats(self) -> None:
-        """Test valid SSN formats."""
-        valid_ssns = [
-            "987-65-4321",
-            "555-12-3456",
-            "321-54-9876",
+    def test_valid_cpf_formats(self) -> None:
+        """Test valid CPF formats."""
+        valid_cpfs = [
+            "123.456.789-09",  # Valid CPF with correct check digits
+            "987.654.321-00",  # Valid CPF with correct check digits
+            "12345678909",     # Valid without formatting
         ]
-        for ssn in valid_ssns:
-            assert validate_ssn(ssn) is True
+        for cpf in valid_cpfs:
+            assert validate_cpf(cpf) is True
 
-    def test_invalid_ssn_formats(self) -> None:
-        """Test invalid SSN formats."""
-        invalid_ssns = [
+    def test_invalid_cpf_formats(self) -> None:
+        """Test invalid CPF formats."""
+        invalid_cpfs = [
             "",  # Empty
-            "123456789",  # No dashes
-            "123-456-789",  # Wrong format
-            "12-45-6789",  # Too short area
-            "123-4-6789",  # Too short group
-            "123-45-789",  # Too short serial
-            "1234-45-6789",  # Too long area
+            "123.456.789",  # Missing check digits
+            "123.456.789-1",  # Only one check digit
+            "123.456.789-123",  # Too many check digits
+            "12.456.789-09",  # Too short
+            "1234.456.789-09",  # Too long first part
         ]
-        for ssn in invalid_ssns:
-            assert validate_ssn(ssn) is False
+        for cpf in invalid_cpfs:
+            assert validate_cpf(cpf) is False
 
-    def test_invalid_ssn_patterns(self) -> None:
-        """Test SSN patterns that are invalid by SSA rules."""
+    def test_invalid_cpf_patterns(self) -> None:
+        """Test CPF patterns that are invalid by Brazilian rules."""
         invalid_patterns = [
-            "000-12-3456",  # Area cannot be 000
-            "123-00-3456",  # Group cannot be 00
-            "123-45-0000",  # Serial cannot be 0000
-            "000-00-0000",  # All zeros
-            "111-11-1111",  # Repetitive pattern
-            "222-22-2222",  # Repetitive pattern
-            "123-45-6789",  # Sequential pattern (invalid)
+            "000.000.000-00",  # All zeros
+            "111.111.111-11",  # All same digits
+            "222.222.222-22",  # All same digits
+            "333.333.333-33",  # All same digits
+            "444.444.444-44",  # All same digits
+            "555.555.555-55",  # All same digits
+            "666.666.666-66",  # All same digits
+            "777.777.777-77",  # All same digits
+            "888.888.888-88",  # All same digits
+            "999.999.999-99",  # All same digits
+            "123.456.789-10",  # Invalid check digits
         ]
         # All should be invalid
-        for ssn in invalid_patterns:
-            assert validate_ssn(ssn) is False
+        for cpf in invalid_patterns:
+            assert validate_cpf(cpf) is False
 
-    def test_none_and_empty_ssn(self) -> None:
-        """Test None and empty SSN handling."""
-        assert validate_ssn("") is False
-        assert validate_ssn(None) is False
+    def test_none_and_empty_cpf(self) -> None:
+        """Test None and empty CPF handling."""
+        assert validate_cpf("") is False
+        assert validate_cpf(None) is False
 
 
 class TestValidateEmail:

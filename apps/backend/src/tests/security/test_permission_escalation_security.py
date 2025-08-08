@@ -307,7 +307,7 @@ class TestAgentPermissionBoundaryViolation:
         # Attempt to access client management endpoints
         client_data = {
             "name": "Unauthorized Client",
-            "ssn": "123456789",
+            "cpf": "123456789",
             "birth_date": "1990-01-01"
         }
         
@@ -484,7 +484,7 @@ class TestCrossUserPermissionExploitation:
         impersonation_data = {
             "acting_as_user_id": str(admin_user.user_id),  # Attempt impersonation
             "name": "Exploited Client",
-            "ssn": "987654321",
+            "cpf": "987654321",
             "birth_date": "1985-01-01"
         }
         

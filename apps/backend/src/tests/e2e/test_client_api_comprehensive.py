@@ -26,7 +26,7 @@ class TestClientAPICreate:
         # Client data
         client_data = {
             "full_name": "API Test Client",
-            "ssn": "123-45-6789",
+            "cpf": "123-45-6789",
             "birth_date": "1990-01-01",
             "notes": "Created via API test",
         }
@@ -38,7 +38,7 @@ class TestClientAPICreate:
         assert response.status_code == 201
         response_data = response.json()
         assert response_data["full_name"] == client_data["full_name"]
-        assert response_data["ssn"] == "***-**-6789"  # SSN should be masked in response
+        assert response_data["cpf"] == "***-**-6789"  # SSN should be masked in response
         assert response_data["birth_date"] == client_data["birth_date"]
         assert response_data["notes"] == client_data["notes"]
         assert response_data["status"] == "active"
@@ -58,7 +58,7 @@ class TestClientAPICreate:
         # Minimal client data
         client_data = {
             "full_name": "Minimal Client",
-            "ssn": "987-65-4321",
+            "cpf": "987-65-4321",
             "birth_date": "1985-06-15",
         }
 
@@ -69,11 +69,11 @@ class TestClientAPICreate:
         assert response.status_code == 201
         response_data = response.json()
         assert response_data["full_name"] == client_data["full_name"]
-        assert response_data["ssn"] == "***-**-4321"  # SSN should be masked in response
+        assert response_data["cpf"] == "***-**-4321"  # SSN should be masked in response
         assert response_data["birth_date"] == client_data["birth_date"]
         assert response_data["notes"] is None
 
-    def test_create_client_duplicate_ssn(
+    def test_create_client_duplicate_cpf(
         self, client: TestClient, test_session: Session, auth_headers: dict[str, str], test_user: User
     ) -> None:
         """Test client creation with duplicate SSN returns conflict error."""
@@ -81,7 +81,7 @@ class TestClientAPICreate:
         existing_client = Client(
             client_id=uuid4(),
             full_name="Existing Client",
-            ssn="555-66-7777",
+            cpf="555-66-7777",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             created_by=test_user.user_id,
@@ -94,7 +94,7 @@ class TestClientAPICreate:
         # Try to create client with same SSN
         client_data = {
             "full_name": "Duplicate SSN Client",
-            "ssn": "555-66-7777",  # Same SSN
+            "cpf": "555-66-7777",  # Same SSN
             "birth_date": "1985-06-15",
         }
 
@@ -115,7 +115,7 @@ class TestClientAPICreate:
         # Invalid client data
         client_data = {
             "full_name": "A",  # Too short
-            "ssn": "invalid-ssn",  # Invalid format
+            "cpf": "invalid-cpf",  # Invalid format
             "birth_date": "2020-01-01",  # Too young
         }
 
@@ -131,7 +131,7 @@ class TestClientAPICreate:
         """Test client creation without authentication."""
         client_data = {
             "full_name": "Unauthorized Client",
-            "ssn": "111-22-3333",
+            "cpf": "111-22-3333",
             "birth_date": "1990-01-01",
         }
 
@@ -156,7 +156,7 @@ class TestClientAPIGet:
         test_client = Client(
             client_id=client_id,
             full_name="Test Client",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             notes="Test notes",
@@ -175,7 +175,7 @@ class TestClientAPIGet:
         response_data = response.json()
         assert response_data["client_id"] == str(client_id)
         assert response_data["full_name"] == test_client.full_name
-        assert response_data["ssn"] == "***-**-6789"  # SSN should be masked in response
+        assert response_data["cpf"] == "***-**-6789"  # SSN should be masked in response
         assert response_data["birth_date"] == test_client.birth_date.isoformat()
         assert response_data["notes"] == test_client.notes
 
@@ -227,7 +227,7 @@ class TestClientAPIUpdate:
         test_client = Client(
             client_id=client_id,
             full_name="Original Name",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             notes="Original notes",
@@ -251,7 +251,7 @@ class TestClientAPIUpdate:
         response_data = response.json()
         assert response_data["full_name"] == update_data["full_name"]
         assert response_data["notes"] == update_data["notes"]
-        assert response_data["ssn"] == "***-**-6789"  # SSN should be masked, unchanged
+        assert response_data["cpf"] == "***-**-6789"  # SSN should be masked, unchanged
 
         # Verify in database using SQLModel pattern
         statement = select(Client).where(Client.client_id == client_id)
@@ -302,7 +302,7 @@ class TestClientAPIDelete:
         test_client = Client(
             client_id=client_id,
             full_name="Test Client",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             created_by=test_user.user_id,
@@ -363,7 +363,7 @@ class TestClientAPIErrorHandling:
         """Test handling of internal server errors."""
         client_data = {
             "full_name": "Error Test Client",
-            "ssn": "888-99-1111",
+            "cpf": "888-99-1111",
             "birth_date": "1990-01-01",
         }
 

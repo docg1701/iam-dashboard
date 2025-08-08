@@ -54,7 +54,7 @@ class TestClientServiceIntegration:
         # Client data
         client_data = ClientCreate(
             full_name="Integration Test Client",
-            ssn="123-45-6789",
+            cpf="123.456.789-09",
             birth_date=date(1990, 5, 15),
             notes="Test client for integration testing",
         )
@@ -70,7 +70,7 @@ class TestClientServiceIntegration:
 
             # Verify creation
             assert created_client.full_name == client_data.full_name
-            assert created_client.ssn == client_data.ssn
+            assert created_client.cpf == client_data.cpf
             assert created_client.birth_date == client_data.birth_date
             assert created_client.notes == client_data.notes
             assert created_client.status == "active"
@@ -85,7 +85,7 @@ class TestClientServiceIntegration:
             # Verify retrieval
             assert retrieved_client.client_id == created_client.client_id
             assert retrieved_client.full_name == created_client.full_name
-            assert retrieved_client.ssn == created_client.ssn
+            assert retrieved_client.cpf == created_client.cpf
 
         except Exception as e:
             # If service methods aren't fully implemented, we expect specific errors
@@ -101,23 +101,23 @@ class TestClientServiceIntegration:
         # Test valid client creation
         valid_client = ClientCreate(
             full_name="Valid Client Name",
-            ssn="123-45-6789",
+            cpf="123.456.789-09",
             birth_date=date(1990, 1, 1),
             notes="Valid notes",
         )
 
         assert valid_client.full_name == "Valid Client Name"
-        assert valid_client.ssn == "123-45-6789"
+        assert valid_client.cpf == "123.456.789-09"
         assert valid_client.birth_date == date(1990, 1, 1)
         assert valid_client.notes == "Valid notes"
 
         # Test minimal valid client
         minimal_client = ClientCreate(
-            full_name="Minimal Client", ssn="987-65-4321", birth_date=date(1985, 12, 25)
+            full_name="Minimal Client", cpf="987.654.321-00", birth_date=date(1985, 12, 25)
         )
 
         assert minimal_client.full_name == "Minimal Client"
-        assert minimal_client.ssn == "987-65-4321"
+        assert minimal_client.cpf == "987.654.321-00"
         assert minimal_client.birth_date == date(1985, 12, 25)
         assert minimal_client.notes is None
 
@@ -128,7 +128,7 @@ class TestClientServiceIntegration:
         client_response = ClientResponse(
             client_id=uuid4(),
             full_name="Test Client",
-            ssn="123-45-6789",  # Should be masked
+            cpf="123.456.789-09",  # Should be masked
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             notes="Test notes",
@@ -138,8 +138,8 @@ class TestClientServiceIntegration:
             updated_by=uuid4(),
         )
 
-        # Verify SSN is masked
-        assert client_response.ssn == "***-**-6789"
+        # Verify CPF is masked
+        assert client_response.cpf == "***.***.***-09"
         assert client_response.full_name == "Test Client"
 
     @pytest.mark.asyncio
@@ -161,7 +161,7 @@ class TestClientServiceIntegration:
         client1 = Client(
             client_id=uuid4(),
             full_name="First Client",
-            ssn="111-22-3333",
+            cpf="111.222.333-96",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -174,7 +174,7 @@ class TestClientServiceIntegration:
         client2 = Client(
             client_id=uuid4(),
             full_name="Second Client",
-            ssn="111-22-3333",  # Same SSN
+            cpf="111.222.333-96",  # Same SSN
             birth_date=date(1985, 6, 15),
             status="active",
             created_by=user.user_id,
@@ -190,7 +190,7 @@ class TestClientServiceIntegration:
             # Let's verify both clients exist and then clean up
             # Verify both clients exist using SQLModel pattern
 
-            statement = select(Client).where(Client.ssn == "111-22-3333")
+            statement = select(Client).where(Client.cpf == "111.222.333-96")
             all_clients = list(test_session.exec(statement).all())
             assert len(all_clients) >= 1, "At least one client with the SSN should exist"
             # Clean up by rolling back
@@ -199,7 +199,7 @@ class TestClientServiceIntegration:
             # An integrity error was raised, which is what we expect with proper constraints
             test_session.rollback()
             # Verify only the first client exists using SQLModel pattern
-            statement = select(Client).where(Client.ssn == "111-22-3333")
+            statement = select(Client).where(Client.cpf == "111.222.333-96")
             all_clients = list(test_session.exec(statement).all())
             assert len(all_clients) == 1, (
                 "Only one client with the SSN should exist after constraint violation"
@@ -214,7 +214,7 @@ class TestClientServiceIntegration:
         exactly_13_years = date(today.year - 13, today.month, today.day)
         try:
             valid_client = ClientCreate(
-                full_name="Thirteen Year Old", ssn="123-45-6789", birth_date=exactly_13_years
+                full_name="Thirteen Year Old", cpf="123.456.789-09", birth_date=exactly_13_years
             )
             assert valid_client.birth_date == exactly_13_years
         except ValidationError:
@@ -225,30 +225,30 @@ class TestClientServiceIntegration:
         twelve_years_old = date(today.year - 12, today.month, today.day)
         with pytest.raises(ValidationError):
             ClientCreate(
-                full_name="Twelve Year Old", ssn="123-45-6789", birth_date=twelve_years_old
+                full_name="Twelve Year Old", cpf="123.456.789-09", birth_date=twelve_years_old
             )
 
-    def test_ssn_format_validation_comprehensive(self) -> None:
+    def test_cpf_format_validation_comprehensive(self) -> None:
         """Test comprehensive SSN format validation."""
 
         # Valid SSN formats
-        valid_ssns = [
-            "123-45-6789",
+        valid_cpfs = [
+            "123.456.789-09",
             "987-65-4321",
             "555-12-3456",
             "000-12-3456",  # Some implementations allow 000 area
         ]
 
-        for ssn in valid_ssns:
+        for cpf in valid_cpfs:
             try:
-                client = ClientCreate(full_name="Test Client", ssn=ssn, birth_date=date(1990, 1, 1))
-                assert client.ssn == ssn
+                client = ClientCreate(full_name="Test Client", cpf=cpf, birth_date=date(1990, 1, 1))
+                assert client.cpf == cpf
             except ValidationError:
                 # Some SSNs might be invalid depending on strict validation
                 pass
 
         # Invalid SSN formats
-        invalid_ssns = [
+        invalid_cpfs = [
             "123456789",  # No dashes
             "123-456-789",  # Wrong format
             "12-45-6789",  # Too short area
@@ -256,12 +256,12 @@ class TestClientServiceIntegration:
             "123-45-789",  # Too short serial
             "abc-de-fghi",  # Letters
             "",  # Empty
-            "123-45-67890",  # Too long
+            "123.456.789-090",  # Too long
         ]
 
-        for ssn in invalid_ssns:
+        for cpf in invalid_cpfs:
             with pytest.raises(ValidationError):
-                ClientCreate(full_name="Test Client", ssn=ssn, birth_date=date(1990, 1, 1))
+                ClientCreate(full_name="Test Client", cpf=cpf, birth_date=date(1990, 1, 1))
 
     def test_name_validation_edge_cases(self) -> None:
         """Test edge cases for name validation."""
@@ -279,7 +279,7 @@ class TestClientServiceIntegration:
         for name in valid_names:
             try:
                 client = ClientCreate(
-                    full_name=name, ssn="123-45-6789", birth_date=date(1990, 1, 1)
+                    full_name=name, cpf="123.456.789-09", birth_date=date(1990, 1, 1)
                 )
                 assert client.full_name == name
             except ValidationError:
@@ -295,7 +295,7 @@ class TestClientServiceIntegration:
 
         for name in invalid_names:
             with pytest.raises(ValidationError):
-                ClientCreate(full_name=name, ssn="123-45-6789", birth_date=date(1990, 1, 1))
+                ClientCreate(full_name=name, cpf="123.456.789-09", birth_date=date(1990, 1, 1))
 
     def test_notes_validation(self) -> None:
         """Test notes field validation."""
@@ -310,7 +310,7 @@ class TestClientServiceIntegration:
 
         for notes in valid_notes:
             client = ClientCreate(
-                full_name="Test Client", ssn="123-45-6789", birth_date=date(1990, 1, 1), notes=notes
+                full_name="Test Client", cpf="123.456.789-09", birth_date=date(1990, 1, 1), notes=notes
             )
             assert client.notes == notes
 
@@ -319,7 +319,7 @@ class TestClientServiceIntegration:
         with pytest.raises(ValidationError):
             ClientCreate(
                 full_name="Test Client",
-                ssn="123-45-6789",
+                cpf="123.456.789-09",
                 birth_date=date(1990, 1, 1),
                 notes=too_long_notes,
             )
@@ -347,7 +347,7 @@ class TestClientDataIntegrity:
         client = Client(
             client_id=uuid4(),
             full_name="Direct Model Client",
-            ssn="555-66-7777",
+            cpf="555.666.777-04",
             birth_date=date(1988, 7, 14),
             status="active",
             notes="Created directly via model",
@@ -365,7 +365,7 @@ class TestClientDataIntegrity:
 
         assert retrieved_client is not None
         assert retrieved_client.full_name == "Direct Model Client"
-        assert retrieved_client.ssn == "555-66-7777"
+        assert retrieved_client.cpf == "555.666.777-04"
         assert retrieved_client.birth_date == date(1988, 7, 14)
         assert retrieved_client.status == "active"
         assert retrieved_client.notes == "Created directly via model"
@@ -389,7 +389,7 @@ class TestClientDataIntegrity:
         client = Client(
             client_id=uuid4(),
             full_name="Timestamp Test Client",
-            ssn="888-99-0000",
+            cpf="888.999.000-25",
             birth_date=date(1992, 3, 20),
             status="active",
             created_by=user.user_id,

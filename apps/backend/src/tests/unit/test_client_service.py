@@ -52,7 +52,7 @@ class TestClientServiceCreate:
         # Client data
         client_data = ClientCreateSchema(
             full_name="Test Client",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             notes="Test notes",
         )
@@ -62,7 +62,7 @@ class TestClientServiceCreate:
 
         # Verify result
         assert result.full_name == client_data.full_name
-        assert result.ssn == client_data.ssn
+        assert result.cpf == client_data.cpf
         assert result.birth_date == client_data.birth_date
         assert result.notes == client_data.notes
         assert result.status == "active"
@@ -80,7 +80,7 @@ class TestClientServiceCreate:
         assert db_client.full_name == client_data.full_name
 
     @pytest.mark.asyncio
-    async def test_create_client_duplicate_ssn(self, test_session: Session) -> None:
+    async def test_create_client_duplicate_cpf(self, test_session: Session) -> None:
         """Test client creation with duplicate SSN raises ConflictError."""
         # Create test user
         user = User(
@@ -98,7 +98,7 @@ class TestClientServiceCreate:
         existing_client = Client(
             client_id=uuid4(),
             full_name="Existing Client",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -120,7 +120,7 @@ class TestClientServiceCreate:
         # Try to create client with same SSN
         client_data = ClientCreateSchema(
             full_name="New Client",
-            ssn="123-45-6789",  # Same SSN
+            cpf="123-45-6789",  # Same SSN
             birth_date=date(1985, 6, 15),
         )
 
@@ -155,7 +155,7 @@ class TestClientServiceCreate:
 
         # Client data with no notes
         client_data = ClientCreateSchema(
-            full_name="Minimal Client", ssn="987-65-4321", birth_date=date(1995, 8, 12)
+            full_name="Minimal Client", cpf="987-65-4321", birth_date=date(1995, 8, 12)
         )
 
         # Create client
@@ -163,7 +163,7 @@ class TestClientServiceCreate:
 
         # Verify result
         assert result.full_name == client_data.full_name
-        assert result.ssn == client_data.ssn
+        assert result.cpf == client_data.cpf
         assert result.birth_date == client_data.birth_date
         assert result.notes is None
         assert result.status == "active"
@@ -195,7 +195,7 @@ class TestClientServiceCreate:
 
         # Client data
         client_data = ClientCreateSchema(
-            full_name="Audit Test Client", ssn="555-66-7777", birth_date=date(1992, 4, 8)
+            full_name="Audit Test Client", cpf="555-66-7777", birth_date=date(1992, 4, 8)
         )
 
         # Create client
@@ -230,13 +230,13 @@ class TestClientServiceCreate:
 
         # Create first client
         first_client_data = ClientCreateSchema(
-            full_name="First Client", ssn="888-99-1111", birth_date=date(1990, 1, 1)
+            full_name="First Client", cpf="888-99-1111", birth_date=date(1990, 1, 1)
         )
         await service.create_client(first_client_data, user.user_id, mock_request)
 
         # Try to create second client with same SSN - should raise ConflictError
         duplicate_client_data = ClientCreateSchema(
-            full_name="Second Client", ssn="888-99-1111", birth_date=date(1991, 2, 2)
+            full_name="Second Client", cpf="888-99-1111", birth_date=date(1991, 2, 2)
         )
 
         with pytest.raises(ConflictError) as exc_info:
@@ -268,7 +268,7 @@ class TestClientServiceGetById:
         test_client = Client(
             client_id=client_id,
             full_name="Test Client",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status="active",
             notes="Test notes",
@@ -294,7 +294,7 @@ class TestClientServiceGetById:
         # Verify result (ClientRead object)
         assert result.client_id == client_id
         assert result.full_name == test_client.full_name
-        assert result.ssn == test_client.ssn
+        assert result.cpf == test_client.cpf
         assert result.birth_date == test_client.birth_date
         assert result.notes == test_client.notes
 
@@ -350,7 +350,7 @@ class TestClientServiceGetById:
         test_client = Client(
             client_id=client_id,
             full_name="Audit Test Client",
-            ssn="999-88-7777",
+            cpf="999-88-7777",
             birth_date=date(1985, 12, 25),
             status="active",
             created_by=user.user_id,
@@ -381,7 +381,7 @@ class TestClientServiceValidation:
     """Test ClientService validation logic."""
 
     @pytest.mark.asyncio
-    async def test_ssn_uniqueness_check(self, test_session: Session) -> None:
+    async def test_cpf_uniqueness_check(self, test_session: Session) -> None:
         """Test SSN uniqueness validation through service."""
         # Create test user
         user = User(
@@ -405,7 +405,7 @@ class TestClientServiceValidation:
 
         # Create first client
         client_data1 = ClientCreateSchema(
-            full_name="First Client", ssn="111-22-3333", birth_date=date(1990, 1, 1)
+            full_name="First Client", cpf="111-22-3333", birth_date=date(1990, 1, 1)
         )
 
         await service.create_client(client_data1, user.user_id, mock_request)
@@ -413,7 +413,7 @@ class TestClientServiceValidation:
         # Try to create second client with same SSN - should fail
         client_data2 = ClientCreateSchema(
             full_name="Second Client",
-            ssn="111-22-3333",  # Same SSN
+            cpf="111-22-3333",  # Same SSN
             birth_date=date(1985, 6, 15),
         )
 
@@ -425,7 +425,7 @@ class TestClientServiceErrorHandling:
     """Test error handling in ClientService."""
 
     @pytest.mark.asyncio
-    async def test_ssn_validation_business_logic(self, test_session: Session) -> None:
+    async def test_cpf_validation_business_logic(self, test_session: Session) -> None:
         """Test SSN validation business logic in service layer."""
         # Create test user
         user = User(
@@ -449,14 +449,14 @@ class TestClientServiceErrorHandling:
 
         # Create first client
         first_client_data = ClientCreateSchema(
-            full_name="First Client", ssn="123-45-6789", birth_date=date(1990, 1, 1)
+            full_name="First Client", cpf="123-45-6789", birth_date=date(1990, 1, 1)
         )
         first_client = await service.create_client(first_client_data, user.user_id, mock_request)
         assert first_client is not None
 
         # Test SSN uniqueness validation - should fail for duplicate
         duplicate_client_data = ClientCreateSchema(
-            full_name="Duplicate SSN Client", ssn="123-45-6789", birth_date=date(1985, 6, 15)
+            full_name="Duplicate SSN Client", cpf="123-45-6789", birth_date=date(1985, 6, 15)
         )
         
         with pytest.raises(ConflictError) as exc_info:
@@ -465,7 +465,7 @@ class TestClientServiceErrorHandling:
         assert exc_info.value.error_code == "SSN_DUPLICATE"
 
     @pytest.mark.asyncio
-    async def test_duplicate_ssn_rollback_behavior(self, test_session: Session) -> None:
+    async def test_duplicate_cpf_rollback_behavior(self, test_session: Session) -> None:
         """Test that failed client creation doesn't leave partial data."""
         # Create test user
         user = User(
@@ -492,7 +492,7 @@ class TestClientServiceErrorHandling:
 
         # Create first client successfully
         first_client_data = ClientCreateSchema(
-            full_name="First Client", ssn="123-45-6789", birth_date=date(1990, 1, 1)
+            full_name="First Client", cpf="123-45-6789", birth_date=date(1990, 1, 1)
         )
         await service.create_client(first_client_data, user.user_id, mock_request)
         
@@ -502,7 +502,7 @@ class TestClientServiceErrorHandling:
 
         # Try to create duplicate SSN client - should fail
         duplicate_client_data = ClientCreateSchema(
-            full_name="Duplicate Client", ssn="123-45-6789", birth_date=date(1991, 2, 2)
+            full_name="Duplicate Client", cpf="123-45-6789", birth_date=date(1991, 2, 2)
         )
 
         with pytest.raises(ConflictError):
@@ -535,7 +535,7 @@ class TestClientServiceUpdate:
         test_client = Client(
             client_id=client_id,
             full_name="Original Name",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status="active",
             notes="Original notes",
@@ -567,7 +567,7 @@ class TestClientServiceUpdate:
         # Verify result
         assert result.full_name == "Updated Name"
         assert result.notes == "Updated notes"
-        assert result.ssn == "123-45-6789"  # Unchanged
+        assert result.cpf == "123-45-6789"  # Unchanged
         assert result.updated_by == user.user_id
         assert result.updated_at is not None
 
@@ -607,7 +607,7 @@ class TestClientServiceUpdate:
         assert "not found" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_update_client_ssn_duplicate(self, test_session: Session) -> None:
+    async def test_update_client_cpf_duplicate(self, test_session: Session) -> None:
         """Test client update with duplicate SSN raises ConflictError."""
         # Create test user
         user = User(
@@ -625,7 +625,7 @@ class TestClientServiceUpdate:
         client1 = Client(
             client_id=client1_id,
             full_name="Client 1",
-            ssn="111-11-1111",
+            cpf="111-11-1111",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -637,7 +637,7 @@ class TestClientServiceUpdate:
         client2 = Client(
             client_id=client2_id,
             full_name="Client 2",
-            ssn="222-22-2222",
+            cpf="222-22-2222",
             birth_date=date(1991, 2, 2),
             status="active",
             created_by=user.user_id,
@@ -658,7 +658,7 @@ class TestClientServiceUpdate:
 
         # Try to update client2's SSN to match client1's SSN
 
-        update_data = ClientUpdate(ssn="111-11-1111")
+        update_data = ClientUpdate(cpf="111-11-1111")
 
         with pytest.raises(ConflictError) as exc_info:
             await service.update_client(client2_id, update_data, user.user_id, mock_request)
@@ -685,7 +685,7 @@ class TestClientServiceUpdate:
         test_client = Client(
             client_id=client_id,
             full_name="Original Name",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=original_birth_date,
             status="active",
             notes="Original notes",
@@ -712,7 +712,7 @@ class TestClientServiceUpdate:
 
         # Verify only birth_date changed, other fields unchanged
         assert result.full_name == "Original Name"  # Unchanged
-        assert result.ssn == "123-45-6789"  # Unchanged
+        assert result.cpf == "123-45-6789"  # Unchanged
         assert result.notes == "Original notes"  # Unchanged
         assert result.birth_date == date(1985, 6, 15)  # Changed
 
@@ -737,7 +737,7 @@ class TestClientServiceUpdate:
         test_client = Client(
             client_id=client_id,
             full_name="Original Name",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -789,7 +789,7 @@ class TestClientServiceDelete:
         test_client = Client(
             client_id=client_id,
             full_name="Test Client",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -873,7 +873,7 @@ class TestClientServiceDelete:
         test_client = Client(
             client_id=client_id,
             full_name="Test Client",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -922,7 +922,7 @@ class TestClientServiceList:
             client = Client(
                 client_id=uuid4(),
                 full_name=f"Test Client {i + 1}",
-                ssn=f"12{i}-45-678{i}",
+                cpf=f"12{i}-45-678{i}",
                 birth_date=date(1990, 1, i + 1),
                 status="active",
                 created_by=user.user_id,
@@ -978,7 +978,7 @@ class TestClientServiceList:
         client1 = Client(
             client_id=uuid4(),
             full_name="John Doe",
-            ssn="111-11-1111",
+            cpf="111-11-1111",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -989,7 +989,7 @@ class TestClientServiceList:
         client2 = Client(
             client_id=uuid4(),
             full_name="Jane Smith",
-            ssn="222-22-2222",
+            cpf="222-22-2222",
             birth_date=date(1991, 2, 2),
             status="active",
             created_by=user.user_id,
@@ -1000,7 +1000,7 @@ class TestClientServiceList:
         client3 = Client(
             client_id=uuid4(),
             full_name="John Johnson",
-            ssn="333-33-3333",
+            cpf="333-33-3333",
             birth_date=date(1992, 3, 3),
             status="active",
             created_by=user.user_id,
@@ -1054,7 +1054,7 @@ class TestClientServiceList:
         active_client = Client(
             client_id=uuid4(),
             full_name="Active Client",
-            ssn="111-11-1111",
+            cpf="111-11-1111",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             created_by=user.user_id,
@@ -1065,7 +1065,7 @@ class TestClientServiceList:
         inactive_client = Client(
             client_id=uuid4(),
             full_name="Inactive Client",
-            ssn="222-22-2222",
+            cpf="222-22-2222",
             birth_date=date(1991, 2, 2),
             status=ClientStatus.INACTIVE,
             created_by=user.user_id,
@@ -1180,8 +1180,8 @@ class TestClientServiceSSNValidation:
     """Test ClientService SSN validation edge cases."""
 
     @pytest.mark.asyncio
-    async def test_check_ssn_uniqueness_direct(self, test_session: Session) -> None:
-        """Test _check_ssn_uniqueness method directly."""
+    async def test_check_cpf_uniqueness_direct(self, test_session: Session) -> None:
+        """Test _check_cpf_uniqueness method directly."""
         # Create test user
         user = User(
             user_id=uuid4(),
@@ -1197,7 +1197,7 @@ class TestClientServiceSSNValidation:
         existing_client = Client(
             client_id=uuid4(),
             full_name="Existing Client",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -1212,14 +1212,14 @@ class TestClientServiceSSNValidation:
 
         # Test SSN uniqueness check for duplicate SSN
         with pytest.raises(ConflictError) as exc_info:
-            await service._check_ssn_uniqueness("123-45-6789")
+            await service._check_cpf_uniqueness("123-45-6789")
 
         assert "already exists" in str(exc_info.value).lower()
         assert exc_info.value.error_code == "SSN_DUPLICATE"
 
     @pytest.mark.asyncio
-    async def test_check_ssn_uniqueness_with_exclusion(self, test_session: Session) -> None:
-        """Test _check_ssn_uniqueness method with client exclusion for updates."""
+    async def test_check_cpf_uniqueness_with_exclusion(self, test_session: Session) -> None:
+        """Test _check_cpf_uniqueness method with client exclusion for updates."""
         # Create test user
         user = User(
             user_id=uuid4(),
@@ -1236,7 +1236,7 @@ class TestClientServiceSSNValidation:
         existing_client = Client(
             client_id=client_id,
             full_name="Existing Client",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -1251,13 +1251,13 @@ class TestClientServiceSSNValidation:
 
         # Test SSN uniqueness check excluding the same client (should pass)
         try:
-            await service._check_ssn_uniqueness("123-45-6789", exclude_client_id=client_id)
+            await service._check_cpf_uniqueness("123-45-6789", exclude_client_id=client_id)
         except ConflictError:
             pytest.fail("SSN uniqueness check should pass when excluding the same client")
 
     @pytest.mark.asyncio
-    async def test_check_ssn_uniqueness_unique_ssn(self, test_session: Session) -> None:
-        """Test _check_ssn_uniqueness method with unique SSN."""
+    async def test_check_cpf_uniqueness_unique_cpf(self, test_session: Session) -> None:
+        """Test _check_cpf_uniqueness method with unique SSN."""
         # Create test user
         user = User(
             user_id=uuid4(),
@@ -1275,7 +1275,7 @@ class TestClientServiceSSNValidation:
 
         # Test SSN uniqueness check for unique SSN (should pass)
         try:
-            await service._check_ssn_uniqueness("999-99-9999")
+            await service._check_cpf_uniqueness("999-99-9999")
         except ConflictError:
             pytest.fail("SSN uniqueness check should pass for unique SSN")
 
@@ -1284,7 +1284,7 @@ class TestClientServiceErrorHandlingExtended:
     """Test additional error handling scenarios in ClientService."""
 
     @pytest.mark.asyncio
-    async def test_update_client_ssn_conflict_handling(self, test_session: Session) -> None:
+    async def test_update_client_cpf_conflict_handling(self, test_session: Session) -> None:
         """Test handling of SSN conflicts during client update."""
         # Create test user and clients
         user = User(
@@ -1302,7 +1302,7 @@ class TestClientServiceErrorHandlingExtended:
         test_client1 = Client(
             client_id=client1_id,
             full_name="Client 1",
-            ssn="111-11-1111",
+            cpf="111-11-1111",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -1315,7 +1315,7 @@ class TestClientServiceErrorHandlingExtended:
         test_client2 = Client(
             client_id=client2_id,
             full_name="Client 2",
-            ssn="222-22-2222",
+            cpf="222-22-2222",
             birth_date=date(1991, 2, 2),
             status="active",
             created_by=user.user_id,
@@ -1335,7 +1335,7 @@ class TestClientServiceErrorHandlingExtended:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Try to update client2's SSN to match client1's SSN
-        update_data = ClientUpdate(ssn="111-11-1111")
+        update_data = ClientUpdate(cpf="111-11-1111")
 
         # Should raise ConflictError due to duplicate SSN
         with pytest.raises(ConflictError) as exc_info:
@@ -1362,7 +1362,7 @@ class TestClientServiceErrorHandlingExtended:
         test_client = Client(
             client_id=client_id,
             full_name="Test Client",
-            ssn="123-45-6789",
+            cpf="123-45-6789",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -1421,7 +1421,7 @@ class TestClientServiceErrorHandlingExtended:
             client = Client(
                 client_id=uuid4(),
                 full_name=f"Test Client {i + 1:02d}",
-                ssn=f"12{i}-45-678{i}",
+                cpf=f"12{i}-45-678{i}",
                 birth_date=date(1990, 1, i + 1),
                 status="active",
                 created_by=user.user_id,
@@ -1495,7 +1495,7 @@ class TestClientServiceErrorHandlingExtended:
         test_client = Client(
             client_id=client_id,
             full_name="Business Logic Test Client",
-            ssn="999-88-7777",
+            cpf="999-88-7777",
             birth_date=date(1985, 12, 25),
             status="active",
             notes="Test client for business logic validation",
@@ -1521,7 +1521,7 @@ class TestClientServiceErrorHandlingExtended:
         assert isinstance(result, ClientRead)
         assert result.client_id == client_id
         assert result.full_name == "Business Logic Test Client"
-        assert result.ssn == "999-88-7777"
+        assert result.cpf == "999-88-7777"
         assert result.birth_date == date(1985, 12, 25)
         assert result.notes == "Test client for business logic validation"
         assert result.status == "active"

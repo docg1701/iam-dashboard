@@ -285,7 +285,7 @@ class TestCriticalPerformanceSLA:
                 "url": "/api/v1/clients",
                 "payload": {
                     "name": "Performance Test Client",
-                    "ssn": "12345678901",
+                    "cpf": "12345678901",
                     "birth_date": "1990-01-01"
                 },
                 "description": "Create client"
@@ -301,7 +301,7 @@ class TestCriticalPerformanceSLA:
                 if endpoint["method"] == "POST":
                     # Generate unique SSN for each request
                     payload = endpoint["payload"].copy()
-                    payload["ssn"] = f"{uuid4().hex[:11]}"
+                    payload["cpf"] = f"{uuid4().hex[:11]}"
                     
                     response = await async_client.post(
                         endpoint["url"],

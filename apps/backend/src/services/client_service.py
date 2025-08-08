@@ -55,13 +55,13 @@ class ClientService:
             DatabaseError: If database operation fails
         """
         try:
-            # Check for existing SSN to prevent duplicates
-            await self._check_ssn_uniqueness(client_data.ssn)
+            # Check for existing CPF to prevent duplicates
+            await self._check_cpf_uniqueness(client_data.cpf)
 
             # Create SQLModel instance from schema data
             client = Client(
                 full_name=client_data.full_name,
-                ssn=client_data.ssn,
+                cpf=client_data.cpf,
                 birth_date=client_data.birth_date,
                 notes=client_data.notes,
                 created_by=user_id,
@@ -89,11 +89,11 @@ class ClientService:
 
         except IntegrityError as e:
             self.session.rollback()
-            if "ssn" in str(e.orig):
+            if "cpf" in str(e.orig):
                 raise ConflictError(
-                    message="A client with this SSN already exists",
-                    error_code="SSN_DUPLICATE",
-                    details={"ssn": client_data.ssn},
+                    message="A client with this CPF already exists",
+                    error_code="CPF_DUPLICATE",
+                    details={"cpf": client_data.cpf},
                 ) from e
             raise DatabaseError(
                 message="Failed to create client due to database constraint",
@@ -206,9 +206,9 @@ class ClientService:
             # Store old values for audit
             old_data = prepare_audit_data(client)
 
-            # Check SSN uniqueness if SSN is being updated
-            if client_data.ssn and client_data.ssn != client.ssn:
-                await self._check_ssn_uniqueness(client_data.ssn, exclude_client_id=client_id)
+            # Check CPF uniqueness if CPF is being updated
+            if client_data.cpf and client_data.cpf != client.cpf:
+                await self._check_cpf_uniqueness(client_data.cpf, exclude_client_id=client_id)
 
             # Update fields that are provided
             update_data = client_data.model_dump(exclude_unset=True)
@@ -241,11 +241,11 @@ class ClientService:
 
         except IntegrityError as e:
             self.session.rollback()
-            if "ssn" in str(e.orig):
+            if "cpf" in str(e.orig):
                 raise ConflictError(
-                    message="A client with this SSN already exists",
-                    error_code="SSN_DUPLICATE",
-                    details={"ssn": client_data.ssn},
+                    message="A client with this CPF already exists",
+                    error_code="CPF_DUPLICATE",
+                    details={"cpf": client_data.cpf},
                 ) from e
             raise DatabaseError(
                 message="Failed to update client due to database constraint",
@@ -416,17 +416,17 @@ class ClientService:
                 original_error=e,
             ) from e
 
-    async def _check_ssn_uniqueness(self, ssn: str, exclude_client_id: UUID | None = None) -> None:
-        """Check if SSN is unique in the database.
+    async def _check_cpf_uniqueness(self, cpf: str, exclude_client_id: UUID | None = None) -> None:
+        """Check if CPF is unique in the database.
 
         Args:
-            ssn: SSN to check for uniqueness
+            cpf: CPF to check for uniqueness
             exclude_client_id: Optional client ID to exclude from check (for updates)
 
         Raises:
-            ConflictError: If SSN already exists
+            ConflictError: If CPF already exists
         """
-        statement = select(Client).where(Client.ssn == ssn)
+        statement = select(Client).where(Client.cpf == cpf)
         if exclude_client_id:
             statement = statement.where(Client.client_id != exclude_client_id)
 
@@ -435,7 +435,7 @@ class ClientService:
 
         if existing_client:
             raise ConflictError(
-                message="A client with this SSN already exists",
-                error_code="SSN_DUPLICATE",
-                details={"ssn": ssn, "existing_client_id": str(existing_client.client_id)},
+                message="A client with this CPF already exists",
+                error_code="CPF_DUPLICATE",
+                details={"cpf": cpf, "existing_client_id": str(existing_client.client_id)},
             )

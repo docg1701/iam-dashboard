@@ -16,6 +16,13 @@ def validate_cpf(cpf: str | None) -> bool:
     if not cpf:
         return False
     
+    # First check format - must be exactly XXX.XXX.XXX-XX or 11 digits
+    formatted_pattern = re.match(r'^\d{3}\.\d{3}\.\d{3}-\d{2}$', cpf)
+    unformatted_pattern = re.match(r'^\d{11}$', cpf)
+    
+    if not (formatted_pattern or unformatted_pattern):
+        return False
+    
     try:
         from cnpj_cpf_validator import CPF
         return CPF.is_valid(cpf)

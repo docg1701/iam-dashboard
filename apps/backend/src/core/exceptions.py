@@ -49,7 +49,7 @@ class NotFoundError(DashboardException):
 
 
 class ConflictError(DashboardException):
-    """Raised when a resource conflict occurs (e.g., duplicate SSN)."""
+    """Raised when a resource conflict occurs (e.g., duplicate CPF)."""
 
     pass
 

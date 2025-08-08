@@ -26,9 +26,9 @@ class ClientBase(SQLModel):
     """Base client fields shared between models."""
 
     full_name: str = Field(min_length=2, max_length=255, description="Client's full legal name")
-    ssn: str = Field(
-        regex=r"^\d{3}-\d{2}-\d{4}$",
-        description="Client's Social Security Number in XXX-XX-XXXX format",
+    cpf: str = Field(
+        regex=r"^\d{3}\.\d{3}\.\d{3}-\d{2}$",
+        description="Client's Brazilian CPF in XXX.XXX.XXX-XX format",
     )
     birth_date: date = Field(description="Client's date of birth")
     status: ClientStatus = Field(
@@ -53,26 +53,19 @@ class ClientBase(SQLModel):
 
         return v
 
-    @field_validator("ssn")
+    @field_validator("cpf")
     @classmethod
-    def validate_ssn_format(cls, v: str) -> str:
-        """Validate SSN format and check sum."""
+    def validate_cpf_format(cls, v: str) -> str:
+        """Validate Brazilian CPF format and check digits."""
+        from src.utils.validation import validate_cpf
+        
         # Check format
-        if not re.match(r"^\d{3}-\d{2}-\d{4}$", v):
-            raise ValueError("SSN must be in XXX-XX-XXXX format")
+        if not re.match(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$", v):
+            raise ValueError("CPF must be in XXX.XXX.XXX-XX format")
 
-        # Extract digits for validation
-        digits = v.replace("-", "")
-
-        # Check for invalid SSN patterns
-        if digits == "000000000":
-            raise ValueError("SSN cannot be all zeros")
-        if digits[:3] == "000":
-            raise ValueError("SSN area number cannot be 000")
-        if digits[3:5] == "00":
-            raise ValueError("SSN group number cannot be 00")
-        if digits[5:] == "0000":
-            raise ValueError("SSN serial number cannot be 0000")
+        # Validate CPF using utility function
+        if not validate_cpf(v):
+            raise ValueError("Invalid CPF: failed check digit validation")
 
         return v
 
@@ -133,7 +126,7 @@ class Client(ClientBase, table=True):
 
         json_schema_extra = {
             "indexes": [
-                {"fields": ["ssn"], "unique": True},
+                {"fields": ["cpf"], "unique": True},
                 {"fields": ["full_name"]},
                 {"fields": ["status"]},
                 {"fields": ["created_at"]},
@@ -155,8 +148,8 @@ class ClientUpdate(SQLModel):
     full_name: str | None = Field(
         default=None, min_length=2, max_length=255, description="Updated client full name"
     )
-    ssn: Annotated[str, PydanticField(pattern=r"^\d{3}-\d{2}-\d{4}$")] | None = Field(
-        default=None, description="Updated SSN in XXX-XX-XXXX format"
+    cpf: Annotated[str, PydanticField(pattern=r"^\d{3}\.\d{3}\.\d{3}-\d{2}$")] | None = Field(
+        default=None, description="Updated CPF in XXX.XXX.XXX-XX format"
     )
     birth_date: date | None = Field(default=None, description="Updated birth date")
     status: ClientStatus | None = Field(default=None, description="Updated client status")
@@ -169,7 +162,7 @@ class ClientSearch(SQLModel):
     """Schema for client search operations."""
 
     full_name: str | None = Field(default=None, description="Search by full name (partial match)")
-    ssn: str | None = Field(default=None, description="Search by exact SSN")
+    cpf: str | None = Field(default=None, description="Search by exact CPF")
     status: ClientStatus | None = Field(default=None, description="Filter by client status")
     created_after: date | None = Field(
         default=None, description="Filter clients created after this date"

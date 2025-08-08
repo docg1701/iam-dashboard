@@ -7,43 +7,43 @@ from datetime import date
 from src.utils.validation import (
     sanitize_filename,
     validate_birth_date,
+    validate_cpf,
     validate_email,
     validate_name,
     validate_password_strength,
-    validate_ssn,
 )
 
 
 class TestValidationUtilities:
     """Test all validation utility functions."""
 
-    def test_validate_ssn_valid(self) -> None:
-        """Test SSN validation with valid SSNs."""
-        valid_ssns = [
-            "987-65-4320",  # Changed from sequential pattern
-            "555-12-3457",  # Changed from sequential pattern
-            "432-10-9876",  # Valid non-sequential SSN
+    def test_validate_cpf_valid(self) -> None:
+        """Test CPF validation with valid CPFs."""
+        valid_cpfs = [
+            "123.456.789-09",  # Valid CPF with correct check digits
+            "987.654.321-00",  # Valid CPF with correct check digits
+            "12345678909",     # Valid without formatting
         ]
 
-        for ssn in valid_ssns:
-            assert validate_ssn(ssn) is True
+        for cpf in valid_cpfs:
+            assert validate_cpf(cpf) is True
 
-    def test_validate_ssn_invalid(self) -> None:
-        """Test SSN validation with invalid SSNs."""
-        invalid_ssns = [
-            "000-00-0000",  # All zeros
-            "123-00-1234",  # Invalid group
-            "123-45-0000",  # Invalid serial
-            "12-345-6789",  # Wrong format
-            "123456789",  # No dashes
-            "abc-de-fghi",  # Non-numeric
+    def test_validate_cpf_invalid(self) -> None:
+        """Test CPF validation with invalid CPFs."""
+        invalid_cpfs = [
+            "000.000.000-00",  # All zeros
+            "111.111.111-11",  # All same digits
+            "123.456.789-10",  # Invalid check digits
+            "123.456.789",  # Wrong format (missing check digits)
+            "12345678",  # Too short
+            "abc.def.ghi-jk",  # Non-numeric
             "",  # Empty string
             None,  # None input
-            "123-45-6789-extra",  # Too long
+            "123.456.789-09-extra",  # Too long
         ]
 
-        for ssn in invalid_ssns:
-            assert validate_ssn(ssn) is False
+        for cpf in invalid_cpfs:
+            assert validate_cpf(cpf) is False
 
     def test_validate_email_valid(self) -> None:
         """Test email validation with valid emails."""

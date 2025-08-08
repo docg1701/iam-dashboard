@@ -58,7 +58,7 @@ class TestSQLInjectionPrevention:
         # Attempt SQL injection in various client fields
         malicious_client_data = {
             "name": sql_payload,
-            "ssn": "123456789",
+            "cpf": "123456789",
             "birth_date": "1990-01-01"
         }
         
@@ -178,7 +178,7 @@ class TestXSSPrevention:
         """Test that client data properly prevents XSS attacks."""
         malicious_client_data = {
             "name": xss_payload,
-            "ssn": "123456789", 
+            "cpf": "123456789", 
             "birth_date": "1990-01-01"
         }
         
@@ -321,7 +321,7 @@ class TestCommandInjectionPrevention:
         # Attempt command injection in client name (hypothetical scenario)
         malicious_data = {
             "name": f"TestClient{cmd_payload}",
-            "ssn": "123456789",
+            "cpf": "123456789",
             "birth_date": "1990-01-01"
         }
         
@@ -356,7 +356,7 @@ class TestJSONInjectionPrevention:
         # Attempt to inject additional fields
         malicious_json = {
             "name": "Test Client",
-            "ssn": "123456789", 
+            "cpf": "123456789", 
             "birth_date": "1990-01-01",
             # Attempt to inject admin-only fields
             "role": "sysadmin",
@@ -398,7 +398,7 @@ class TestJSONInjectionPrevention:
         # Attempt to inject malicious nested data
         malicious_data = {
             "name": "Test Client",
-            "ssn": "123456789",
+            "cpf": "123456789",
             "birth_date": "1990-01-01",
             **nested_payload  # Spread malicious nested data
         }
@@ -413,7 +413,7 @@ class TestJSONInjectionPrevention:
         if response.status_code == 201:
             client_data = response.json()
             # Verify only expected fields are present
-            expected_fields = {"client_id", "name", "ssn", "birth_date", "created_at", "updated_at", "is_active"}
+            expected_fields = {"client_id", "name", "cpf", "birth_date", "created_at", "updated_at", "is_active"}
             actual_fields = set(client_data.keys())
             unexpected_fields = actual_fields - expected_fields
             

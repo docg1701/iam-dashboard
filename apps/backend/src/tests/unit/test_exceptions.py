@@ -176,7 +176,7 @@ def test_dashboard_exception_to_http_not_found_error() -> None:
 
 def test_dashboard_exception_to_http_conflict_error() -> None:
     """Test ConflictError to HTTP mapping."""
-    exc = ConflictError("Resource conflict", "CONFLICT_001", {"field": "ssn"})
+    exc = ConflictError("Resource conflict", "CONFLICT_001", {"field": "cpf"})
     http_exc = dashboard_exception_to_http(exc)
 
     assert isinstance(http_exc, HTTPException)
@@ -185,7 +185,7 @@ def test_dashboard_exception_to_http_conflict_error() -> None:
     assert isinstance(detail, dict)
     assert detail["message"] == "Resource conflict"
     assert detail["error_code"] == "CONFLICT_001"
-    assert detail["details"] == {"field": "ssn"}
+    assert detail["details"] == {"field": "cpf"}
 
 
 def test_dashboard_exception_to_http_database_error() -> None:

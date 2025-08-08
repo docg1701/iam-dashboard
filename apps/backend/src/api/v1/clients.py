@@ -40,7 +40,7 @@ async def list_clients(
 
     This endpoint supports comprehensive filtering and search capabilities:
     - Full name search (partial, case-insensitive)
-    - Exact SSN search
+    - Exact CPF search
     - Status filtering (active, inactive, archived)
     - Date range filtering (created_after, created_before)
     - Pagination with configurable page size
@@ -75,13 +75,13 @@ async def list_clients(
         # Convert Client models to ClientListItem schemas
         client_list_items = []
         for client in clients:
-            # Create masked SSN for list view
-            masked_ssn = f"***-**-{client.ssn[-4:]}" if len(client.ssn) >= 4 else "***-**-****"
+            # Create masked CPF for list view
+            masked_cpf = f"***.***.*{client.cpf[-2:]}-{client.cpf[-2:]}" if len(client.cpf) >= 4 else "***.***.**-**"
 
             client_list_item = ClientListItem(
                 client_id=client.client_id,
                 full_name=client.full_name,
-                ssn_masked=masked_ssn,
+                cpf_masked=masked_cpf,
                 status=client.status,
                 created_at=client.created_at,
             )
@@ -115,8 +115,8 @@ async def create_client(
     Create a new client with comprehensive validation and audit logging.
 
     This endpoint validates client data including:
-    - SSN format validation (XXX-XX-XXXX)
-    - Duplicate SSN prevention
+    - CPF format validation (XXX.XXX.XXX-XX)
+    - Duplicate CPF prevention
     - Birth date validation (minimum 13 years old)
     - Full name format validation
     - Input sanitization for all fields
@@ -148,7 +148,7 @@ async def create_client(
         return ClientResponse(
             client_id=client_read.client_id,
             full_name=client_read.full_name,
-            ssn=client_read.ssn,  # Will be masked by validator
+            cpf=client_read.cpf,  # Will be masked by validator
             birth_date=client_read.birth_date,
             status=client_read.status,
             notes=client_read.notes,
@@ -209,7 +209,7 @@ async def get_client(
         return ClientResponse(
             client_id=client_read.client_id,
             full_name=client_read.full_name,
-            ssn=client_read.ssn,  # Will be masked by validator
+            cpf=client_read.cpf,  # Will be masked by validator
             birth_date=client_read.birth_date,
             status=client_read.status,
             notes=client_read.notes,
@@ -246,7 +246,7 @@ async def update_client(
 
     This endpoint allows updating client data including:
     - Full name with validation
-    - SSN format validation and uniqueness check
+    - CPF format validation and uniqueness check
     - Birth date validation (minimum 13 years old)
     - Status changes
     - Notes updates

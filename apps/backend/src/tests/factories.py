@@ -17,6 +17,7 @@ from src.models.permissions import (
     UserAgentPermission,
 )
 from src.models.user import User, UserRole
+from src.utils.validation import validate_cpf
 
 fake = FakerInstance()
 
@@ -37,7 +38,7 @@ class ClientAuditValues(TypedDict):
 
     client_id: str
     full_name: str
-    ssn: str
+    cpf: str
     birth_date: str
     status: str
     created_by: str
@@ -92,7 +93,7 @@ class ClientFactory(factory.Factory):  # type: ignore[misc,name-defined]
 
     # Client basic fields
     full_name = Faker("name")  # type: ignore[no-untyped-call]
-    ssn = factory.LazyAttribute(lambda _: generate_valid_ssn())  # type: ignore[attr-defined,no-untyped-call]
+    cpf = factory.LazyAttribute(lambda _: generate_valid_cpf())  # type: ignore[attr-defined,no-untyped-call]
     birth_date = Faker("date_of_birth", minimum_age=18, maximum_age=90)  # type: ignore[no-untyped-call]
     status = factory.Iterator([ClientStatus.ACTIVE, ClientStatus.INACTIVE])  # type: ignore[attr-defined,no-untyped-call]
     notes = Faker("text", max_nb_chars=200)  # type: ignore[no-untyped-call]
@@ -186,7 +187,7 @@ class SysAdminUserFactory(UserFactory):
 class InactiveClientFactory(ClientFactory):
     """Factory for creating inactive clients."""
 
-    status = factory.LazyFunction(lambda: ClientStatus.INACTIVE)  # type: ignore[attr-defined,no-untyped-call,assignment]
+    status = ClientStatus.INACTIVE  # type: ignore[assignment]
     notes = "Client account deactivated per client request"  # type: ignore[assignment]
     updated_at = Faker("date_time_this_month")  # type: ignore[no-untyped-call,assignment]
 
@@ -201,20 +202,67 @@ class RecentClientFactory(ClientFactory):
     status = ClientStatus.ACTIVE  # type: ignore[assignment]
 
 
+def generate_valid_cpf() -> str:
+    """Generate a valid CPF format using fallback implementation."""
+    # Use fallback implementation since cnpj-cpf-validator doesn't have generate
+    cpf = _generate_cpf_fallback()
+    
+    # Double-check our generated CPF is valid
+    assert validate_cpf(cpf), f"Generated invalid CPF: {cpf}"
+    
+    return cpf
+
+
+def _generate_cpf_fallback() -> str:
+    """Fallback CPF generation when cnpj-cpf-validator is not available."""
+    import random
+    
+    # Generate first 9 digits randomly
+    digits = [random.randint(0, 9) for _ in range(9)]
+    
+    # Avoid sequences like 000000000, 111111111, etc.
+    while all(d == digits[0] for d in digits):
+        digits = [random.randint(0, 9) for _ in range(9)]
+    
+    # Calculate first check digit
+    sum1 = sum(digits[i] * (10 - i) for i in range(9))
+    remainder1 = sum1 % 11
+    check_digit1 = 0 if remainder1 < 2 else 11 - remainder1
+    digits.append(check_digit1)
+    
+    # Calculate second check digit
+    sum2 = sum(digits[i] * (11 - i) for i in range(10))
+    remainder2 = sum2 % 11
+    check_digit2 = 0 if remainder2 < 2 else 11 - remainder2
+    digits.append(check_digit2)
+    
+    # Format as XXX.XXX.XXX-XX
+    return f"{digits[0]}{digits[1]}{digits[2]}.{digits[3]}{digits[4]}{digits[5]}.{digits[6]}{digits[7]}{digits[8]}-{digits[9]}{digits[10]}"
+
+
+def generate_invalid_cpf() -> str:
+    """Generate an invalid CPF for testing validation failures."""
+    # Return a CPF with all same digits (always invalid)
+    return "000.000.000-00"
+
+
+def generate_test_cpfs() -> dict[str, str]:
+    """Generate a set of test CPFs for various test scenarios."""
+    return {
+        "valid_cpf_1": generate_valid_cpf(),  # Valid CPF generated dynamically
+        "valid_cpf_2": generate_valid_cpf(),  # Valid CPF generated dynamically
+        "invalid_format_1": "12345678909",  # No formatting
+        "invalid_format_2": "123.456.789.09",  # Wrong separator
+        "invalid_check_digits": "123.456.789-10",  # Wrong check digits
+        "invalid_all_zeros": "000.000.000-00",  # All zeros (invalid)
+        "invalid_all_same": "111.111.111-11",  # All same digits (invalid)
+    }
+
+
+# Legacy SSN functions for backward compatibility during migration
 def generate_valid_ssn() -> str:
-    """Generate a valid SSN format that passes validation."""
-    # Generate valid area number (001-899, excluding 666)
-    area = fake.random_int(1, 899)
-    if area == 666:
-        area = 667
-
-    # Generate valid group number (01-99)
-    group = fake.random_int(1, 99)
-
-    # Generate valid serial number (0001-9999)
-    serial = fake.random_int(1, 9999)
-
-    return f"{area:03d}-{group:02d}-{serial:04d}"
+    """Generate a valid SSN format - DEPRECATED: Use generate_valid_cpf() instead."""
+    return generate_valid_cpf()
 
 
 def generate_audit_values(
@@ -234,7 +282,7 @@ def generate_audit_values(
         return {
             "client_id": str(fake.uuid4()),
             "full_name": fake.name(),
-            "ssn": generate_valid_ssn(),
+            "cpf": generate_valid_cpf(),
             "birth_date": fake.date_of_birth(minimum_age=18, maximum_age=90).isoformat(),
             "status": fake.random_element(["ACTIVE", "INACTIVE", "ARCHIVED"]),
             "created_by": str(fake.uuid4()),

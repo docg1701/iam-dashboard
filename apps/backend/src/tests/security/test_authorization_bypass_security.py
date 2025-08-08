@@ -204,7 +204,7 @@ class TestAgentPermissionBoundaryBypass:
         
         # Test client management operations
         client_operations = [
-            ("POST", "/api/v1/clients", {"name": "Test Client", "ssn": "123456789", "birth_date": "1990-01-01"}),
+            ("POST", "/api/v1/clients", {"name": "Test Client", "cpf": "123456789", "birth_date": "1990-01-01"}),
             ("GET", "/api/v1/clients", None),
         ]
         
@@ -252,7 +252,7 @@ class TestAgentPermissionBoundaryBypass:
         # Should NOT be able to create
         create_response = security_test_client.client.post(
             "/api/v1/clients",
-            json={"name": "Unauthorized Client", "ssn": "987654321", "birth_date": "1985-01-01"},
+            json={"name": "Unauthorized Client", "cpf": "987654321", "birth_date": "1985-01-01"},
             headers=headers
         )
         assert create_response.status_code == 403, "Create operation should be forbidden without create permission"
@@ -288,11 +288,11 @@ class TestAgentPermissionBoundaryBypass:
         # Attempt to escalate permissions through API manipulation
         escalation_attempts = [
             # Attempt to modify request to claim higher permissions
-            {"name": "Client", "ssn": "123456789", "birth_date": "1990-01-01", "_permission_override": "admin"},
-            {"name": "Client", "ssn": "123456789", "birth_date": "1990-01-01", "force_create": True},
-            {"name": "Client", "ssn": "123456789", "birth_date": "1990-01-01", "bypass_auth": True},
+            {"name": "Client", "cpf": "123456789", "birth_date": "1990-01-01", "_permission_override": "admin"},
+            {"name": "Client", "cpf": "123456789", "birth_date": "1990-01-01", "force_create": True},
+            {"name": "Client", "cpf": "123456789", "birth_date": "1990-01-01", "bypass_auth": True},
             # Attempt to claim admin role in request
-            {"name": "Client", "ssn": "123456789", "birth_date": "1990-01-01", "user_role": "admin"},
+            {"name": "Client", "cpf": "123456789", "birth_date": "1990-01-01", "user_role": "admin"},
         ]
         
         for attempt_data in escalation_attempts:
@@ -554,7 +554,7 @@ class TestHTTPMethodManipulationBypass:
         # Attempt unauthorized operations using different HTTP verbs
         # These should all be forbidden for regular user without permissions
         verb_attempts = [
-            ("POST", "/api/v1/clients", {"name": "Test", "ssn": "123456789", "birth_date": "1990-01-01"}),
+            ("POST", "/api/v1/clients", {"name": "Test", "cpf": "123456789", "birth_date": "1990-01-01"}),
             ("PUT", "/api/v1/users/me", {"role": "admin"}),  # Role escalation attempt
             ("DELETE", "/api/v1/clients/00000000-0000-0000-0000-000000000001", None),
             ("PATCH", "/api/v1/users/me", {"role": "sysadmin"}),
@@ -640,14 +640,14 @@ class TestParameterPollutionBypass:
         polluted_json_attempts = [
             {
                 "name": "Test Client",
-                "ssn": "123456789",
+                "cpf": "123456789",
                 "birth_date": "1990-01-01",
                 "role": "user",
                 "role": "admin",  # Duplicate key with different value
             },
             {
                 "name": "Test Client",
-                "ssn": "123456789", 
+                "cpf": "123456789", 
                 "birth_date": "1990-01-01",
                 "permissions": ["read"],
                 "permissions": ["admin", "all"],  # Pollution attempt
@@ -858,7 +858,7 @@ class TestMiddlewareBypassAttempts:
             # Add required fields
             full_data = {
                 **encoded_data,
-                "ssn": "123456789",
+                "cpf": "123456789",
                 "birth_date": "1990-01-01"
             }
             

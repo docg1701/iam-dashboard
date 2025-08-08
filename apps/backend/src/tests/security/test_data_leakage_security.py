@@ -47,7 +47,7 @@ class TestSensitiveDataExposurePrevention:
     tokens, and other PII is properly masked or excluded from responses.
     """
     
-    def test_ssn_masking_in_client_responses(
+    def test_cpf_masking_in_client_responses(
         self,
         security_test_client,
         attack_user_scenarios: Dict[str, User],
@@ -59,7 +59,7 @@ class TestSensitiveDataExposurePrevention:
         # Create client with real SSN
         test_client = ClientFactory(
             name="Test Client",
-            ssn="123456789",  # Real SSN for testing
+            cpf="123456789",  # Real SSN for testing
             birth_date="1990-01-01"
         )
         test_session.add(test_client)
@@ -82,22 +82,22 @@ class TestSensitiveDataExposurePrevention:
         
         if response.status_code == 200:
             client_data = response.json()
-            ssn_value = client_data.get("ssn", "")
+            cpf_value = client_data.get("cpf", "")
             
             # SSN should be masked (e.g., "XXX-XX-6789" or similar)
-            assert "123456789" not in ssn_value, "Full SSN should not be exposed"
-            assert len(ssn_value) > 0, "SSN field should exist but be masked"
+            assert "123456789" not in cpf_value, "Full SSN should not be exposed"
+            assert len(cpf_value) > 0, "SSN field should exist but be masked"
             
             # Common masking patterns
             is_masked = (
-                "XXX" in ssn_value or  # XXX-XX-6789
-                "*" in ssn_value or    # ***-**-6789
-                "###" in ssn_value or  # ###-##-6789
-                ssn_value.startswith("***") or  # ***456789
-                len(ssn_value.replace("-", "").replace("X", "").replace("*", "").replace("#", "")) < 9  # Some digits hidden
+                "XXX" in cpf_value or  # XXX-XX-6789
+                "*" in cpf_value or    # ***-**-6789
+                "###" in cpf_value or  # ###-##-6789
+                cpf_value.startswith("***") or  # ***456789
+                len(cpf_value.replace("-", "").replace("X", "").replace("*", "").replace("#", "")) < 9  # Some digits hidden
             )
             
-            assert is_masked, f"SSN should be masked, got: {ssn_value}"
+            assert is_masked, f"SSN should be masked, got: {cpf_value}"
     
     def test_password_data_never_exposed(
         self,
@@ -259,12 +259,12 @@ class TestErrorMessageInformationDisclosure:
         # Attempt to trigger database errors with malicious data
         database_error_triggers = [
             # Duplicate key violation attempt
-            {"name": "Test Client", "ssn": "123456789", "birth_date": "1990-01-01"},
-            {"name": "Test Client 2", "ssn": "123456789", "birth_date": "1990-01-01"},  # Same SSN
+            {"name": "Test Client", "cpf": "123456789", "birth_date": "1990-01-01"},
+            {"name": "Test Client 2", "cpf": "123456789", "birth_date": "1990-01-01"},  # Same SSN
             # Invalid foreign key attempt  
-            {"name": "Test Client", "ssn": "987654321", "birth_date": "1990-01-01", "created_by_user_id": "invalid-uuid"},
+            {"name": "Test Client", "cpf": "987654321", "birth_date": "1990-01-01", "created_by_user_id": "invalid-uuid"},
             # Invalid data type
-            {"name": "Test Client", "ssn": "111111111", "birth_date": "not-a-date"},
+            {"name": "Test Client", "cpf": "111111111", "birth_date": "not-a-date"},
         ]
         
         for client_data in database_error_triggers:
@@ -366,11 +366,11 @@ class TestErrorMessageInformationDisclosure:
             # Missing required fields
             {"name": "Test Client"},  # Missing SSN and birth_date
             # Invalid formats
-            {"name": "", "ssn": "invalid-ssn", "birth_date": "invalid-date"},
+            {"name": "", "cpf": "invalid-cpf", "birth_date": "invalid-date"},
             # Field length violations
-            {"name": "A" * 1000, "ssn": "123456789", "birth_date": "1990-01-01"},
+            {"name": "A" * 1000, "cpf": "123456789", "birth_date": "1990-01-01"},
             # Type mismatches
-            {"name": 12345, "ssn": True, "birth_date": ["array"]},
+            {"name": 12345, "cpf": True, "birth_date": ["array"]},
         ]
         
         for invalid_data in validation_triggers:
@@ -560,13 +560,13 @@ class TestCrossUserDataBleeding:
         # Create clients for each user
         client1 = ClientFactory(
             name="User1 Confidential Client",
-            ssn="111111111",
+            cpf="111111111",
             created_by_user_id=user1.user_id
         )
         
         client2 = ClientFactory(
             name="User2 Secret Client", 
-            ssn="222222222",
+            cpf="222222222",
             created_by_user_id=user2.user_id
         )
         
@@ -592,11 +592,11 @@ class TestCrossUserDataBleeding:
             
             # Should not contain user2's client data
             client_names = [client.get("name", "") for client in clients_data]
-            client_ssns = [client.get("ssn", "") for client in clients_data]
+            client_cpfs = [client.get("cpf", "") for client in clients_data]
             
             assert "User2 Secret Client" not in client_names, "Should not see other user's client names"
-            assert "222222222" not in str(client_ssns), "Should not see other user's client SSNs"
-            assert "***-**-2222" not in str(client_ssns), "Should not see other user's masked SSNs"
+            assert "222222222" not in str(client_cpfs), "Should not see other user's client SSNs"
+            assert "***-**-2222" not in str(client_cpfs), "Should not see other user's masked SSNs"
             
             # Should only see own clients or have appropriate permission-based access
             for client_data in clients_data:
@@ -709,7 +709,7 @@ class TestCrossUserDataBleeding:
         # User1 should not be able to create clients
         create_response1 = security_test_client.client.post(
             "/api/v1/clients",
-            json={"name": "Test Client", "ssn": "123456789", "birth_date": "1990-01-01"},
+            json={"name": "Test Client", "cpf": "123456789", "birth_date": "1990-01-01"},
             headers=headers1
         )
         
@@ -718,7 +718,7 @@ class TestCrossUserDataBleeding:
         # User2 should be able to create clients
         create_response2 = security_test_client.client.post(
             "/api/v1/clients",
-            json={"name": "Admin Client", "ssn": "987654321", "birth_date": "1990-01-01"},
+            json={"name": "Admin Client", "cpf": "987654321", "birth_date": "1990-01-01"},
             headers=headers2
         )
         
@@ -728,7 +728,7 @@ class TestCrossUserDataBleeding:
         # Verify permissions didn't bleed - user1 still can't create after user2's successful creation
         create_response1_again = security_test_client.client.post(
             "/api/v1/clients",
-            json={"name": "Test Client 2", "ssn": "111111111", "birth_date": "1990-01-01"},
+            json={"name": "Test Client 2", "cpf": "111111111", "birth_date": "1990-01-01"},
             headers=headers1
         )
         
