@@ -548,7 +548,7 @@ class TestClientResponse:
         assert client_response.updated_by == updated_by
 
     def test_client_response_cpf_masking_normal(self) -> None:
-        """Test ClientResponse SSN masking with normal SSNs."""
+        """Test ClientResponse CPF masking with normal CPFs."""
 
         test_cases = [
             ("123.456.789-09", "***.***.***-09"),
@@ -578,7 +578,7 @@ class TestClientResponse:
             assert client_response.cpf == expected_masked
 
     def test_client_response_cpf_masking_edge_cases(self) -> None:
-        """Test ClientResponse SSN masking with edge cases."""
+        """Test ClientResponse CPF masking with edge cases."""
 
         test_cases = [
             ("123", "***.***.***-**"),  # Too short, fallback

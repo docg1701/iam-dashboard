@@ -24,6 +24,12 @@ Essential guidance for Claude Code when working on this fullstack IAM Dashboard 
 - **ONLY mock external APIs** (fetch calls, third-party services, etc.)
 - **Test actual behavior**, not implementation details
 
+### Tool Usage Rules
+- **MANDATORY: Read before Edit** - ALWAYS use `Read` tool before any `Edit` operation
+- **File-specific editing** - NEVER attempt to edit directories as if they were files
+- **Correct workflow**: `Read` → `Edit` → `Bash` (for validation)
+- **NEVER skip reading** - Even for "obvious" changes, read the file first
+
 ## 🛠️ MCP Tools
 
 ### Context7 - Documentation Search
@@ -116,6 +122,8 @@ uv run pytest              # Run tests
 5. **Never exceed 500 lines per file**
 6. **Never use `any` type** in TypeScript
 7. **Never commit without passing quality checks**
+8. **Never edit files without reading them first** - Always `Read` before `Edit`
+9. **Never attempt to edit directories as if they were files** - Use `Edit` only on specific files
 
 ---
 

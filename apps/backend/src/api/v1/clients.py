@@ -128,7 +128,7 @@ async def create_client(
         token_data: Current user token data for authorization
 
     Returns:
-        ClientResponse: Created client information with masked SSN
+        ClientResponse: Created client information with masked CPF
 
     Raises:
         HTTPException: 400 for validation errors, 409 for conflicts, 500 for server errors
@@ -189,7 +189,7 @@ async def get_client(
         token_data: Current user token data
 
     Returns:
-        ClientResponse: Client information with masked SSN
+        ClientResponse: Client information with masked CPF
 
     Raises:
         HTTPException: 404 if client not found, 500 for server errors
@@ -260,7 +260,7 @@ async def update_client(
         token_data: Current user token data for authorization
 
     Returns:
-        ClientResponse: Updated client information with masked SSN
+        ClientResponse: Updated client information with masked CPF
 
     Raises:
         HTTPException: 400 for validation errors, 404 if not found, 409 for conflicts, 500 for server errors
@@ -281,7 +281,7 @@ async def update_client(
         return ClientResponse(
             client_id=updated_client.client_id,
             full_name=updated_client.full_name,
-            ssn=updated_client.ssn,  # Will be masked by validator
+            cpf=updated_client.cpf,  # Will be masked by validator
             birth_date=updated_client.birth_date,
             status=updated_client.status,
             notes=updated_client.notes,

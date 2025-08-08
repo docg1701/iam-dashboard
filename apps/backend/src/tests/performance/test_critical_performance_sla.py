@@ -299,7 +299,7 @@ class TestCriticalPerformanceSLA:
                 start_time = time.time()
                 
                 if endpoint["method"] == "POST":
-                    # Generate unique SSN for each request
+                    # Generate unique CPF for each request
                     payload = endpoint["payload"].copy()
                     payload["cpf"] = f"{uuid4().hex[:11]}"
                     

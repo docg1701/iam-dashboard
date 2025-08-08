@@ -54,9 +54,9 @@ test.describe('Critical User Flows', () => {
       await page.waitForSelector('input[name="name"], input[name="full_name"]')
       await page.fill('input[name="name"], input[name="full_name"]', 'João Silva')
       
-      const ssnInput = page.locator('input[name="ssn"]')
-      if (await ssnInput.isVisible()) {
-        await ssnInput.fill('123-45-6789')
+      const cpfInput = page.locator('input[name="cpf"]')
+      if (await cpfInput.isVisible()) {
+        await cpfInput.fill('123.456.789-09')
       }
       
       const birthDateInput = page.locator('input[name="birth_date"], input[type="date"]')

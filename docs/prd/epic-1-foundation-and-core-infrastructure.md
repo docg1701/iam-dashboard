@@ -61,7 +61,7 @@ so that I can start building our client database with proper validation and secu
 ### Acceptance Criteria
 
 1. **Client Registration API:** POST endpoint for creating new clients with comprehensive validation
-2. **SSN Validation:** Format validation and duplicate prevention system with clear error messages
+2. **CPF Validation:** Format validation and duplicate prevention system with clear error messages
 3. **Data Validation:** Birthdate validation, name field requirements, and input sanitization
 4. **Client Registration UI:** Responsive form with real-time validation and user-friendly error display
 5. **Success Feedback:** Confirmation messages and proper navigation after successful registration

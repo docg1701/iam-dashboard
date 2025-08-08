@@ -37,7 +37,7 @@ interface UserUpdate {
 interface Client {
   client_id: string;
   full_name: string;
-  ssn: string; // Format: XXX-XX-XXXX
+  cpf: string; // Format: XXX.XXX.XXX-XX
   birth_date: string; // ISO 8601 date format
   status: 'active' | 'inactive' | 'archived';
   created_by: string; // User ID reference
@@ -49,21 +49,21 @@ interface Client {
 
 interface ClientCreate {
   full_name: string;
-  ssn: string;
+  cpf: string;
   birth_date: string;
   notes?: string;
 }
 
 interface ClientUpdate {
   full_name?: string;
-  ssn?: string;
+  cpf?: string;
   birth_date?: string;
   status?: 'active' | 'inactive' | 'archived';
   notes?: string;
 }
 
 interface ClientSearch {
-  query?: string; // Name or SSN search
+  query?: string; // Name or CPF search
   status?: 'active' | 'inactive' | 'archived';
   created_after?: string;
   created_before?: string;

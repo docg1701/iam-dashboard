@@ -101,7 +101,7 @@ function NewClientPageContent() {
               <div className="text-sm text-green-700 space-y-1">
                 <p><strong>ID:</strong> {createdClient.client_id}</p>
                 <p><strong>Nome:</strong> {createdClient.full_name}</p>
-                <p><strong>CPF:</strong> {createdClient.ssn}</p>
+                <p><strong>CPF:</strong> {createdClient.cpf}</p>
                 <p><strong>Data de Nascimento:</strong> {formatDateBR(createdClient.birth_date)}</p>
               </div>
             </div>

@@ -33,7 +33,7 @@ so that I can quickly find specific clients and generate targeted reports.
 ### Acceptance Criteria
 
 1. **Basic Search:** Text search across client names with real-time results and autocomplete
-2. **SSN Search:** Secure SSN search with proper access control and partial matching
+2. **CPF Search:** Secure CPF search with proper access control and partial matching
 3. **Date Range Filtering:** Filter clients by registration date, birth date, or modification date ranges
 4. **Advanced Filters:** Combine multiple search criteria with AND/OR logic operations
 5. **Search Results:** Paginated results with sorting options and result count display

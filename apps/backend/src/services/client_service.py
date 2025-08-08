@@ -51,7 +51,7 @@ class ClientService:
 
         Raises:
             ValidationError: If client data validation fails
-            ConflictError: If SSN already exists
+            ConflictError: If CPF already exists
             DatabaseError: If database operation fails
         """
         try:
@@ -186,7 +186,7 @@ class ClientService:
 
         Raises:
             NotFoundError: If client not found
-            ConflictError: If SSN already exists (for different client)
+            ConflictError: If CPF already exists (for different client)
             ValidationError: If update data validation fails
             DatabaseError: If database operation fails
         """

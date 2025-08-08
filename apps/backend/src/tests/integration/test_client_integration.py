@@ -122,7 +122,7 @@ class TestClientServiceIntegration:
         assert minimal_client.notes is None
 
     def test_client_response_schema_masking(self) -> None:
-        """Test that ClientResponse properly masks SSN."""
+        """Test that ClientResponse properly masks CPF."""
 
         # Create test response
         client_response = ClientResponse(
@@ -170,11 +170,11 @@ class TestClientServiceIntegration:
         test_session.add(client1)
         test_session.commit()
 
-        # Try to create second client with same SSN
+        # Try to create second client with same CPF
         client2 = Client(
             client_id=uuid4(),
             full_name="Second Client",
-            cpf="111.222.333-96",  # Same SSN
+            cpf="111.222.333-96",  # Same CPF
             birth_date=date(1985, 6, 15),
             status="active",
             created_by=user.user_id,
@@ -192,7 +192,7 @@ class TestClientServiceIntegration:
 
             statement = select(Client).where(Client.cpf == "111.222.333-96")
             all_clients = list(test_session.exec(statement).all())
-            assert len(all_clients) >= 1, "At least one client with the SSN should exist"
+            assert len(all_clients) >= 1, "At least one client with the CPF should exist"
             # Clean up by rolling back
             test_session.rollback()
         except Exception:
@@ -202,7 +202,7 @@ class TestClientServiceIntegration:
             statement = select(Client).where(Client.cpf == "111.222.333-96")
             all_clients = list(test_session.exec(statement).all())
             assert len(all_clients) == 1, (
-                "Only one client with the SSN should exist after constraint violation"
+                "Only one client with the CPF should exist after constraint violation"
             )
 
     def test_client_age_validation_edge_cases(self) -> None:
@@ -229,14 +229,14 @@ class TestClientServiceIntegration:
             )
 
     def test_cpf_format_validation_comprehensive(self) -> None:
-        """Test comprehensive SSN format validation."""
+        """Test comprehensive CPF format validation."""
 
-        # Valid SSN formats
+        # Valid CPF formats
         valid_cpfs = [
             "123.456.789-09",
-            "987-65-4321",
-            "555-12-3456",
-            "000-12-3456",  # Some implementations allow 000 area
+            "987.654.321-00",
+            "555.123.456-78",
+            "000.123.456-78",  # Some implementations allow 000 area
         ]
 
         for cpf in valid_cpfs:
@@ -244,10 +244,10 @@ class TestClientServiceIntegration:
                 client = ClientCreate(full_name="Test Client", cpf=cpf, birth_date=date(1990, 1, 1))
                 assert client.cpf == cpf
             except ValidationError:
-                # Some SSNs might be invalid depending on strict validation
+                # Some CPFs might be invalid depending on strict validation
                 pass
 
-        # Invalid SSN formats
+        # Invalid CPF formats
         invalid_cpfs = [
             "123456789",  # No dashes
             "123-456-789",  # Wrong format

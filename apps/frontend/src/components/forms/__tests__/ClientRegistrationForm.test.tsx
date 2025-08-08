@@ -27,7 +27,7 @@ describe('ClientRegistrationForm', () => {
 
   // Helper functions to get form fields reliably
   const getNameField = () => screen.getByPlaceholderText(/joão silva santos/i)
-  const getSsnField = () => screen.getByPlaceholderText(/123-45-6789/i)
+  const getCpfField = () => screen.getByPlaceholderText(/123\.456\.789-12/i)
   const getBirthDateField = () => document.querySelector('input[type="date"]') as HTMLInputElement
   const getNotesField = () => screen.getByPlaceholderText(/informações adicionais/i)
   const getSubmitButton = () => screen.getByRole('button', { name: /criar cliente/i })
@@ -49,7 +49,7 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     expect(getNameField()).toBeInTheDocument()
-    expect(getSsnField()).toBeInTheDocument()
+    expect(getCpfField()).toBeInTheDocument()
     expect(getBirthDateField()).toBeInTheDocument()
     expect(getNotesField()).toBeInTheDocument()
     expect(getSubmitButton()).toBeInTheDocument()
@@ -60,11 +60,11 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const notesField = getNotesField()
     
     expect(nameField).toHaveAttribute('autoComplete', 'name')
-    expect(ssnField).toHaveAttribute('autoComplete', 'off')
+    expect(cpfField).toHaveAttribute('autoComplete', 'off')
     expect(notesField.tagName).toBe('TEXTAREA')
   })
 
@@ -126,16 +126,16 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const submitButton = getSubmitButton()
     
     // Fill form with invalid CPF (too short - only 8 digits)
     await user.type(nameField, 'João Silva')
-    await user.type(ssnField, '12345678')
+    await user.type(cpfField, '12345678')
     await user.click(submitButton)
     
     await waitFor(() => {
-      expect(screen.getByText(/cpf deve estar no formato XXX-XX-XXXX/i)).toBeInTheDocument()
+      expect(screen.getByText(/cpf deve estar no formato XXX\.XXX\.XXX-XX/i)).toBeInTheDocument()
     })
     
     expect(mockOnSubmit).not.toHaveBeenCalled()
@@ -147,12 +147,12 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const submitButton = getSubmitButton()
     
     // Fill form without birth date
     await user.type(nameField, 'João Silva')
-    await user.type(ssnField, '123456789')
+    await user.type(cpfField, '12345678901')
     await user.click(submitButton)
     
     await waitFor(() => {
@@ -169,7 +169,7 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const birthDateField = getBirthDateField()
     const submitButton = getSubmitButton()
     
@@ -180,9 +180,10 @@ describe('ClientRegistrationForm', () => {
     
     // Fill all required fields to trigger age validation specifically
     await user.type(nameField, 'João Silva')
-    await user.type(ssnField, '123456789')
+    await user.type(cpfField, '11144477735') // Use a valid CPF format for testing
     
     // Set the birth date to today's date (0 years old)
+    await user.clear(birthDateField)
     await user.type(birthDateField, todayStr)
     
     // Click submit to trigger validation
@@ -193,7 +194,7 @@ describe('ClientRegistrationForm', () => {
       () => {
         expect(screen.getByText(/idade deve estar entre 13 e 120 anos/i)).toBeInTheDocument()
       },
-      { timeout: 3000 }
+      { timeout: 5000 }
     )
     
     expect(mockOnSubmit).not.toHaveBeenCalled()
@@ -205,7 +206,7 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const birthDateField = getBirthDateField()
     const submitButton = getSubmitButton()
     
@@ -215,7 +216,7 @@ describe('ClientRegistrationForm', () => {
     const overAgeStr = overAge.toISOString().split('T')[0]
     
     await user.type(nameField, 'João Silva')
-    await user.type(ssnField, '123-45-6789')
+    await user.type(cpfField, '11144477735')
     await user.clear(birthDateField)
     await user.type(birthDateField, overAgeStr)
     await user.click(submitButton)
@@ -233,7 +234,7 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const birthDateField = getBirthDateField()
     const notesField = getNotesField()
     const submitButton = getSubmitButton()
@@ -242,7 +243,7 @@ describe('ClientRegistrationForm', () => {
     const longText = 'A'.repeat(1001)
     
     await user.type(nameField, 'João Silva')
-    await user.type(ssnField, '123-45-6789')
+    await user.type(cpfField, '11144477735')
     await user.type(birthDateField, '1990-05-15')
     await user.type(notesField, longText)
     await user.click(submitButton)
@@ -258,26 +259,29 @@ describe('ClientRegistrationForm', () => {
     
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     
     // Type CPF digits and verify formatting
-    await user.type(ssnField, '12345')
-    expect(ssnField).toHaveValue('123-45')
+    await user.type(cpfField, '12345')
+    expect(cpfField).toHaveValue('123.45')
     
-    await user.type(ssnField, '6789')
-    expect(ssnField).toHaveValue('123-45-6789')
+    await user.type(cpfField, '67890')
+    expect(cpfField).toHaveValue('123.456.789-0')
+    
+    await user.type(cpfField, '1')
+    expect(cpfField).toHaveValue('123.456.789-09')
   })
 
-  it('should limit CPF input to 9 digits', async () => {
+  it('should limit CPF input to 11 digits', async () => {
     const user = userEvent.setup()
     
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     
-    // Try to type more than 9 digits
-    await user.type(ssnField, '12345678901234')
-    expect(ssnField).toHaveValue('123-45-6789')
+    // Try to type more than 11 digits
+    await user.type(cpfField, '12345678901234')
+    expect(cpfField).toHaveValue('123.456.789-09')
   })
 
   it('should handle non-numeric characters in CPF input', async () => {
@@ -285,11 +289,11 @@ describe('ClientRegistrationForm', () => {
     
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     
     // Type CPF with letters and special characters
-    await user.type(ssnField, 'abc123def45ghi6789')
-    expect(ssnField).toHaveValue('123-45-6789')
+    await user.type(cpfField, 'abc123def456ghi789jkl01')
+    expect(cpfField).toHaveValue('123.456.789-09')
   })
 
   // Form Submission Tests
@@ -298,7 +302,7 @@ describe('ClientRegistrationForm', () => {
     const mockClientResponse: ClientResponse = {
       client_id: '123e4567-e89b-12d3-a456-426614174000',
       full_name: 'João Silva Santos',
-      ssn: 'XXX-XX-6789',
+      cpf: '***.***.***-89',
       birth_date: '1990-05-15',
       status: 'active',
       notes: 'Cliente teste',
@@ -316,14 +320,14 @@ describe('ClientRegistrationForm', () => {
  />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const birthDateField = getBirthDateField()
     const notesField = getNotesField()
     const submitButton = getSubmitButton()
     
     // Fill form with valid data
     await user.type(nameField, 'João Silva Santos')
-    await user.type(ssnField, '123456789')
+    await user.type(cpfField, '12345678901')
     await user.type(birthDateField, '1990-05-15')
     await user.type(notesField, 'Cliente teste')
     
@@ -333,7 +337,7 @@ describe('ClientRegistrationForm', () => {
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         full_name: 'João Silva Santos',
-        ssn: '123-45-6789',
+        cpf: '123.456.789-09',
         birth_date: '1990-05-15',
         notes: 'Cliente teste'
       })
@@ -347,7 +351,7 @@ describe('ClientRegistrationForm', () => {
     const mockClientResponse: ClientResponse = {
       client_id: '123e4567-e89b-12d3-a456-426614174000',
       full_name: 'Maria Silva',
-      ssn: 'XXX-XX-5432',
+      cpf: '***.***.***-32',
       birth_date: '1985-03-10',
       status: 'active',
       created_by: 'user123',
@@ -364,13 +368,13 @@ describe('ClientRegistrationForm', () => {
  />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const birthDateField = getBirthDateField()
     const submitButton = getSubmitButton()
     
     // Fill only required fields
     await user.type(nameField, 'Maria Silva')
-    await user.type(ssnField, '987654321')
+    await user.type(cpfField, '98765432101')
     await user.type(birthDateField, '1985-03-10')
     
     // Submit form
@@ -379,7 +383,7 @@ describe('ClientRegistrationForm', () => {
     await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         full_name: 'Maria Silva',
-        ssn: '987-65-4321',
+        cpf: '987.654.321-01',
         birth_date: '1985-03-10',
         notes: undefined
       })
@@ -396,7 +400,7 @@ describe('ClientRegistrationForm', () => {
         setTimeout(() => resolve({
           client_id: '123',
           full_name: 'João Silva',
-          ssn: 'XXX-XX-6789',
+          cpf: '***.***.***-89',
           birth_date: '1990-05-15',
           status: 'active',
           created_by: 'user123',
@@ -410,13 +414,13 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const birthDateField = getBirthDateField()
     const submitButton = getSubmitButton()
     const clearButton = getClearButton()
     
     await user.type(nameField, 'João Silva')
-    await user.type(ssnField, '123456789')
+    await user.type(cpfField, '12345678901')
     await user.type(birthDateField, '1990-05-15')
     
     await user.click(submitButton)
@@ -426,7 +430,7 @@ describe('ClientRegistrationForm', () => {
     expect(submitButton).toBeDisabled()
     expect(clearButton).toBeDisabled()
     expect(nameField).toBeDisabled()
-    expect(ssnField).toBeDisabled()
+    expect(cpfField).toBeDisabled()
     expect(birthDateField).toBeDisabled()
     
     // Wait for loading to complete
@@ -448,12 +452,12 @@ describe('ClientRegistrationForm', () => {
  />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const birthDateField = getBirthDateField()
     const submitButton = getSubmitButton()
     
     await user.type(nameField, 'João Silva')
-    await user.type(ssnField, '123456789')
+    await user.type(cpfField, '12345678901')
     await user.type(birthDateField, '1990-05-15')
     
     await user.click(submitButton)
@@ -472,20 +476,20 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const birthDateField = getBirthDateField()
     const notesField = getNotesField()
     const clearButton = getClearButton()
     
     // Fill form
     await user.type(nameField, 'João Silva')
-    await user.type(ssnField, '123456789')
+    await user.type(cpfField, '12345678901')
     await user.type(birthDateField, '1990-05-15')
     await user.type(notesField, 'Test notes')
     
     // Verify fields have values
     expect(nameField).toHaveValue('João Silva')
-    expect(ssnField).toHaveValue('123-45-6789')
+    expect(cpfField).toHaveValue('123.456.789-09')
     expect(birthDateField).toHaveValue('1990-05-15')
     expect(notesField).toHaveValue('Test notes')
     
@@ -494,7 +498,7 @@ describe('ClientRegistrationForm', () => {
     
     // Verify fields are cleared
     expect(nameField).toHaveValue('')
-    expect(ssnField).toHaveValue('')
+    expect(cpfField).toHaveValue('')
     expect(birthDateField).toHaveValue('')
     expect(notesField).toHaveValue('')
   })
@@ -504,7 +508,7 @@ describe('ClientRegistrationForm', () => {
     const mockClientResponse: ClientResponse = {
       client_id: '123e4567-e89b-12d3-a456-426614174000',
       full_name: 'João Silva',
-      ssn: 'XXX-XX-6789',
+      cpf: '***.***.***-89',
       birth_date: '1990-05-15',
       status: 'active',
       created_by: 'user123',
@@ -518,14 +522,14 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const birthDateField = getBirthDateField()
     const notesField = getNotesField()
     const submitButton = getSubmitButton()
     
     // Fill and submit form
     await user.type(nameField, 'João Silva')
-    await user.type(ssnField, '123456789')
+    await user.type(cpfField, '12345678901')
     await user.type(birthDateField, '1990-05-15')
     await user.type(notesField, 'Test notes')
     
@@ -538,7 +542,7 @@ describe('ClientRegistrationForm', () => {
     // Form should be reset after successful submission
     await waitFor(() => {
       expect(nameField).toHaveValue('')
-      expect(ssnField).toHaveValue('')
+      expect(cpfField).toHaveValue('')
       expect(birthDateField).toHaveValue('')
       expect(notesField).toHaveValue('')
     })
@@ -551,7 +555,7 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     const nameField = getNameField()
-    const ssnField = getSsnField()
+    const cpfField = getCpfField()
     const birthDateField = getBirthDateField()
     const notesField = getNotesField()
     const submitButton = getSubmitButton()
@@ -563,7 +567,7 @@ describe('ClientRegistrationForm', () => {
     
     // Tab through fields
     await user.tab()
-    expect(ssnField).toHaveFocus()
+    expect(cpfField).toHaveFocus()
     
     await user.tab()
     expect(birthDateField).toHaveFocus()
@@ -583,7 +587,7 @@ describe('ClientRegistrationForm', () => {
     renderWithProviders(<ClientRegistrationForm onSubmit={mockOnSubmit} />)
     
     expect(screen.getByText(/nome completo do cliente conforme documento de identidade/i)).toBeInTheDocument()
-    expect(screen.getByText(/cpf no formato xxx-xx-xxxx \(apenas números\)/i)).toBeInTheDocument()
+    expect(screen.getByText(/cpf no formato XXX\.XXX\.XXX-XX \(apenas números\)/i)).toBeInTheDocument()
     expect(screen.getByText(/cliente deve ter pelo menos 13 anos de idade/i)).toBeInTheDocument()
     expect(screen.getByText(/notas ou informações adicionais relevantes \(máximo 1000 caracteres\)/i)).toBeInTheDocument()
   })

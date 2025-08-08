@@ -33,14 +33,14 @@ describe('NewClientPage', () => {
 
   const mockClientData: ClientCreate = {
     full_name: 'João Silva Santos',
-    ssn: '123456789', // Raw CPF without formatting
+    cpf: '12345678901', // Raw CPF without formatting
     birth_date: '1990-05-15'
   }
 
   const mockClientResponse: ClientResponse = {
     client_id: 'client-123',
     full_name: 'João Silva Santos',
-    ssn: '123-45-6789', // Formatted by backend
+    cpf: '123.456.789-09', // Formatted by backend
     birth_date: '1990-05-15',
     status: 'active',
     created_at: '2023-01-01T00:00:00Z',
@@ -90,7 +90,7 @@ describe('NewClientPage', () => {
       renderNewClientPage()
 
       expect(screen.getByPlaceholderText(/joão silva santos/i)).toBeInTheDocument()
-      expect(screen.getByPlaceholderText(/123-45-6789/i)).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/123\.456\.789-12/i)).toBeInTheDocument()
       expect(document.querySelector('input[name="birth_date"]')).toBeInTheDocument()
     })
 
@@ -98,11 +98,11 @@ describe('NewClientPage', () => {
       renderNewClientPage()
 
       const nameInput = screen.getByPlaceholderText(/joão silva santos/i)
-      const cpfInput = screen.getByPlaceholderText(/123-45-6789/i)
+      const cpfInput = screen.getByPlaceholderText(/123\.456\.789-12/i)
       const birthDateInput = document.querySelector('input[name="birth_date"]')
 
       await userEvent.type(nameInput, mockClientData.full_name)
-      await userEvent.type(cpfInput, mockClientData.ssn)
+      await userEvent.type(cpfInput, mockClientData.cpf)
       await userEvent.type(birthDateInput, mockClientData.birth_date)
 
       expect(nameInput).toHaveValue(mockClientData.full_name)
@@ -142,7 +142,7 @@ describe('NewClientPage', () => {
 
       // Fill form
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
-      await userEvent.type(screen.getByPlaceholderText(/123-45-6789/i), mockClientData.ssn)
+      await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)
       await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
 
       // Submit form
@@ -156,7 +156,7 @@ describe('NewClientPage', () => {
 
       // Should display created client information
       expect(screen.getByText('João Silva Santos')).toBeInTheDocument()
-      expect(screen.getByText('123-45-6789')).toBeInTheDocument() // Updated to match formatted CPF
+      expect(screen.getByText('123.456.789-09')).toBeInTheDocument() // Updated to match formatted CPF
       expect(screen.getByText('client-123')).toBeInTheDocument()
     })
 
@@ -166,7 +166,7 @@ describe('NewClientPage', () => {
 
       // Fill and submit form
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
-      await userEvent.type(screen.getByPlaceholderText(/123-45-6789/i), mockClientData.ssn)
+      await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)
       await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
       await userEvent.click(screen.getByRole('button', { name: /criar cliente/i }))
 
@@ -184,7 +184,7 @@ describe('NewClientPage', () => {
 
       // Fill and submit form
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
-      await userEvent.type(screen.getByPlaceholderText(/123-45-6789/i), mockClientData.ssn)
+      await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)
       await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
       await userEvent.click(screen.getByRole('button', { name: /criar cliente/i }))
 
@@ -212,7 +212,7 @@ describe('NewClientPage', () => {
 
       // Fill and submit form
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
-      await userEvent.type(screen.getByPlaceholderText(/123-45-6789/i), mockClientData.ssn)
+      await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)
       await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
       await userEvent.click(screen.getByRole('button', { name: /criar cliente/i }))
 
@@ -234,7 +234,7 @@ describe('NewClientPage', () => {
 
       // Fill and submit form
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
-      await userEvent.type(screen.getByPlaceholderText(/123-45-6789/i), mockClientData.ssn)  
+      await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)  
       await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
       await userEvent.click(screen.getByRole('button', { name: /criar cliente/i }))
 
@@ -264,7 +264,7 @@ describe('NewClientPage', () => {
 
       // Create client
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
-      await userEvent.type(screen.getByPlaceholderText(/123-45-6789/i), mockClientData.ssn)
+      await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)
       await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
       await userEvent.click(screen.getByRole('button', { name: /criar cliente/i }))
 
@@ -321,7 +321,7 @@ describe('NewClientPage', () => {
 
       // Should have properly labeled form inputs
       expect(screen.getByPlaceholderText(/joão silva santos/i)).toBeInTheDocument()
-      expect(screen.getByPlaceholderText(/123-45-6789/i)).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/123\.456\.789-12/i)).toBeInTheDocument()
       expect(document.querySelector('input[name="birth_date"]')).toBeInTheDocument()
 
       // Should have accessible buttons

@@ -38,7 +38,7 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => {
 
 // Helper functions to get form fields reliably
 const getNameField = () => screen.getByPlaceholderText(/joão silva santos/i)
-const getSsnField = () => screen.getByPlaceholderText(/123-45-6789/i)
+const getCpfField = () => screen.getByPlaceholderText(/123\.456\.789-12/i)
 const getBirthDateField = () => document.querySelector('input[name="birth_date"]') as HTMLInputElement
 const getNotesField = () => screen.getByPlaceholderText(/informações adicionais/i)
 
@@ -62,7 +62,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       const mockClientResponse: ClientResponse = {
         client_id: '123e4567-e89b-12d3-a456-426614174000',
         full_name: 'João Silva Santos',
-        ssn: 'XXX-XX-6789', // API returns masked SSN
+        cpf: '***.***.***-89', // API returns masked CPF
         birth_date: '1990-05-15',
         status: 'active',
         notes: 'Cliente preferencial com histórico excelente',
@@ -94,7 +94,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Fill out complete form
       const nameField = getNameField()
-      const ssnField = getSsnField()
+      const cpfField = getCpfField()
       const birthDateField = getBirthDateField()
       const notesField = getNotesField()
       const submitButton = screen.getByRole('button', { name: /criar cliente/i })
@@ -104,8 +104,8 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       expect(nameField).toHaveValue('João Silva Santos')
       
       // Step 2: Fill CPF with automatic formatting
-      await user.type(ssnField, '123456789')
-      expect(ssnField).toHaveValue('123-45-6789')
+      await user.type(cpfField, '12345678901')
+      expect(cpfField).toHaveValue('123.456.789-09')
       
       // Step 3: Fill birth date
       await user.type(birthDateField, '1990-05-15')
@@ -127,7 +127,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       await waitFor(() => {
         expect(mockOnSubmit).toHaveBeenCalledWith({
           full_name: 'João Silva Santos',
-          ssn: '123-45-6789',
+          cpf: '123.456.789-09',
           birth_date: '1990-05-15',
           notes: 'Cliente preferencial com histórico excelente'
         })
@@ -141,7 +141,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       // Should reset form after success
       await waitFor(() => {
         expect(nameField).toHaveValue('')
-        expect(ssnField).toHaveValue('')
+        expect(cpfField).toHaveValue('')
         expect(birthDateField).toHaveValue('')
         expect(notesField).toHaveValue('')
       })
@@ -155,11 +155,11 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       const mockOnSuccess = vi.fn()
       const mockOnError = vi.fn()
       
-      // Mock API validation error (duplicate SSN)
+      // Mock API validation error (duplicate CPF)
       const validationError: ClientErrorResponse = {
-        detail: 'Client with this SSN already exists',
+        detail: 'Client with this CPF already exists',
         field_errors: {
-          ssn: ['CPF já está em uso por outro cliente']
+          cpf: ['CPF já está em uso por outro cliente']
         }
       }
       
@@ -168,7 +168,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
           status: 409,
           data: validationError
         },
-        message: 'Client with this SSN already exists'
+        message: 'Client with this CPF already exists'
       })
       
       render(
@@ -181,26 +181,26 @@ describe('ClientRegistrationForm - Integration Tests', () => {
         </TestWrapper>
       )
       
-      // Fill form with duplicate SSN
+      // Fill form with duplicate CPF
       const nameField = getNameField()
-      const ssnField = getSsnField()
+      const cpfField = getCpfField()
       const birthDateField = getBirthDateField()
       const submitButton = screen.getByRole('button', { name: /criar cliente/i })
       
       await user.type(nameField, 'Maria Silva')
-      await user.type(ssnField, '123456789') // Duplicate SSN
+      await user.type(cpfField, '12345678901') // Duplicate CPF
       await user.type(birthDateField, '1985-03-10')
       
       await user.click(submitButton)
       
       // Should show API error
       await waitFor(() => {
-        expect(screen.getByText(/client with this ssn already exists/i)).toBeInTheDocument()
+        expect(screen.getByText(/client with this cpf already exists/i)).toBeInTheDocument()
       })
       
       // Should call error callback
       await waitFor(() => {
-        expect(mockOnError).toHaveBeenCalledWith('Client with this SSN already exists')
+        expect(mockOnError).toHaveBeenCalledWith('Client with this CPF already exists')
       })
       
       // Should not call success callback
@@ -208,7 +208,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Form should retain values for correction
       expect(nameField).toHaveValue('Maria Silva')
-      expect(ssnField).toHaveValue('123-45-6789')
+      expect(cpfField).toHaveValue('123.456.789-09')
       expect(birthDateField).toHaveValue('1985-03-10')
     })
 
@@ -232,12 +232,12 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Fill and submit form
       const nameField = getNameField()
-      const ssnField = getSsnField()
+      const cpfField = getCpfField()
       const birthDateField = getBirthDateField()
       const submitButton = screen.getByRole('button', { name: /criar cliente/i })
       
       await user.type(nameField, 'João Silva')
-      await user.type(ssnField, '123456789')
+      await user.type(cpfField, '12345678901')
       await user.type(birthDateField, '1990-05-15')
       
       await user.click(submitButton)
@@ -254,7 +254,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Should not reset form on error
       expect(nameField).toHaveValue('João Silva')
-      expect(ssnField).toHaveValue('123-45-6789')
+      expect(cpfField).toHaveValue('123.456.789-09')
       expect(birthDateField).toHaveValue('1990-05-15')
     })
 
@@ -280,7 +280,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Fill and submit form
       await user.type(getNameField(), 'João Silva')
-      await user.type(getSsnField(), '123456789')
+      await user.type(getCpfField(), '12345678901')
       await user.type(getBirthDateField(), '1990-05-15')
       
       await user.click(screen.getByRole('button', { name: /criar cliente/i }))
@@ -307,14 +307,14 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       )
       
       const nameField = getNameField()
-      const ssnField = getSsnField()
+      const cpfField = getCpfField()
       const birthDateField = getBirthDateField()
       const notesField = getNotesField()
       const submitButton = screen.getByRole('button', { name: /criar cliente/i })
       
       // Fill form with invalid data
       await user.type(nameField, 'João Silva Santos')
-      await user.type(ssnField, '123456789')
+      await user.type(cpfField, '12345678901')
       await user.type(birthDateField, '1990-05-15')
       await user.type(notesField, 'Some notes')
       
@@ -328,7 +328,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       })
       
       // Other fields should maintain their values
-      expect(ssnField).toHaveValue('123-45-6789')
+      expect(cpfField).toHaveValue('123.456.789-09')
       expect(birthDateField).toHaveValue('1990-05-15')
       expect(notesField).toHaveValue('Some notes')
       
@@ -347,25 +347,25 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       )
       
       const nameField = getNameField()
-      const ssnField = getSsnField()
+      const cpfField = getCpfField()
       const submitButton = screen.getByRole('button', { name: /criar cliente/i })
       
       // Fill with multiple invalid values
       await user.type(nameField, 'A') // Too short
-      await user.type(ssnField, '123') // Invalid format
+      await user.type(cpfField, '123') // Invalid format
       
       await user.click(submitButton)
       
       // Should show multiple validation errors
       await waitFor(() => {
         expect(screen.getByText(/nome deve ter pelo menos 2 caracteres/i)).toBeInTheDocument()
-        expect(screen.getByText(/cpf deve estar no formato xxx-xx-xxxx/i)).toBeInTheDocument()
+        expect(screen.getByText(/cpf deve estar no formato xxx\.xxx\.xxx-xx/i)).toBeInTheDocument()
         expect(screen.getByText(/data de nascimento é obrigatória/i)).toBeInTheDocument()
       })
       
       // Form values should be preserved
       expect(nameField).toHaveValue('A')
-      expect(ssnField).toHaveValue('123')
+      expect(cpfField).toHaveValue('123')
     })
 
     it('should clear validation errors when fields are corrected', async () => {
@@ -406,7 +406,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
           setTimeout(() => resolve({
             client_id: '123',
             full_name: 'João Silva',
-            ssn: 'XXX-XX-6789',
+            cpf: '***.***.***-89',
             birth_date: '1990-05-15',
             status: 'active',
             created_by: 'user123',
@@ -425,12 +425,12 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Fill form
       const nameField = getNameField()
-      const ssnField = getSsnField()
+      const cpfField = getCpfField()
       const birthDateField = getBirthDateField()
       const submitButton = screen.getByRole('button', { name: /criar cliente/i })
       
       await user.type(nameField, 'João Silva')
-      await user.type(ssnField, '123456789')
+      await user.type(cpfField, '12345678901')
       await user.type(birthDateField, '1990-05-15')
       
       await user.click(submitButton)
@@ -438,19 +438,19 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       // During loading, form should show loading state but preserve values
       expect(screen.getByText(/criando cliente/i)).toBeInTheDocument()
       expect(nameField).toHaveValue('João Silva')
-      expect(ssnField).toHaveValue('123-45-6789')
+      expect(cpfField).toHaveValue('123.456.789-09')
       expect(birthDateField).toHaveValue('1990-05-15')
       
       // Fields should be disabled during loading
       expect(nameField).toBeDisabled()
-      expect(ssnField).toBeDisabled()
+      expect(cpfField).toBeDisabled()
       expect(birthDateField).toBeDisabled()
       expect(submitButton).toBeDisabled()
       
       // After completion, form should reset
       await waitFor(() => {
         expect(nameField).toHaveValue('')
-        expect(ssnField).toHaveValue('')
+        expect(cpfField).toHaveValue('')
         expect(birthDateField).toHaveValue('')
       })
     })
@@ -464,7 +464,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       const mockClientResponse: ClientResponse = {
         client_id: '123e4567-e89b-12d3-a456-426614174000',
         full_name: 'Ana Paula Silva',
-        ssn: 'XXX-XX-9876',
+        cpf: '***.***.***-76',
         birth_date: '1988-12-25',
         status: 'active',
         notes: 'Cliente VIP',
@@ -494,7 +494,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Fill form
       await user.type(getNameField(), 'Ana Paula Silva')
-      await user.type(getSsnField(), '987654321')
+      await user.type(getCpfField(), '987654321')
       await user.type(getBirthDateField(), '1988-12-25')
       await user.type(getNotesField(), 'Cliente VIP')
       
@@ -561,7 +561,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Fill and submit form
       await user.type(getNameField(), 'Carlos Santos')
-      await user.type(getSsnField(), '111223344')
+      await user.type(getCpfField(), '111223344')
       await user.type(getBirthDateField(), '1975-08-30')
       
       await user.click(screen.getByRole('button', { name: /criar cliente/i }))
@@ -572,14 +572,14 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       })
     })
 
-    it('should handle successful API response with masked SSN', async () => {
+    it('should handle successful API response with masked CPF', async () => {
       const user = userEvent.setup()
       const mockOnSuccess = vi.fn()
       
       const mockClientResponse: ClientResponse = {
         client_id: '456e7890-e89b-12d3-a456-426614174001',
         full_name: 'Roberto Santos',
-        ssn: 'XXX-XX-1357', // API returns masked SSN for security
+        cpf: '***.***.***-57', // API returns masked CPF for security
         birth_date: '1992-07-18',
         status: 'active',
         created_by: 'user123',
@@ -610,17 +610,17 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Fill and submit form
       await user.type(getNameField(), 'Roberto Santos')
-      await user.type(getSsnField(), '555113579')
+      await user.type(getCpfField(), '555113579')
       await user.type(getBirthDateField(), '1992-07-18')
       
       await user.click(screen.getByRole('button', { name: /criar cliente/i }))
       
-      // Should receive masked SSN in response
+      // Should receive masked CPF in response
       await waitFor(() => {
         expect(mockOnSuccess).toHaveBeenCalledWith(expect.objectContaining({
           client_id: '456e7890-e89b-12d3-a456-426614174001',
           full_name: 'Roberto Santos',
-          ssn: 'XXX-XX-1357', // Masked by API
+          cpf: '***.***.***-57', // Masked by API
           birth_date: '1992-07-18'
         }))
       })
@@ -636,7 +636,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       const mockClientResponse: ClientResponse = {
         client_id: '789e0123-e89b-12d3-a456-426614174002',
         full_name: 'Fernanda Costa',
-        ssn: 'XXX-XX-4680',
+        cpf: '***.***.***-80',
         birth_date: '1995-01-22',
         status: 'active',
         created_by: 'user123',
@@ -658,15 +658,15 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // User fills form progressively
       const nameField = getNameField()
-      const ssnField = getSsnField()
+      const cpfField = getCpfField()
       const birthDateField = getBirthDateField()
       
       // Step-by-step form filling
       await user.type(nameField, 'Fernanda Costa')
       expect(nameField).toHaveValue('Fernanda Costa')
       
-      await user.type(ssnField, '246802468')
-      expect(ssnField).toHaveValue('246-80-2468')
+      await user.type(cpfField, '246802468')
+      expect(cpfField).toHaveValue('246.802.468-01')
       
       await user.type(birthDateField, '1995-01-22')
       expect(birthDateField).toHaveValue('1995-01-22')
@@ -689,7 +689,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       // Form resets for next entry
       await waitFor(() => {
         expect(nameField).toHaveValue('')
-        expect(ssnField).toHaveValue('')
+        expect(cpfField).toHaveValue('')
         expect(birthDateField).toHaveValue('')
       })
     })
@@ -726,8 +726,8 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       })
       
       // Continue fixing other fields
-      const ssnField = getSsnField()
-      await user.type(ssnField, '123456789')
+      const cpfField = getCpfField()
+      await user.type(cpfField, '12345678901')
       
       await waitFor(() => {
         expect(screen.queryByText(/cpf é obrigatório/i)).not.toBeInTheDocument()
@@ -756,13 +756,13 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // User fills form
       const nameField = getNameField()
-      const ssnField = getSsnField()
+      const cpfField = getCpfField()
       const birthDateField = getBirthDateField()
       const notesField = getNotesField()
       const clearButton = screen.getByRole('button', { name: /limpar formulário/i })
       
       await user.type(nameField, 'Test User')
-      await user.type(ssnField, '123456789')
+      await user.type(cpfField, '12345678901')
       await user.type(birthDateField, '1990-01-01')
       await user.type(notesField, 'Test notes')
       
@@ -771,7 +771,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // All fields should be empty
       expect(nameField).toHaveValue('')
-      expect(ssnField).toHaveValue('')
+      expect(cpfField).toHaveValue('')
       expect(birthDateField).toHaveValue('')
       expect(notesField).toHaveValue('')
       

@@ -259,10 +259,6 @@ def generate_test_cpfs() -> dict[str, str]:
     }
 
 
-# Legacy SSN functions for backward compatibility during migration
-def generate_valid_ssn() -> str:
-    """Generate a valid SSN format - DEPRECATED: Use generate_valid_cpf() instead."""
-    return generate_valid_cpf()
 
 
 def generate_audit_values(

@@ -204,7 +204,7 @@ const setupDefaultFetchMocks = () => {
       return Promise.resolve(createMockResponse({
         client_id: 'client-123',
         name: 'Test Client',
-        ssn: '123-45-6789',
+        cpf: '123.456.789-09',
         birth_date: '1990-01-01',
         created_at: '2025-01-01T00:00:00Z',
         updated_at: '2025-01-01T00:00:00Z',

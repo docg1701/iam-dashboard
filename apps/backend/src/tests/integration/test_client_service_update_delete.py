@@ -42,7 +42,7 @@ class TestClientServiceUpdate:
         test_client = Client(
             client_id=client_id,
             full_name="Original Name",
-            cpf="123-45-6789",
+            cpf="123.456.789-09",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             notes="Original notes",
@@ -86,7 +86,7 @@ class TestClientServiceUpdate:
         # Verify result
         assert result.full_name == "Updated Name"
         assert result.notes == "Updated notes"
-        assert result.cpf == "123-45-6789"  # Unchanged
+        assert result.cpf == "123.456.789-09"  # Unchanged
         assert result.birth_date == date(1990, 1, 1)  # Unchanged
         assert result.updated_by == user.user_id
         assert result.updated_at is not None
@@ -147,7 +147,7 @@ class TestClientServiceUpdate:
 
     @pytest.mark.asyncio
     async def test_update_client_cpf_conflict(self, test_session: Session) -> None:
-        """Test update client with duplicate SSN raises ConflictError."""
+        """Test update client with duplicate CPF raises ConflictError."""
         # Create test user
         user = User(
             user_id=uuid4(),
@@ -164,7 +164,7 @@ class TestClientServiceUpdate:
         client1 = Client(
             client_id=client1_id,
             full_name="Client 1",
-            cpf="123-45-6789",
+            cpf="123.456.789-09",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             created_by=user.user_id,
@@ -176,7 +176,7 @@ class TestClientServiceUpdate:
         client2 = Client(
             client_id=client2_id,
             full_name="Client 2",
-            cpf="987-65-4321",
+            cpf="987.654.321-00",
             birth_date=date(1985, 6, 15),
             status=ClientStatus.ACTIVE,
             created_by=user.user_id,
@@ -212,8 +212,8 @@ class TestClientServiceUpdate:
         # Create actual Request object (not mocked)
         real_request = Request(scope)
 
-        # Try to update client2 with client1's SSN
-        update_data = ClientUpdate(cpf="123-45-6789")
+        # Try to update client2 with client1's CPF
+        update_data = ClientUpdate(cpf="123.456.789-09")
 
         with pytest.raises(ConflictError) as exc_info:
             await service.update_client(client2_id, update_data, user.user_id, real_request)
@@ -241,7 +241,7 @@ class TestClientServiceUpdate:
         test_client = Client(
             client_id=client_id,
             full_name="Test Client",
-            cpf="123-45-6789",
+            cpf="123.456.789-09",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             created_by=user.user_id,
@@ -308,7 +308,7 @@ class TestClientServiceDelete:
         test_client = Client(
             client_id=client_id,
             full_name="Test Client",
-            cpf="123-45-6789",
+            cpf="123.456.789-09",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             created_by=user.user_id,
@@ -423,7 +423,7 @@ class TestClientServiceDelete:
         test_client = Client(
             client_id=client_id,
             full_name="Test Client",
-            cpf="123-45-6789",
+            cpf="123.456.789-09",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             created_by=user.user_id,

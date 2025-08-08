@@ -248,7 +248,7 @@ describe('ClientRegistrationForm - Responsive & Accessibility Tests', () => {
       )
       
       const nameField = screen.getByLabelText(/nome completo/i)
-      const ssnField = screen.getByLabelText(/cpf/i)
+      const cpfField = screen.getByLabelText(/cpf/i)
       const birthDateField = screen.getByLabelText(/data de nascimento/i)
       const notesField = screen.getByLabelText(/observações/i)
       const submitButton = screen.getByRole('button', { name: /criar cliente/i })
@@ -259,7 +259,7 @@ describe('ClientRegistrationForm - Responsive & Accessibility Tests', () => {
       expect(nameField).toHaveFocus()
       
       await user.tab()
-      expect(ssnField).toHaveFocus()
+      expect(cpfField).toHaveFocus()
       
       await user.tab()
       expect(birthDateField).toHaveFocus()
@@ -443,7 +443,7 @@ describe('ClientRegistrationForm - Responsive & Accessibility Tests', () => {
       
       // Check for descriptive text
       expect(screen.getByText(/nome completo do cliente conforme documento de identidade/i)).toBeInTheDocument()
-      expect(screen.getByText(/cpf no formato xxx-xx-xxxx/i)).toBeInTheDocument()
+      expect(screen.getByText(/cpf no formato xxx\.xxx\.xxx-xx/i)).toBeInTheDocument()
       expect(screen.getByText(/cliente deve ter pelo menos 13 anos de idade/i)).toBeInTheDocument()
       expect(screen.getByText(/máximo 1000 caracteres/i)).toBeInTheDocument()
     })
@@ -457,7 +457,7 @@ describe('ClientRegistrationForm - Responsive & Accessibility Tests', () => {
           setTimeout(() => resolve({
             client_id: '123',
             full_name: 'João Silva',
-            ssn: 'XXX-XX-6789',
+            cpf: '***.***.***-89',
             birth_date: '1990-05-15',
             status: 'active',
             created_by: 'user123',
@@ -476,12 +476,12 @@ describe('ClientRegistrationForm - Responsive & Accessibility Tests', () => {
       
       // Fill form
       const nameField = screen.getByLabelText(/nome completo/i)
-      const ssnField = screen.getByLabelText(/cpf/i)
+      const cpfField = screen.getByLabelText(/cpf/i)
       const birthDateField = screen.getByLabelText(/data de nascimento/i)
       const submitButton = screen.getByRole('button', { name: /criar cliente/i })
       
       await user.type(nameField, 'João Silva')
-      await user.type(ssnField, '123456789')
+      await user.type(cpfField, '12345678901')
       await user.type(birthDateField, '1990-05-15')
       
       await user.click(submitButton)
@@ -533,12 +533,12 @@ describe('ClientRegistrationForm - Responsive & Accessibility Tests', () => {
       
       // Fields should use proper input types
       const nameField = screen.getByLabelText(/nome completo/i)
-      const ssnField = screen.getByLabelText(/cpf/i)
+      const cpfField = screen.getByLabelText(/cpf/i)
       const birthDateField = screen.getByLabelText(/data de nascimento/i)
       const notesField = screen.getByLabelText(/observações/i)
       
       expect(nameField.tagName).toBe('INPUT')
-      expect(ssnField.tagName).toBe('INPUT')
+      expect(cpfField.tagName).toBe('INPUT')
       expect(birthDateField.tagName).toBe('INPUT')
       expect(birthDateField).toHaveAttribute('type', 'date')
       expect(notesField.tagName).toBe('TEXTAREA')
@@ -598,15 +598,15 @@ describe('ClientRegistrationForm - Responsive & Accessibility Tests', () => {
         </TestWrapper>
       )
       
-      const ssnField = screen.getByLabelText(/cpf/i)
+      const cpfField = screen.getByLabelText(/cpf/i)
       
       // Rapidly type and delete
-      await user.type(ssnField, '123456789')
-      await user.clear(ssnField)
-      await user.type(ssnField, '987654321')
+      await user.type(cpfField, '12345678901')
+      await user.clear(cpfField)
+      await user.type(cpfField, '987654321')
       
       // Should handle gracefully without errors
-      expect(ssnField).toHaveValue('987-65-4321')
+      expect(cpfField).toHaveValue('987.654.321-00')
     })
 
     it('should maintain performance with large notes content', async () => {

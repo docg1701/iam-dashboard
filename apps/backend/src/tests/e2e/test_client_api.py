@@ -27,7 +27,7 @@ class TestCreateClientAPI:
         """Test successful client creation with valid data."""
         client_data = {
             "full_name": "João Silva Santos",
-            "cpf": "123-45-6789",
+            "cpf": "123.456.789-09",
             "birth_date": "1990-05-15",
             "notes": "Cliente importante da empresa",
         }
@@ -40,7 +40,7 @@ class TestCreateClientAPI:
         # Verify response structure
         assert "client_id" in data
         assert data["full_name"] == client_data["full_name"]
-        assert data["cpf"] == "***-**-6789"  # SSN should be masked
+        assert data["cpf"] == "***.***.***-09"  # CPF should be masked
         assert data["birth_date"] == client_data["birth_date"]
         assert data["status"] == "active"
         assert data["notes"] == client_data["notes"]
@@ -55,13 +55,13 @@ class TestCreateClientAPI:
         db_client = test_session.exec(statement).first()
         assert db_client is not None
         assert db_client.full_name == client_data["full_name"]
-        assert db_client.cpf == client_data["cpf"]  # SSN should be unmasked in DB
+        assert db_client.cpf == client_data["cpf"]  # CPF should be unmasked in DB
 
     def test_create_client_minimal_data(
         self, client: TestClient, auth_headers: dict[str, str]
     ) -> None:
         """Test client creation with minimal required data."""
-        client_data = {"full_name": "Ana Costa", "cpf": "987-65-4321", "birth_date": "1985-12-10"}
+        client_data = {"full_name": "Ana Costa", "cpf": "987.654.321-00", "birth_date": "1985-12-10"}
 
         response = client.post("/api/v1/clients", json=client_data, headers=auth_headers)
 
@@ -69,14 +69,14 @@ class TestCreateClientAPI:
         data = response.json()
 
         assert data["full_name"] == client_data["full_name"]
-        assert data["cpf"] == "***-**-4321"
+        assert data["cpf"] == "***.***.***-00"
         assert data["birth_date"] == client_data["birth_date"]
         assert data["notes"] is None
 
     def test_create_client_invalid_cpf_format(
         self, client: TestClient, auth_headers: dict[str, str]
     ) -> None:
-        """Test client creation with invalid SSN format."""
+        """Test client creation with invalid CPF format."""
         invalid_cpfs = [
             "123456789",  # No dashes
             "123-456-789",  # Wrong format
@@ -99,34 +99,34 @@ class TestCreateClientAPI:
             assert response.status_code == 422
             data = response.json()
             assert "detail" in data
-            # Check for SSN validation error in detail array
+            # Check for CPF validation error in detail array
             detail_errors = data.get("detail", [])
             if isinstance(detail_errors, list):
                 assert any(
-                    "SSN" in str(error) or "cpf" in str(error).lower() for error in detail_errors
+                    "CPF" in str(error) or "cpf" in str(error).lower() for error in detail_errors
                 )
             else:
                 # Handle case where detail is a string
-                assert "SSN" in str(detail_errors) or "cpf" in str(detail_errors).lower()
+                assert "CPF" in str(detail_errors) or "cpf" in str(detail_errors).lower()
 
     def test_create_client_duplicate_cpf(
         self, client: TestClient, auth_headers: dict[str, str]
     ) -> None:
-        """Test client creation with duplicate SSN."""
+        """Test client creation with duplicate CPF."""
         # First, create a client
         client_data_1 = {
             "full_name": "First Client",
-            "cpf": "111-22-3333",
+            "cpf": "111.223.333-45",
             "birth_date": "1990-01-01",
         }
 
         response_1 = client.post("/api/v1/clients", json=client_data_1, headers=auth_headers)
         assert response_1.status_code == 201
 
-        # Try to create another client with the same SSN
+        # Try to create another client with the same CPF
         client_data_2 = {
             "full_name": "Second Client",
-            "cpf": "111-22-3333",  # Same SSN
+            "cpf": "111.223.333-45",  # Same CPF
             "birth_date": "1985-06-15",
         }
 
@@ -150,7 +150,7 @@ class TestCreateClientAPI:
 
         client_data = {
             "full_name": "Young Client",
-            "cpf": "555-66-7777",
+            "cpf": "555.667.777-89",
             "birth_date": too_young_date.isoformat(),
         }
 
@@ -172,7 +172,7 @@ class TestCreateClientAPI:
         self, client: TestClient, auth_headers: dict[str, str]
     ) -> None:
         """Test client creation with birth date before 1900."""
-        client_data = {"full_name": "Old Client", "cpf": "888-99-0000", "birth_date": "1899-12-31"}
+        client_data = {"full_name": "Old Client", "cpf": "888.990.000-12", "birth_date": "1899-12-31"}
 
         response = client.post("/api/v1/clients", json=client_data, headers=auth_headers)
 
@@ -186,7 +186,7 @@ class TestCreateClientAPI:
         """Test client creation with name too short."""
         client_data = {
             "full_name": "A",  # Only 1 character
-            "cpf": "123-45-6789",
+            "cpf": "123.456.789-09",
             "birth_date": "1990-01-01",
         }
 
@@ -202,7 +202,7 @@ class TestCreateClientAPI:
         """Test client creation with name too long."""
         client_data = {
             "full_name": "A" * 256,  # 256 characters
-            "cpf": "123-45-6789",
+            "cpf": "123.456.789-09",
             "birth_date": "1990-01-01",
         }
 
@@ -218,7 +218,7 @@ class TestCreateClientAPI:
         """Test client creation with notes too long."""
         client_data = {
             "full_name": "Test Client",
-            "cpf": "123-45-6789",
+            "cpf": "123.456.789-09",
             "birth_date": "1990-01-01",
             "notes": "A" * 1001,  # 1001 characters
         }
@@ -236,7 +236,7 @@ class TestCreateClientAPI:
         # Missing full_name
         response = client.post(
             "/api/v1/clients",
-            json={"cpf": "123-45-6789", "birth_date": "1990-01-01"},
+            json={"cpf": "123.456.789-09", "birth_date": "1990-01-01"},
             headers=auth_headers,
         )
         assert response.status_code == 422
@@ -252,14 +252,14 @@ class TestCreateClientAPI:
         # Missing birth_date
         response = client.post(
             "/api/v1/clients",
-            json={"full_name": "Test Client", "cpf": "123-45-6789"},
+            json={"full_name": "Test Client", "cpf": "123.456.789-09"},
             headers=auth_headers,
         )
         assert response.status_code == 422
 
     def test_create_client_unauthorized(self, client: TestClient) -> None:
         """Test client creation without authentication."""
-        client_data = {"full_name": "Test Client", "cpf": "123-45-6789", "birth_date": "1990-01-01"}
+        client_data = {"full_name": "Test Client", "cpf": "123.456.789-09", "birth_date": "1990-01-01"}
 
         response = client.post("/api/v1/clients", json=client_data)
 
@@ -277,7 +277,7 @@ class TestGetClientAPI:
         # Create a client first
         create_data = {
             "full_name": "Maria Santos",
-            "cpf": "456-78-9012",
+            "cpf": "456.789.012-34",
             "birth_date": "1992-03-20",
             "notes": "Test client for retrieval",
         }
@@ -294,7 +294,7 @@ class TestGetClientAPI:
 
         assert data["client_id"] == client_id
         assert data["full_name"] == create_data["full_name"]
-        assert data["cpf"] == "***-**-9012"  # SSN should be masked
+        assert data["cpf"] == "***.***.***-34"  # CPF should be masked
         assert data["birth_date"] == create_data["birth_date"]
         assert data["notes"] == create_data["notes"]
         assert data["status"] == "active"
@@ -341,7 +341,7 @@ class TestClientAuditLogging:
         """Test that client creation is properly logged in audit trail."""
         client_data = {
             "full_name": "Audit Test Client",
-            "cpf": "123-45-6789",
+            "cpf": "123.456.789-09",
             "birth_date": "1990-01-01",
         }
 
@@ -369,7 +369,7 @@ class TestClientAPIIntegration:
         # 1. Create client
         create_data = {
             "full_name": "Lifecycle Test Client",
-            "cpf": "999-88-7777",
+            "cpf": "999.887.777-56",
             "birth_date": "1988-07-14",
             "notes": "Initial notes",
         }
@@ -392,7 +392,7 @@ class TestClientAPIIntegration:
         """Test data consistency between API and database."""
         client_data = {
             "full_name": "Consistency Test Client",
-            "cpf": "777-66-5555",
+            "cpf": "777.665.555-78",
             "birth_date": "1991-09-25",
         }
 
@@ -411,8 +411,8 @@ class TestClientAPIIntegration:
         assert db_client.cpf == client_data["cpf"]  # Unmasked in DB
         assert str(db_client.birth_date) == client_data["birth_date"]
 
-        # Verify API response has masked SSN
-        assert api_data["cpf"] == "***-**-5555"
+        # Verify API response has masked CPF
+        assert api_data["cpf"] == "***.***.***-78"
 
     def test_client_creation_with_special_characters(
         self, client: TestClient, auth_headers: dict[str, str]

@@ -67,8 +67,6 @@ def _validate_cpf_fallback(cpf: str) -> bool:
     return int(cpf_digits[10]) == check_digit2
 
 
-# Backward compatibility alias  
-validate_ssn = validate_cpf
 
 
 def validate_email(email: str | None) -> bool:

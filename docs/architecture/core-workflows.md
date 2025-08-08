@@ -15,7 +15,7 @@ sequenceDiagram
 
     U->>F: Navigate to Add Client
     F->>F: Render ClientForm component
-    U->>F: Fill client details (name, SSN, birthdate)
+    U->>F: Fill client details (name, CPF, birthdate)
     F->>F: Real-time validation (Zod)
     
     alt Invalid Data
@@ -26,12 +26,12 @@ sequenceDiagram
         API->>API: JWT token validation
         API->>API: Pydantic model validation
         
-        alt SSN Duplicate Check
-            API->>DB: Query existing SSN
-            DB-->>API: SSN exists
+        alt CPF Duplicate Check
+            API->>DB: Query existing CPF
+            DB-->>API: CPF exists
             API-->>F: 409 Conflict Error
-            F-->>U: Display "SSN already exists"
-        else SSN Available
+            F-->>U: Display "CPF already exists"
+        else CPF Available
             API->>A1: Trigger client creation
             A1->>DB: INSERT into clients table
             DB-->>A1: Client created successfully

@@ -6,7 +6,7 @@ including sensitive data exposure, information disclosure through error messages
 timing attacks, and other data leakage vectors.
 
 Key Data Leakage Scenarios Tested:
-1. SSN and PII exposure prevention
+1. CPF and PII exposure prevention
 2. Password and authentication data leakage
 3. Error message information disclosure
 4. Database schema information leakage  
@@ -43,7 +43,7 @@ class TestSensitiveDataExposurePrevention:
     """
     Test prevention of sensitive data exposure in API responses.
     
-    These tests verify that sensitive information like SSNs, passwords,
+    These tests verify that sensitive information like CPFs, passwords,
     tokens, and other PII is properly masked or excluded from responses.
     """
     
@@ -53,13 +53,13 @@ class TestSensitiveDataExposurePrevention:
         attack_user_scenarios: Dict[str, User],
         test_session: Session
     ):
-        """Test that SSN data is properly masked in client API responses."""
+        """Test that CPF data is properly masked in client API responses."""
         admin_user = attack_user_scenarios['admin_user']
         
-        # Create client with real SSN
+        # Create client with real CPF
         test_client = ClientFactory(
             name="Test Client",
-            cpf="123456789",  # Real SSN for testing
+            cpf="123456789",  # Real CPF for testing
             birth_date="1990-01-01"
         )
         test_session.add(test_client)
@@ -84,20 +84,20 @@ class TestSensitiveDataExposurePrevention:
             client_data = response.json()
             cpf_value = client_data.get("cpf", "")
             
-            # SSN should be masked (e.g., "XXX-XX-6789" or similar)
-            assert "123456789" not in cpf_value, "Full SSN should not be exposed"
-            assert len(cpf_value) > 0, "SSN field should exist but be masked"
+            # CPF should be masked (e.g., "***.***.***-89" or similar)
+            assert "123456789" not in cpf_value, "Full CPF should not be exposed"
+            assert len(cpf_value) > 0, "CPF field should exist but be masked"
             
             # Common masking patterns
             is_masked = (
-                "XXX" in cpf_value or  # XXX-XX-6789
-                "*" in cpf_value or    # ***-**-6789
-                "###" in cpf_value or  # ###-##-6789
+                "XXX" in cpf_value or  # ***.***.***-89
+                "*" in cpf_value or    # ***.***.***-89
+                "###" in cpf_value or  # ###.###.###-89
                 cpf_value.startswith("***") or  # ***456789
                 len(cpf_value.replace("-", "").replace("X", "").replace("*", "").replace("#", "")) < 9  # Some digits hidden
             )
             
-            assert is_masked, f"SSN should be masked, got: {cpf_value}"
+            assert is_masked, f"CPF should be masked, got: {cpf_value}"
     
     def test_password_data_never_exposed(
         self,
@@ -260,7 +260,7 @@ class TestErrorMessageInformationDisclosure:
         database_error_triggers = [
             # Duplicate key violation attempt
             {"name": "Test Client", "cpf": "123456789", "birth_date": "1990-01-01"},
-            {"name": "Test Client 2", "cpf": "123456789", "birth_date": "1990-01-01"},  # Same SSN
+            {"name": "Test Client 2", "cpf": "123456789", "birth_date": "1990-01-01"},  # Same CPF
             # Invalid foreign key attempt  
             {"name": "Test Client", "cpf": "987654321", "birth_date": "1990-01-01", "created_by_user_id": "invalid-uuid"},
             # Invalid data type
@@ -364,7 +364,7 @@ class TestErrorMessageInformationDisclosure:
         # Trigger various validation errors
         validation_triggers = [
             # Missing required fields
-            {"name": "Test Client"},  # Missing SSN and birth_date
+            {"name": "Test Client"},  # Missing CPF and birth_date
             # Invalid formats
             {"name": "", "cpf": "invalid-cpf", "birth_date": "invalid-date"},
             # Field length violations
@@ -595,8 +595,8 @@ class TestCrossUserDataBleeding:
             client_cpfs = [client.get("cpf", "") for client in clients_data]
             
             assert "User2 Secret Client" not in client_names, "Should not see other user's client names"
-            assert "222222222" not in str(client_cpfs), "Should not see other user's client SSNs"
-            assert "***-**-2222" not in str(client_cpfs), "Should not see other user's masked SSNs"
+            assert "222222222" not in str(client_cpfs), "Should not see other user's client CPFs"
+            assert "***.***.***-22" not in str(client_cpfs), "Should not see other user's masked CPFs"
             
             # Should only see own clients or have appropriate permission-based access
             for client_data in clients_data:

@@ -158,7 +158,7 @@ function ClientDetailPageContent() {
             
             <div>
               <label className="text-sm font-medium text-muted-foreground">CPF</label>
-              <p className="text-base font-medium">{client.ssn}</p>
+              <p className="text-base font-medium">{client.cpf}</p>
             </div>
             
             <div>

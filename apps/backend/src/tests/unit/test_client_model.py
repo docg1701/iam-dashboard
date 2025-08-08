@@ -355,7 +355,7 @@ class TestClientCreate:
 
     def test_client_create_inherits_validation(self) -> None:
         """Test ClientCreate inherits validation from ClientBase."""
-        # Should fail with invalid SSN
+        # Should fail with invalid CPF
         with pytest.raises(ValidationError):
             ClientCreate(full_name="John Doe", cpf="invalid-cpf", birth_date=date(1990, 1, 1))
 

@@ -73,7 +73,7 @@
 Current failing tests (17 failures):
 - **Auth Unit Tests**: 6 failures - mainly Redis mock configuration issues
 - **Permission Tests**: 5 failures - boundary mock setup needs adjustment  
-- **Validation Tests**: 2 failures - SSN validation logic needs review
+- **Validation Tests**: 2 failures - CPF validation logic needs review
 - **E2E Tests**: 1 failure - token management integration
 - **Integration Tests**: 3 failures - service integration boundary issues
 
@@ -94,7 +94,7 @@ Current failing tests (17 failures):
 ### Priority 2: Targeted Improvements (Estimated +1% coverage)
 
 3. **Validation Utilities** (`src/utils/validation.py` - 76%)
-   - Fix failing SSN validation tests
+   - Fix failing CPF validation tests
    - Add edge case validation tests
    - Test international format validations
 
@@ -108,7 +108,7 @@ Current failing tests (17 failures):
 1. **Fix Existing Test Failures First**
    - Resolve Redis mock configuration in auth tests
    - Fix boundary mock setup in permission tests
-   - Address SSN validation test logic
+   - Address CPF validation test logic
 
 2. **Add Missing Test Coverage**
    - Focus on error handling paths

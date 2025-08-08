@@ -34,12 +34,12 @@ const clientRegistrationSchema = ClientFormDataSchema.extend({
       /^[a-zA-ZÀ-ÿĀ-žА-я\s'-]+$/,
       "Nome deve conter apenas letras, espaços, hífens e apostrofes"
     ),
-  ssn: z
+  cpf: z
     .string()
     .min(1, "CPF é obrigatório")
     .regex(
-      /^\d{3}-\d{2}-\d{4}$/,
-      "CPF deve estar no formato XXX-XX-XXXX"
+      /^\d{3}\.\d{3}\.\d{3}-\d{2}$/,
+      "CPF deve estar no formato XXX.XXX.XXX-XX"
     ),
   birth_date: z
     .string()
@@ -85,27 +85,29 @@ export function ClientRegistrationForm({
     resolver: zodResolver(clientRegistrationSchema),
     defaultValues: {
       full_name: "",
-      ssn: "",
+      cpf: "",
       birth_date: "",
       notes: "",
     },
   })
 
-  // SSN formatting handler
-  const handleSSNChange = (value: string, onChange: (value: string) => void) => {
+  // CPF formatting handler
+  const handleCPFChange = (value: string, onChange: (value: string) => void) => {
     // Remove all non-numeric characters
     const cleaned = value.replace(/\D/g, '')
     
-    // Apply formatting: XXX-XX-XXXX
+    // Apply formatting: XXX.XXX.XXX-XX
     let formatted = cleaned
-    if (cleaned.length >= 6) {
-      formatted = `${cleaned.slice(0, 3)}-${cleaned.slice(3, 5)}-${cleaned.slice(5, 9)}`
+    if (cleaned.length >= 10) {
+      formatted = `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6, 9)}-${cleaned.slice(9, 11)}`
+    } else if (cleaned.length >= 7) {
+      formatted = `${cleaned.slice(0, 3)}.${cleaned.slice(3, 6)}.${cleaned.slice(6)}`
     } else if (cleaned.length >= 4) {
-      formatted = `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`
+      formatted = `${cleaned.slice(0, 3)}.${cleaned.slice(3)}`
     }
     
-    // Limit to 11 digits (formatted as XXX-XX-XXXX)
-    if (cleaned.length <= 9) {
+    // Limit to 11 digits (formatted as XXX.XXX.XXX-XX)
+    if (cleaned.length <= 11) {
       onChange(formatted)
     }
   }
@@ -118,7 +120,7 @@ export function ClientRegistrationForm({
       // Transform form data to API format
       const clientData: ClientCreate = {
         full_name: data.full_name.trim(),
-        ssn: data.ssn,
+        cpf: data.cpf,
         birth_date: data.birth_date,
         notes: data.notes?.trim() || undefined,
       }
@@ -177,10 +179,10 @@ export function ClientRegistrationForm({
             )}
           />
 
-          {/* SSN/CPF Field */}
+          {/* CPF Field */}
           <FormField
             control={form.control}
-            name="ssn"
+            name="cpf"
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-sm font-medium">
@@ -191,16 +193,16 @@ export function ClientRegistrationForm({
                     <FileText className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
                       {...field}
-                      placeholder="123-45-6789"
+                      placeholder="123.456.789-12"
                       className="pl-10"
                       disabled={isLoading}
                       autoComplete="off"
-                      onChange={(e) => handleSSNChange(e.target.value, field.onChange)}
+                      onChange={(e) => handleCPFChange(e.target.value, field.onChange)}
                     />
                   </div>
                 </FormControl>
                 <FormDescription>
-                  CPF no formato XXX-XX-XXXX (apenas números)
+                  CPF no formato XXX.XXX.XXX-XX (apenas números)
                 </FormDescription>
                 <FormMessage />
               </FormItem>

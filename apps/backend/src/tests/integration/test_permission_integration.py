@@ -236,7 +236,7 @@ class TestPermissionSystemIntegration:
         # Test client creation
         client_data = {
             "full_name": "John Doe",
-            "cpf": "123-45-6789",
+            "cpf": "123.456.789-09",
             "birth_date": "1990-01-01",
             "notes": "Test client",
         }
