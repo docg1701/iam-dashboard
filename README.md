@@ -40,7 +40,7 @@ IAM Dashboard is a custom implementation service that delivers dedicated multi-a
 
 ## MVP Agent
 
-**Client Management Agent**: Complete CRUD operations with SSN validation, search capabilities, and bulk operations. Serves as the foundation for demonstrating multi-agent architecture.
+**Client Management Agent**: Complete CRUD operations with CPF validation, search capabilities, and bulk operations. Serves as the foundation for demonstrating multi-agent architecture.
 
 ## Pricing Model
 

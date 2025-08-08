@@ -4,47 +4,64 @@ import re
 from datetime import date
 
 
-def validate_ssn(ssn: str | None) -> bool:
-    """Validate Social Security Number format and basic rules.
+def validate_cpf(cpf: str | None) -> bool:
+    """Validate Brazilian CPF (Cadastro de Pessoa Física) format and check digit.
 
     Args:
-        ssn: SSN string to validate
+        cpf: CPF string to validate (accepts formats: XXX.XXX.XXX-XX or XXXXXXXXXXX)
 
     Returns:
-        True if SSN is valid, False otherwise
+        True if CPF is valid, False otherwise
     """
-    # Initial checks
-    if not ssn or not re.match(r"^\d{3}-\d{2}-\d{4}$", ssn):
+    if not cpf:
         return False
+    
+    try:
+        from cnpj_cpf_validator import CPF
+        return CPF.is_valid(cpf)
+    except ImportError:
+        # Fallback validation if library is not available
+        return _validate_cpf_fallback(cpf)
 
-    # Extract digits for validation
-    digits = ssn.replace("-", "")
 
-    # Check for the most obvious sequential pattern
-    is_sequential = digits == "123456789"
+def _validate_cpf_fallback(cpf: str) -> bool:
+    """Fallback CPF validation implementation.
+    
+    Args:
+        cpf: CPF string to validate
+        
+    Returns:
+        True if CPF is valid, False otherwise
+    """
+    # Remove formatting
+    cpf_digits = re.sub(r'\D', '', cpf)
+    
+    # Must have exactly 11 digits
+    if len(cpf_digits) != 11:
+        return False
+    
+    # Check for repeated digits (111.111.111-11, etc.)
+    if cpf_digits == cpf_digits[0] * 11:
+        return False
+    
+    # Calculate first check digit
+    sum1 = sum(int(cpf_digits[i]) * (10 - i) for i in range(9))
+    remainder1 = sum1 % 11
+    check_digit1 = 0 if remainder1 < 2 else 11 - remainder1
+    
+    if int(cpf_digits[9]) != check_digit1:
+        return False
+    
+    # Calculate second check digit
+    sum2 = sum(int(cpf_digits[i]) * (11 - i) for i in range(10))
+    remainder2 = sum2 % 11
+    check_digit2 = 0 if remainder2 < 2 else 11 - remainder2
+    
+    return int(cpf_digits[10]) == check_digit2
 
-    # Invalid patterns to check
-    invalid_conditions = [
-        digits == "000000000",
-        digits[:3] == "000",  # Area number cannot be 000
-        digits[3:5] == "00",  # Group number cannot be 00
-        digits[5:] == "0000",  # Serial number cannot be 0000
-        is_sequential,  # Sequential patterns like 123456789
-        digits
-        in [
-            "111111111",
-            "222222222",
-            "333333333",
-            "444444444",
-            "555555555",
-            "666666666",
-            "777777777",
-            "888888888",
-            "999999999",
-        ],
-    ]
 
-    return not any(invalid_conditions)
+# Backward compatibility alias  
+validate_ssn = validate_cpf
 
 
 def validate_email(email: str | None) -> bool:

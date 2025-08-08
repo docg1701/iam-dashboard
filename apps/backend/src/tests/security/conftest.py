@@ -181,7 +181,7 @@ def attack_user_scenarios(test_session: Session) -> Dict[str, User]:
 
 
 @pytest.fixture 
-def security_test_client(test_client):
+def security_test_client(client):
     """
     Enhanced test client with security testing utilities.
     
@@ -225,7 +225,7 @@ def security_test_client(test_client):
                                   json={"role": target_role}, 
                                   headers=headers)
     
-    return SecurityTestClient(test_client)
+    return SecurityTestClient(client)
 
 
 @pytest.fixture

@@ -33,7 +33,7 @@ export type ClientStatus = z.infer<typeof ClientStatusSchema>
 export interface Client {
   client_id: string
   full_name: string
-  ssn: string // Format: XXX-XX-XXXX
+  cpf: string // Format: XXX.XXX.XXX-XX
   birth_date: string // ISO 8601 date format
   status: ClientStatus
   notes?: string | null
@@ -45,14 +45,14 @@ export interface Client {
 
 export interface ClientCreate {
   full_name: string
-  ssn: string
+  cpf: string
   birth_date: string
   notes?: string | null
 }
 
 export interface ClientUpdate {
   full_name?: string
-  ssn?: string
+  cpf?: string
   birth_date?: string
   notes?: string | null
   status?: ClientStatus
@@ -61,7 +61,7 @@ export interface ClientUpdate {
 export interface ClientResponse {
   client_id: string
   full_name: string
-  ssn: string // Will be masked for security (e.g., XXX-XX-1234)
+  cpf: string // Will be masked for security (e.g., XXX.XXX.XXX-XX)
   birth_date: string
   status: ClientStatus
   notes?: string | null
@@ -74,7 +74,7 @@ export interface ClientResponse {
 export interface ClientListItem {
   client_id: string
   full_name: string
-  ssn: string // Masked
+  cpf: string // Masked
   status: ClientStatus
   created_at: string
 }
@@ -86,7 +86,7 @@ export interface ClientErrorResponse {
 
 export interface ClientFormData {
   full_name: string
-  ssn: string
+  cpf: string
   birth_date: string
   notes?: string | null
 }
@@ -151,14 +151,14 @@ export interface BrandingConfig {
 // Validation Schemas
 export const ClientCreateSchema = z.object({
   full_name: z.string().min(2).max(255),
-  ssn: z.string().regex(/^\d{3}-\d{2}-\d{4}$/, 'SSN must be in format XXX-XX-XXXX'),
+  cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'CPF must be in format XXX.XXX.XXX-XX'),
   birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
   notes: z.string().optional()
 })
 
 export const ClientUpdateSchema = z.object({
   full_name: z.string().min(2).max(255).optional(),
-  ssn: z.string().regex(/^\d{3}-\d{2}-\d{4}$/, 'SSN must be in format XXX-XX-XXXX').optional(),
+  cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'CPF must be in format XXX.XXX.XXX-XX').optional(),
   birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional(),
   notes: z.string().optional(),
   status: ClientStatusSchema.optional()
@@ -166,7 +166,7 @@ export const ClientUpdateSchema = z.object({
 
 export const ClientFormDataSchema = z.object({
   full_name: z.string().min(2).max(255),
-  ssn: z.string().regex(/^\d{3}-\d{2}-\d{4}$/, 'SSN must be in format XXX-XX-XXXX'),
+  cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, 'CPF must be in format XXX.XXX.XXX-XX'),
   birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
   notes: z.string().optional()
 })

@@ -75,7 +75,7 @@ const useAuthStore = create<AuthStore>()(
             set({
               user,
               token: data.access_token,
-              isAuthenticated: true,
+              isAuthenticated: !!user && !!data.access_token,
               isLoading: false,
               requires2FA: false,
               tempToken: null,

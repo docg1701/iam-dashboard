@@ -76,7 +76,7 @@ export default function UsersPage() {
   // Prepare filters for API call
   const filters: UserListFilters = {
     query: searchTerm || undefined,
-    role: roleFilter || undefined,
+    role: (roleFilter && roleFilter !== "all") ? roleFilter : undefined,
     is_active: statusFilter === "active" ? true : statusFilter === "inactive" ? false : undefined,
     page: 1,
     limit: 50
@@ -242,7 +242,7 @@ export default function UsersPage() {
               <SelectValue placeholder="Filtrar por role" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os roles</SelectItem>
+              <SelectItem value="all">Todos os roles</SelectItem>
               <SelectItem value="sysadmin">Sysadmin</SelectItem>
               <SelectItem value="admin">Admin</SelectItem>
               <SelectItem value="user">Usuário</SelectItem>
@@ -254,7 +254,7 @@ export default function UsersPage() {
               <SelectValue placeholder="Filtrar por status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos os status</SelectItem>
+              <SelectItem value="all">Todos os status</SelectItem>
               <SelectItem value="active">Ativo</SelectItem>
               <SelectItem value="inactive">Inativo</SelectItem>
             </SelectContent>

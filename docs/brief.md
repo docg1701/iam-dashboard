@@ -162,9 +162,9 @@ A custom-implemented AI automation platform that provides enterprise-grade capab
   - **Quality Assurance:** Testing and validation before client handover
 
 - **Client Management Agent:** Core automation functionality including:
-  - **Client Registration:** Name, SSN, birthdate validation and storage
-  - **SSN Validation:** Format validation and duplicate prevention system
-  - **Client Search & Retrieval:** Efficient search by name, SSN, or other criteria
+  - **Client Registration:** Name, CPF, birthdate validation and storage
+  - **CPF Validation:** Format validation and duplicate prevention system
+  - **Client Search & Retrieval:** Efficient search by name, CPF, or other criteria
   - **Data Management:** Edit, update, and maintain client information with audit trails
   - **Bulk Operations:** CSV export and multiple client selection capabilities
 

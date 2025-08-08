@@ -36,6 +36,7 @@ import {
   mockNetworkError,
   triggerWindowResize,
   within,
+  act,
 } from '@/test/test-template'
 import { 
   AuthScenarios,
@@ -290,7 +291,9 @@ describe('AdminPermissionsPage', () => {
       
       // Apply role filter
       const roleFilter = screen.getByRole('combobox')
-      await userEvent.click(roleFilter)
+      await act(async () => {
+        await userEvent.click(roleFilter)
+      })
       
       // The statistics should reflect filtered data
       expect(screen.getByText(/total de usuários/i)).toBeInTheDocument()
@@ -337,7 +340,9 @@ describe('AdminPermissionsPage', () => {
       
       // Find and interact with role filter
       const roleFilter = screen.getAllByRole('combobox')[1] // Second combobox should be role
-      await userEvent.click(roleFilter)
+      await act(async () => {
+        await userEvent.click(roleFilter)
+      })
     })
 
     test('filters users by status (active/inactive)', async () => {

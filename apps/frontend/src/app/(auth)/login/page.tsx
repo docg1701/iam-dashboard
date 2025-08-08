@@ -69,9 +69,16 @@ export default function LoginPage() {
     }
   }
 
-  const handleBackToLogin = () => {
+  const handleBackToLogin = async () => {
+    // Clear local state
     setCurrentStep(AuthStep.LOGIN)
     setTempToken(null)
+    
+    // Clear auth store 2FA state
+    const { default: useAuthStore } = await import('@/store/authStore')
+    const authStore = useAuthStore.getState()
+    authStore.setRequires2FA(false)
+    authStore.setTempToken(null)
   }
 
   const handleLoginError = (error: string) => {

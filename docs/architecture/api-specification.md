@@ -446,16 +446,16 @@ components:
   schemas:
     Client:
       type: object
-      required: [client_id, full_name, ssn, birth_date, status]
+      required: [client_id, full_name, cpf, birth_date, status]
       properties:
         client_id:
           type: string
           format: uuid
         full_name:
           type: string
-        ssn:
+        cpf:
           type: string
-          pattern: '^\d{3}-\d{2}-\d{4}$'
+          pattern: '^\d{3}\.\d{3}\.\d{3}-\d{2}$'
         birth_date:
           type: string
           format: date
@@ -476,9 +476,9 @@ components:
           type: string
           minLength: 2
           maxLength: 255
-        ssn:
+        cpf:
           type: string
-          pattern: '^\d{3}-\d{2}-\d{4}$'
+          pattern: '^\d{3}\.\d{3}\.\d{3}-\d{2}$'
         birth_date:
           type: string
           format: date
@@ -491,15 +491,15 @@ components:
 
     ClientCreate:
       type: object
-      required: [full_name, ssn, birth_date]
+      required: [full_name, cpf, birth_date]
       properties:
         full_name:
           type: string
           minLength: 2
           maxLength: 255
-        ssn:
+        cpf:
           type: string
-          pattern: '^\d{3}-\d{2}-\d{4}$'
+          pattern: '^\d{3}\.\d{3}\.\d{3}-\d{2}$'
         birth_date:
           type: string
           format: date

@@ -45,9 +45,9 @@ interface ApiError {
 {
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Invalid SSN format provided",
+    "message": "Invalid CPF format provided",
     "details": {
-      "field": "ssn",
+      "field": "cpf",
       "received": "123456789",
       "expected": "XXX-XX-XXXX format"
     },

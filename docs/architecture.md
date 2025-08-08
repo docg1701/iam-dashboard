@@ -134,6 +134,7 @@ This is the **DEFINITIVE technology selection** for the entire project. This tab
 | Backend Language | Python | >=3.13.5 | Backend API development | Excellent FastAPI support, mature ecosystem, strong typing with Pydantic integration |
 | Backend Framework | FastAPI | >=0.116.1 | Modern Python web framework | Automatic OpenAPI generation, async support, Pydantic integration, excellent performance |
 | Backend Validation | Pydantic | >=2.11.7 | Data validation and settings management | Integrates seamlessly with FastAPI, uses Python type hints for robust validation |
+| CPF/CNPJ Validation | cnpj-cpf-validator | >=0.1.2 | Brazilian document validation | Validates CPF and CNPJ numbers with proper check digit algorithm, supports formatting |
 | Web Server | Gunicorn + Uvicorn | >=23.0.0 + >=0.35.0 | ASGI server and process manager | Gunicorn manages Uvicorn workers for production-grade performance and reliability |
 | API Style | REST + OpenAPI 3.0 | >=3.1.1 | API architecture and documentation | Standard REST for simplicity, OpenAPI for automatic documentation, easier than GraphQL for this use case |
 | Database | PostgreSQL | >=17.5 | Primary data storage with vector support | ACID compliance, excellent JSON support, pgvector extension for future AI features, mature ecosystem |
@@ -194,7 +195,7 @@ interface UserUpdate {
 interface Client {
   client_id: string;
   full_name: string;
-  ssn: string; // Format: XXX-XX-XXXX
+  cpf: string; // Format: XXX.XXX.XXX-XX
   birth_date: string; // ISO 8601 date format
   status: 'active' | 'inactive' | 'archived';
   created_by: string; // User ID reference
@@ -206,21 +207,21 @@ interface Client {
 
 interface ClientCreate {
   full_name: string;
-  ssn: string;
+  cpf: string;
   birth_date: string;
   notes?: string;
 }
 
 interface ClientUpdate {
   full_name?: string;
-  ssn?: string;
+  cpf?: string;
   birth_date?: string;
   status?: 'active' | 'inactive' | 'archived';
   notes?: string;
 }
 
 interface ClientSearch {
-  query?: string; // Name or SSN search
+  query?: string; // Name or CPF search
   status?: 'active' | 'inactive' | 'archived';
   created_after?: string;
   created_before?: string;
@@ -1577,17 +1578,37 @@ This architecture enables the custom implementation service model to deliver ent
 
 The platform implements **comprehensive testing** following the testing pyramid approach to ensure 80% minimum code coverage and reliable functionality across all multi-agent interactions.
 
+**🚨 CRITICAL TESTING DIRECTIVE**: Following CLAUDE.md backend testing directives:
+- **NEVER mock internal business logic** (PermissionService, UserService, authentication flows)
+- **ONLY mock external dependencies** (APIs, file systems, Redis/cache, time/random)
+- **Unit Tests**: Mock external APIs, file systems, Redis - Test real business logic
+- **Integration Tests**: Use real database sessions, real services - Mock only external systems
+- **Golden Rule**: "Mock the boundaries, not the behavior" - Mock system edges, test internal logic
+
 ### Testing Pyramid
 
 ```
-                  E2E Tests
+                  E2E Tests (No Internal Mocks)
                  /        \
-            Integration Tests
+            Integration Tests (Real DB + Services)
                /            \
-          Frontend Unit  Backend Unit
+          Frontend Unit (Real Components)  Backend Unit (Real Logic)
 ```
 
 The testing strategy emphasizes unit tests as the foundation while ensuring critical user workflows are validated through end-to-end testing across all agents.
+
+**PROHIBITED MOCKING PATTERNS** (per CLAUDE.md):
+- ❌ `vi.mock('@/services/ClientService')`
+- ❌ `vi.mock('@/hooks/useAuth')`
+- ❌ `patch('core.permissions.PermissionService')`
+- ❌ `patch('services.UserService')`
+- ❌ Database session mocking in integration tests
+
+**APPROVED MOCKING PATTERNS**:
+- ✅ `global.fetch = vi.fn()` (external API)
+- ✅ `patch('external_services.notification_service')` (external service)
+- ✅ `patch('time.time')` (time/random)
+- ✅ `patch('external_services.redis_client')` (external cache)
 
 ### Test Organization
 
@@ -1698,33 +1719,35 @@ tests/playwright/
 
 ### Test Examples
 
+**CRITICAL**: Following CLAUDE.md testing directives - Mock only external dependencies, test real business logic
+
 #### Frontend Component Test
 
 ```typescript
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { ClientForm } from '@/components/forms/ClientForm';
-import { ClientService } from '@/services/ClientService';
+import { AuthProvider } from '@/contexts/AuthContext';
 
-// Mock the service
-vi.mock('@/services/ClientService');
+// Mock only external API calls - NEVER mock internal components/services
+global.fetch = vi.fn();
 
 describe('ClientForm', () => {
-  const mockCreateClient = vi.fn();
+  const mockFetch = vi.mocked(fetch);
   
   beforeEach(() => {
-    vi.mocked(ClientService.createClient).mockImplementation(mockCreateClient);
-  });
-
-  afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should validate SSN format correctly', async () => {
+  it('should validate SSN format correctly using real validation logic', async () => {
     const user = userEvent.setup();
     
-    render(<ClientForm onSuccess={vi.fn()} />);
+    render(
+      <AuthProvider>
+        <ClientForm onSuccess={vi.fn()} />
+      </AuthProvider>
+    );
     
     // Fill in form with invalid SSN
     await user.type(screen.getByLabelText(/name/i), 'John Doe');
@@ -1734,16 +1757,16 @@ describe('ClientForm', () => {
     // Submit form
     await user.click(screen.getByRole('button', { name: /create client/i }));
     
-    // Should show validation error
+    // Should show validation error from real Zod validation
     await waitFor(() => {
       expect(screen.getByText(/invalid ssn format/i)).toBeInTheDocument();
     });
     
-    // Service should not be called
-    expect(mockCreateClient).not.toHaveBeenCalled();
+    // No API call should be made for invalid data
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it('should create client with valid data', async () => {
+  it('should create client with valid data using real form logic', async () => {
     const user = userEvent.setup();
     const mockClient = {
       client_id: '123',
@@ -1752,10 +1775,19 @@ describe('ClientForm', () => {
       birth_date: '1990-01-01'
     };
     
-    mockCreateClient.mockResolvedValue(mockClient);
+    // Mock only the external API response
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockClient
+    } as Response);
+    
     const onSuccess = vi.fn();
     
-    render(<ClientForm onSuccess={onSuccess} />);
+    render(
+      <AuthProvider>
+        <ClientForm onSuccess={onSuccess} />
+      </AuthProvider>
+    );
     
     // Fill in form with valid data
     await user.type(screen.getByLabelText(/name/i), 'John Doe');
@@ -1765,27 +1797,32 @@ describe('ClientForm', () => {
     // Submit form
     await user.click(screen.getByRole('button', { name: /create client/i }));
     
-    // Should call service with correct data
+    // Should call external API with correct data
     await waitFor(() => {
-      expect(mockCreateClient).toHaveBeenCalledWith({
-        name: 'John Doe',
-        ssn: '123-45-6789',
-        birth_date: '1990-01-01'
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'John Doe',
+          ssn: '123-45-6789',
+          birth_date: '1990-01-01'
+        })
       });
     });
     
-    // Should call success callback
+    // Should call success callback through real logic
     expect(onSuccess).toHaveBeenCalledWith(mockClient);
   });
 });
 ```
 
-#### Backend API Test
+#### Backend Integration Test
 
 ```python
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+from unittest.mock import patch
 from uuid import uuid4
 
 from main import app
@@ -1795,16 +1832,19 @@ from agents.agent1.models import Client
 from tests.factories import UserFactory, ClientFactory
 
 class TestClientAPI:
-    """Test suite for client management API endpoints."""
+    """Integration test suite - tests real business logic with mocked external dependencies only."""
     
-    def test_create_client_success(self, test_client: TestClient, auth_headers: dict):
-        """Test successful client creation."""
+    @patch('external_services.notification_service.send_email')  # Mock external service only
+    @patch('time.time', return_value=1234567890)  # Mock time for consistent testing
+    def test_create_client_success(self, mock_time, mock_email, test_client: TestClient, auth_headers: dict, db: Session):
+        """Test successful client creation using real business logic and database."""
         client_data = {
             "name": "John Doe",
             "ssn": "123-45-6789",
             "birth_date": "1990-01-01"
         }
         
+        # Test real API endpoint with real validation and database operations
         response = test_client.post(
             "/api/v1/clients/",
             json=client_data,
@@ -1818,10 +1858,19 @@ class TestClientAPI:
         assert data["birth_date"] == client_data["birth_date"]
         assert "client_id" in data
         assert "created_at" in data
+        
+        # Verify client exists in real database
+        created_client = db.query(Client).filter(Client.ssn == "123-45-6789").first()
+        assert created_client is not None
+        assert created_client.full_name == "John Doe"
+        
+        # Verify external service was called (mocked)
+        mock_email.assert_called_once()
     
-    def test_create_client_duplicate_ssn(self, test_client: TestClient, auth_headers: dict, db: Session):
-        """Test client creation with duplicate SSN."""
-        # Create existing client
+    @patch('external_services.notification_service.send_email')
+    def test_create_client_duplicate_ssn(self, mock_email, test_client: TestClient, auth_headers: dict, db: Session):
+        """Test client creation with duplicate SSN using real validation logic."""
+        # Create existing client in real database
         existing_client = ClientFactory(ssn="123-45-6789")
         db.add(existing_client)
         db.commit()
@@ -1832,6 +1881,7 @@ class TestClientAPI:
             "birth_date": "1985-05-15"
         }
         
+        # Test real duplicate validation logic
         response = test_client.post(
             "/api/v1/clients/",
             json=client_data,
@@ -1842,6 +1892,13 @@ class TestClientAPI:
         data = response.json()
         assert data["error"]["code"] == "DUPLICATE_CLIENT"
         assert "SSN already exists" in data["error"]["message"]
+        
+        # No email should be sent for failed creation
+        mock_email.assert_not_called()
+        
+        # Verify real database state - should still have only one client
+        clients_with_ssn = db.query(Client).filter(Client.ssn == "123-45-6789").all()
+        assert len(clients_with_ssn) == 1
 ```
 
 #### E2E Test
@@ -1859,7 +1916,7 @@ test.describe('Client Management Workflow', () => {
     authHelper = new AuthHelper(page);
     dataHelper = new DataHelper(page);
     
-    // Login as admin user
+    // Real login flow - no mocks
     await authHelper.loginAsAdmin();
   });
 
@@ -1868,36 +1925,36 @@ test.describe('Client Management Workflow', () => {
     await page.goto('/clients');
     await expect(page.getByRole('heading', { name: 'Clients' })).toBeVisible();
 
-    // Create new client
+    // Create new client - tests real form validation and API calls
     await page.getByRole('button', { name: 'Add Client' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
 
-    // Fill client form
+    // Fill client form - validates real client creation flow
     await page.getByLabel('Name').fill('John Doe');
     await page.getByLabel('SSN').fill('123-45-6789');
     await page.getByLabel('Birth Date').fill('1990-01-01');
 
-    // Submit form
+    // Submit form - tests complete client creation workflow
     await page.getByRole('button', { name: 'Create Client' }).click();
 
-    // Verify client was created
+    // Verify client was created - validates database integration
     await expect(page.getByText('Client created successfully')).toBeVisible();
     await expect(page.getByText('John Doe')).toBeVisible();
 
-    // Edit client
+    // Edit client - tests real edit functionality
     await page.getByRole('row', { name: /John Doe/ }).getByRole('button', { name: 'Edit' }).click();
     await page.getByLabel('Name').fill('John Smith');
     await page.getByRole('button', { name: 'Save Changes' }).click();
 
-    // Verify client was updated
+    // Verify client was updated - validates real update logic
     await expect(page.getByText('Client updated successfully')).toBeVisible();
     await expect(page.getByText('John Smith')).toBeVisible();
 
-    // Delete client
+    // Delete client - tests real deletion with confirmation
     await page.getByRole('row', { name: /John Smith/ }).getByRole('button', { name: 'Delete' }).click();
     await page.getByRole('button', { name: 'Confirm Delete' }).click();
 
-    // Verify client was deleted
+    // Verify client was deleted - validates complete deletion workflow
     await expect(page.getByText('Client deleted successfully')).toBeVisible();
     await expect(page.getByText('John Smith')).not.toBeVisible();
   });

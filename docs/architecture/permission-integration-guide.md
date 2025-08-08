@@ -1273,7 +1273,7 @@ async def test_create_client_requires_permission(
     
     with pytest.raises(PermissionDeniedError):
         await client_service.create_client(
-            ClientCreate(full_name="John Doe", ssn="123-45-6789"),
+            ClientCreate(full_name="John Doe", cpf="123.456.789-01"),
             regular_user.user_id
         )
     
@@ -1283,7 +1283,7 @@ async def test_create_client_requires_permission(
     })
     
     client = await client_service.create_client(
-        ClientCreate(full_name="Jane Doe", ssn="987-65-4321"),
+        ClientCreate(full_name="Jane Doe", cpf="987.654.321-02"),
         regular_user.user_id
     )
     
@@ -1297,7 +1297,7 @@ async def test_api_endpoint_permission_protection(async_client, mock_permission_
     
     response = await async_client.post(
         "/api/v1/clients",
-        json={"full_name": "Test Client", "ssn": "123-45-6789"},
+        json={"full_name": "Test Client", "cpf": "123.456.789-01"},
         headers={"Authorization": "Bearer mock_token_user123"}
     )
     
@@ -1311,7 +1311,7 @@ async def test_api_endpoint_permission_protection(async_client, mock_permission_
     
     response = await async_client.post(
         "/api/v1/clients",
-        json={"full_name": "Test Client", "ssn": "123-45-6789"},
+        json={"full_name": "Test Client", "cpf": "123.456.789-01"},
         headers={"Authorization": "Bearer mock_token_user123"}
     )
     

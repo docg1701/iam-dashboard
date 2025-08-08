@@ -10,6 +10,7 @@ requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.16.4",
     "celery>=5.5.0",
+    "cnpj-cpf-validator>=0.1.2",
     "coverage>=7.10.1",
     "email-validator>=2.1.1",
     "fastapi>=0.116.1",
@@ -36,6 +37,7 @@ dev = [
     "mypy>=1.17.1",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
     "ruff>=0.12.7",
     "types-passlib>=1.7.7.20250602",
     "types-qrcode>=8.2.0.20250506",

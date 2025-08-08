@@ -41,11 +41,11 @@ This custom implementation service delivers the sophistication of enterprise aut
 
 **FR1:** The system shall provide a custom implementation service that delivers fully-customized multi-agent AI automation infrastructure on dedicated VPS instances within 30 days
 
-**FR2:** The system shall include a Client Management Agent with complete CRUD operations for client data including name, SSN, and birthdate with validation
+**FR2:** The system shall include a Client Management Agent with complete CRUD operations for client data including name, CPF, and birthdate with validation
 
-**FR3:** The system shall validate SSN format and prevent duplicate SSN entries across the client database
+**FR3:** The system shall validate CPF format and prevent duplicate CPF entries across the client database
 
-**FR4:** The system shall provide comprehensive client search and retrieval capabilities by name, SSN, or other criteria
+**FR4:** The system shall provide comprehensive client search and retrieval capabilities by name, CPF, or other criteria
 
 **FR5:** The system shall support bulk operations including CSV export and multiple client selection capabilities
 
@@ -275,11 +275,11 @@ so that I have a solid data foundation for client management and user authentica
 #### Acceptance Criteria
 
 1. **User Model:** Complete user schema with authentication fields, roles (sysadmin, admin, user), and 2FA support
-2. **Client Model:** Client schema with name, SSN, birthdate, and audit fields following the Project Brief specifications
+2. **Client Model:** Client schema with name, CPF, birthdate, and audit fields following the Project Brief specifications
 3. **Audit Trail Model:** Schema for tracking all data modifications with user, timestamp, and change details
 4. **Database Relationships:** Proper foreign key relationships and constraints between all entities
 5. **Migration Scripts:** Alembic migrations for all initial schemas with proper indexing
-6. **Validation:** Comprehensive field validation including SSN format validation and uniqueness constraints
+6. **Validation:** Comprehensive field validation including CPF format validation and uniqueness constraints
 7. **Test Data:** Factory patterns and seed data for development and testing environments
 
 ### Story 1.3: Authentication System with 2FA
@@ -302,7 +302,7 @@ so that my account and client data are protected with enterprise-grade security.
 ### Story 1.4: Basic Client Registration
 
 As a **user**,  
-I want to register new clients with name, SSN, and birthdate,  
+I want to register new clients with name, CPF, and birthdate,  
 so that I can start building our client database with proper validation and security.
 
 #### Acceptance Criteria
@@ -452,7 +452,7 @@ so that I can maintain accurate client information and track all changes over ti
 1. **Client Detail View:** Comprehensive display of all client information with edit capabilities
 2. **Edit Functionality:** Inline editing of client data with real-time validation and error handling
 3. **Audit History:** Complete timeline of all changes with user, timestamp, and modification details
-4. **Data Validation:** Comprehensive validation for all fields including SSN format and duplicate checks
+4. **Data Validation:** Comprehensive validation for all fields including CPF format and duplicate checks
 5. **Change Confirmation:** Clear confirmation dialogs for data modifications with change summaries
 6. **Permission Control:** Edit permissions enforced based on user role and client status
 7. **Mobile Editing:** Full editing capabilities optimized for mobile and tablet interfaces
@@ -797,7 +797,7 @@ The PRD and epics are comprehensive, properly structured, and ready for architec
 - Monitor user activity and usage statistics across agents
 
 **🟢 USER (Operational User) - Greatly Expanded**
-- **NEW:** Create and edit clients (name, SSN, birth date) with validation
+- **NEW:** Create and edit clients (name, CPF, birth date) with validation
 - **NEW:** Search and filter clients by various criteria
 - **NEW:** Access assigned agents based on job responsibilities
 - **NEW:** Configurable permissions for different operational needs

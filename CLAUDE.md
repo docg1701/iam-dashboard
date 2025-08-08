@@ -1,1034 +1,122 @@
-# CLAUDE.md - Multi-Agent IAM Dashboard Development Guide
+# CLAUDE.md - IAM Dashboard Development Guide
 
-This file provides comprehensive guidance to Claude Code when working on this fullstack multi-agent IAM Dashboard project. The system is built as a **Custom Implementation Service** delivering **dedicated VPS instances** with **independent agents** communicating through a shared database.
+Essential guidance for Claude Code when working on this fullstack IAM Dashboard project.
 
 ## 🚫 CRITICAL RESTRICTIONS
 
 ### Directory Access
 - **The `.secret-vault` directory is OFF-LIMITS** to Claude Code
 - **NEVER read, list, or modify** files in `.secret-vault/`
-- This restriction is permanent and non-negotiable
 
 ### Language Requirements
-- **ALL code, comments, documentation, and technical content MUST be in native English**
+- **ALL code, comments, documentation MUST be in English**
 - **ALL variable names, function names, class names MUST be in English**
-- **ALL commit messages, pull request descriptions, and technical discussions MUST be in English**
-- **ALL API endpoints, database schemas, and system logs MUST be in English**
-- **User Interface (UI) content MUST be in Portuguese (Brazil)** for ease of use
-- **Only user-facing labels, messages, and interface text should be in Portuguese**
+- **User Interface (UI) content MUST be in Portuguese (Brazil)**
 
 ### Backend Testing Directives
 - **CRITICAL: Mock only external dependencies - NEVER mock internal business logic**
-- **Follow Test Pyramid: 60-75% Unit Tests, 20-30% Integration Tests, 5-10% E2E Tests**
-- **Unit Tests**: Mock external APIs, file systems, Redis/cache, time/random - Test real business logic
-- **Integration Tests**: Use real database sessions, real services, real permission logic - Mock only external systems
-- **E2E Tests**: No internal mocks - test complete workflows with real authentication and database
+- **Golden Rule**: "Mock the boundaries, not the behavior"
 - **NEVER mock**: PermissionService logic, authentication flows, database operations (in integration), business rules
 - **ALWAYS mock**: External HTTP calls, SMTP servers, file I/O, third-party libraries, time/UUID generation
-- **Authentication**: Unit tests can mock auth, Integration/E2E tests must use real auth flow
-- **Database**: Unit tests use mocked data, Integration tests use real database transactions
-- **Permission System**: Must have comprehensive integration tests with real role hierarchy and permission checks
-- **Test Categories**: Clearly separate test files by category (unit/, integration/, e2e/) with appropriate mocking strategy
-- **Golden Rule**: "Mock the boundaries, not the behavior" - Mock system edges, test internal logic
 
 ### Frontend Testing Directives
-- **NEVER mock internal frontend code, components, hooks, or utilities in tests**
+- **NEVER mock internal frontend code, components, hooks, or utilities**
 - **ONLY mock external APIs** (fetch calls, third-party services, etc.)
-- **Use real component rendering** and actual data flows in tests
-- **Mock external dependencies only**: API endpoints, browser APIs, third-party libraries
 - **Test actual behavior**, not implementation details
-- **When testing components, use real providers and contexts** - never mock them
-- **Integration tests must use actual component interactions** without internal mocks
 
-## 🛠️ MCP (Model Context Protocol) Tools
+## 🛠️ MCP Tools
 
-### MCP Context7 - Documentation & Code Search
-**ALWAYS use MCP Context7** for searching documentation, code examples, and library information:
+### Context7 - Documentation Search
+**Always use** before implementing new features:
 
-#### When to Use Context7
-- **Before implementing any new feature**: Search for examples and patterns
-- **When learning a new library**: Get up-to-date documentation and examples  
-- **For code snippets**: Find proven implementations and best practices
-- **API references**: Get current API documentation and usage patterns
-- **Framework guides**: Access latest framework documentation and tutorials
-
-#### Context7 Usage Pattern
 ```bash
-# 1. First resolve the library ID
-mcp__context7__resolve-library-id --libraryName="next.js"
-
-# 2. Then get specific documentation  
-mcp__context7__get-library-docs --context7CompatibleLibraryID="/vercel/next.js" --topic="server components"
-```
-
-#### Context7 Examples
-```bash
-# Get FastAPI documentation
+# 1. Resolve library ID
 mcp__context7__resolve-library-id --libraryName="fastapi"
+# 2. Get documentation
 mcp__context7__get-library-docs --context7CompatibleLibraryID="/tiangolo/fastapi" --topic="authentication"
-
-# Get React 19 examples
-mcp__context7__resolve-library-id --libraryName="react"
-mcp__context7__get-library-docs --context7CompatibleLibraryID="/facebook/react" --topic="hooks"
-
-# Get shadcn/ui components
-mcp__context7__resolve-library-id --libraryName="shadcn/ui"
-mcp__context7__get-library-docs --context7CompatibleLibraryID="/shadcn/ui" --topic="theming"
 ```
 
-#### Context7 Integration Workflow
-1. **Before coding**: Always search Context7 for relevant documentation
-2. **During implementation**: Reference Context7 for API usage and patterns
-3. **When debugging**: Check Context7 for known issues and solutions
-4. **For testing**: Find testing examples and patterns in documentation
+### Playwright - E2E Testing
+**Essential commands**:
 
-### MCP Playwright - End-to-End Testing
-**ALWAYS use MCP Playwright** for comprehensive E2E testing of the dashboard:
-
-#### When to Use Playwright
-- **User journey testing**: Complete workflows across multiple agents
-- **Cross-browser testing**: Ensure compatibility across different browsers
-- **Responsive testing**: Validate UI behavior on different screen sizes
-- **Authentication flows**: Test login, 2FA, and role-based access
-- **Agent interactions**: Test data flow between different agents
-- **Custom branding**: Validate brand customizations and visual identity integration
-
-#### Playwright Testing Strategy
-```javascript
-// Example E2E test structure
-describe('Agent 1 - Client Management', () => {
-  test('should create new client and verify in Agent 2', async () => {
-    // Navigate to Agent 1
-    await mcp__playwright__browser_navigate({ url: 'http://localhost:3000/agent1' });
-    
-    // Take snapshot of current state
-    const snapshot = await mcp__playwright__browser_snapshot();
-    
-    // Fill client form
-    await mcp__playwright__browser_type({
-      element: 'Client Name Input',
-      ref: 'input[name="clientName"]',
-      text: 'John Doe'
-    });
-    
-    // Submit form
-    await mcp__playwright__browser_click({
-      element: 'Submit Button',
-      ref: 'button[type="submit"]'
-    });
-    
-    // Verify client appears in Agent 2
-    await mcp__playwright__browser_navigate({ url: 'http://localhost:3000/agent2' });
-    
-    // Take screenshot for verification
-    await mcp__playwright__browser_take_screenshot({
-      filename: 'client-created-verification.png'
-    });
-  });
-});
-```
-
-#### Critical E2E Test Scenarios
-1. **Authentication Flow**
-   ```javascript
-   // Test 2FA login process
-   await mcp__playwright__browser_navigate({ url: 'http://localhost:3000/login' });
-   await mcp__playwright__browser_type({
-     element: 'Email Input',
-     ref: 'input[name="email"]',
-     text: 'admin@example.com'
-   });
-   // Continue with 2FA flow...
-   ```
-
-2. **Agent Data Flow**
-   ```javascript
-   // Test data consistency across agents
-   // 1. Create client in Agent 1
-   // 2. Process PDF in Agent 2 for that client
-   // 3. Generate report in Agent 3
-   // 4. Verify all data is consistent
-   ```
-
-3. **Responsive Design**
-   ```javascript
-   // Test mobile responsiveness
-   await mcp__playwright__browser_resize({ width: 375, height: 667 });
-   await mcp__playwright__browser_take_screenshot({
-     filename: 'mobile-dashboard.png'
-   });
-   ```
-
-4. **Custom Branding**
-   ```javascript
-   // Test custom branding system
-   await mcp__playwright__browser_navigate({ url: 'http://localhost:3000/admin/branding' });
-   // Change primary color and logo
-   // Apply custom branding
-   // Verify changes across all pages
-   ```
-
-#### Playwright Integration Commands
 ```bash
-# Navigate and interact
+# Navigation and interaction
 mcp__playwright__browser_navigate --url="http://localhost:3000"
 mcp__playwright__browser_click --element="Login Button" --ref="button.login"
 mcp__playwright__browser_type --element="Username" --ref="input[name='username']" --text="admin"
 
-# Validation and debugging
-mcp__playwright__browser_snapshot  # Get accessible page structure
+# Validation
+mcp__playwright__browser_snapshot  # Get page structure
 mcp__playwright__browser_take_screenshot --filename="test-result.png"
-mcp__playwright__browser_console_messages  # Check for JavaScript errors
-
-# Advanced interactions
-mcp__playwright__browser_drag --startElement="File" --startRef=".file" --endElement="Upload Area" --endRef=".dropzone"
-mcp__playwright__browser_wait_for --text="Upload Complete"
+mcp__playwright__browser_console_messages  # Check errors
 ```
 
-#### E2E Testing Best Practices
-1. **Always take snapshots** before interactions to understand page state
-2. **Use descriptive element names** for better test readability
-3. **Verify state changes** after each major action
-4. **Test error scenarios** not just happy paths
-5. **Include accessibility testing** in E2E flows
-6. **Test theme consistency** across all agents
-7. **Validate responsive behavior** on different screen sizes
+## 🚀 Essential Commands
 
-#### Required E2E Test Coverage
-- [ ] **Login Flow**: Email/password + 2FA authentication
-- [ ] **Role-based Access**: sysadmin, admin, user permissions
-- [ ] **Agent 1 (Client Management)**: 
-  - [ ] Create client with name, SSN, birthdate validation
-  - [ ] Edit and update existing client information
-  - [ ] Delete client and handle cascading effects
-  - [ ] Bulk operations (CSV export, multiple selection)
-  - [ ] SSN validation and duplicate prevention
-- [ ] **Agent 2 (PDF Processing)**: 
-  - [ ] Upload PDF files with validation
-  - [ ] Process PDFs and create vector embeddings
-  - [ ] Search and retrieve document chunks
-  - [ ] Associate PDFs with specific clients
-- [ ] **Agent 3 (Reports & Analysis)**: 
-  - [ ] Generate reports from client and PDF data
-  - [ ] Export reports in different formats
-  - [ ] Customizable report templates
-- [ ] **Agent 4 (Audio Recording)**: 
-  - [ ] Record audio consultations
-  - [ ] Transcribe audio to text
-  - [ ] Associate recordings with clients
-  - [ ] LLM analysis of transcriptions
-- [ ] **Cross-Agent Data Flow**: Data consistency between agents
-- [ ] **Custom Branding**: 
-  - [ ] Logo and favicon upload and integration
-  - [ ] Complete color scheme customization
-  - [ ] Typography selection and application
-  - [ ] Real-time branding preview and deployment
-- [ ] **Responsive Design**: Mobile, tablet, desktop layouts
-- [ ] **Error Handling**: Network errors, validation errors, system errors
-- [ ] **Configuration Management**: 
-  - [ ] User role management
-  - [ ] System configuration files
-  - [ ] Agent card configuration
-
-## 🚀 Quick Start Commands
-
-### Development Setup
+### Development
 ```bash
-# Clone and setup (first time)
-git clone <repository-url> iam-dashboard
-cd iam-dashboard
+# Setup and start
 npm run setup  # Install all dependencies
+npm run dev    # Start both frontend and backend
 
-# Start development environment
-npm run dev  # Starts both frontend and backend
-# Or individually:
-npm run dev:frontend  # Next.js on :3000
-npm run dev:backend   # FastAPI on :8000
+# Testing (CRITICAL: Use exact commands)
+npm run test:coverage          # Frontend tests with coverage - EXACT command
+npx vitest run --coverage      # Direct vitest coverage
+uv run pytest --cov=src --cov-report=html  # Backend coverage
 
-# Database setup
-npm run db:migrate  # Apply Alembic migrations
-
-# Run tests
-npm run test        # All tests
-npm run test:e2e    # Playwright E2E tests
-```
-
-### Daily Development Workflow
-```bash
-# Pull latest changes
-git pull origin main
-
-# Install any new dependencies
-npm run setup
-
-# Apply database migrations
-npm run db:migrate
-
-# Start development
-npm run dev
-
-# Run quality checks before commit
+# Quality checks
 npm run lint
 npm run type-check
-npm run test
-
-# Commit with conventional format
-git add .
-git commit -m "feat: add client SSN validation"
-git push origin feature/client-validation
-```
-
-## 📋 Current Implementation Status
-
-### ✅ Completed Features (Stories 1.1-1.3)
-- **Project Setup**: Monorepo structure with npm workspaces
-- **Database Schema**: PostgreSQL with Alembic migrations, UUID primary keys
-- **Authentication System**: 
-  - Email/password authentication with bcrypt hashing
-  - TOTP 2FA with QR code generation and backup codes
-  - JWT token management with refresh tokens
-  - Role-based access control (sysadmin, admin, user)
-- **Core Models**: User, Client, Audit logging with comprehensive validation
-- **API Endpoints**: Authentication, user management, client management
-- **Frontend Components**: 
-  - Login form with 2FA integration
-  - User creation and editing forms
-  - Client registration forms
-  - Password strength indicator
-  - Protected route wrapper
-- **Testing Infrastructure**: 
-  - Backend: pytest with 80% coverage requirement
-  - Frontend: Vitest + React Testing Library + Playwright E2E
-  - Factory patterns for test data generation
-- **Code Quality**: Ruff (Python), ESLint/Prettier (TypeScript), strict typing
-
-### 🚧 In Progress (Stories 1.4-1.6)
-- **Enhanced Client Management**: Full CRUD operations with validation
-- **User Permission System**: Granular agent-based permissions
-- **Admin Interface**: Permission management and user administration
-- **Advanced UI Components**: Tables, dialogs, form improvements
-
-### 📅 Planned Features (Stories 1.7+)
-- **Agent 2**: PDF processing with pgvector embeddings
-- **Agent 3**: Report generation and analysis
-- **Agent 4**: Audio recording and transcription
-- **Custom Branding**: White-label theming system
-- **Performance Optimization**: Caching, query optimization
-- **Deployment Automation**: Docker containerization, CI/CD
-
-## Core Development Philosophy
-
-### KISS (Keep It Simple, Stupid)
-Simplicity should be a key goal in design. Choose straightforward solutions over complex ones whenever possible. Simple solutions are easier to understand, maintain, and debug.
-
-### YAGNI (You Aren't Gonna Need It)
-Avoid building functionality on speculation. Implement features only when they are needed, not when you anticipate they might be useful in the future.
-
-### Design Principles
-- **Dependency Inversion**: High-level modules should not depend on low-level modules. Both should depend on abstractions
-- **Open/Closed Principle**: Software entities should be open for extension but closed for modification
-- **Vertical Slice Architecture**: Organize by features, not layers
-- **Component-First**: Build with reusable, composable components with single responsibility
-- **Fail Fast**: Validate inputs early, throw errors immediately when issues occur
-
-## 🏗️ Project Architecture Overview
-
-### Multi-Agent System Structure
-This is a **Custom Implementation Service** where each client receives a dedicated VPS instance with complete customization and managed deployment. The system follows a **Core + Independent Agents** architecture:
-
-#### Core System
-- **Frontend**: Next.js 15 + React 19 + TypeScript + shadcn/ui
-- **Backend**: FastAPI + SQLModel + PostgreSQL
-- **Authentication**: OAuth2 + JWT + 2FA
-- **Deployment**: Automated via Terraform + Ansible + Docker Compose on Ubuntu Server VPS
-
-#### Agent Communication Model
-- **Shared Database**: All agents communicate through PostgreSQL tables
-- **Read-Only Access**: Agents can read from other agents' tables but never modify them
-- **Own Tables**: Each agent maintains its own tables for generated data
-- **Independence**: Each agent functions completely independently
-- **Hierarchical Dependencies**: Explicit dependency hierarchy between agents
-
-### Agent Examples
-1. **Agent 1 (Client Management)**: CRUD operations for client data (name, SSN, birthdate)
-2. **Agent 2 (PDF Processing)**: RAG processing with pgvector, references client data
-3. **Agent 3 (Reports & Analysis)**: Structured reports using data from Agents 1 & 2
-4. **Agent 4 (Audio Recording)**: Consultation recordings with transcription and analysis
-
-## 📂 Project Structure
-
-### Monorepo Workspace Structure
-The project uses a **monorepo architecture** with npm workspaces for better organization and dependency management:
-
-```
-/
-├── package.json             # Root package.json with workspace configuration
-├── package-lock.json        # Root lockfile
-├── node_modules/            # Shared node_modules
-├── apps/                    # Application workspace
-│   ├── frontend/           # Next.js 15 application
-│   │   ├── src/
-│   │   │   ├── app/         # App Router (Next.js 15)
-│   │   │   │   ├── (auth)/  # Authentication route group
-│   │   │   │   ├── (dashboard)/ # Main dashboard routes
-│   │   │   │   ├── admin/   # Admin interface routes
-│   │   │   │   ├── agents/  # Agent-specific pages
-│   │   │   │   ├── globals.css # Global styles
-│   │   │   │   ├── layout.tsx # Root layout
-│   │   │   │   └── page.tsx # Home page
-│   │   │   ├── components/  # Shared UI components
-│   │   │   │   ├── ui/      # shadcn/ui base components
-│   │   │   │   ├── common/  # App-specific shared components
-│   │   │   │   └── forms/   # Reusable form components
-│   │   │   ├── features/    # Feature-based modules
-│   │   │   │   ├── auth/    # Authentication features
-│   │   │   │   ├── dashboard/ # Dashboard features
-│   │   │   │   ├── agents/  # Agent-specific features
-│   │   │   │   └── themes/  # White-label theming
-│   │   │   ├── lib/         # Utilities & configurations
-│   │   │   │   ├── utils.ts # Utility functions
-│   │   │   │   ├── auth.ts  # Authentication config
-│   │   │   │   ├── api.ts   # API client configuration
-│   │   │   │   └── env.ts   # Environment validation
-│   │   │   ├── hooks/       # Shared custom hooks
-│   │   │   ├── styles/      # Additional styling files
-│   │   │   ├── test/        # Test setup and utilities
-│   │   │   └── types/       # TypeScript type definitions
-│   │   ├── package.json     # Frontend dependencies
-│   │   ├── next.config.ts   # Next.js configuration
-│   │   ├── tailwind.config.js # Tailwind CSS config
-│   │   ├── vitest.config.ts # Vitest test configuration
-│   │   └── tsconfig.json    # TypeScript configuration
-│   └── backend/            # FastAPI application
-│       ├── src/
-│       │   ├── core/       # Core system modules
-│       │   │   ├── database.py # Database connection
-│       │   │   ├── config.py # Application configuration
-│       │   │   └── exceptions.py # Custom exceptions
-│       │   ├── api/        # API route aggregation
-│       │   │   └── v1/     # API version 1
-│       │   ├── tests/      # Test files
-│       │   └── main.py     # FastAPI application entry
-│       ├── pyproject.toml  # UV dependency management
-│       ├── uv.lock         # UV lock file
-│       ├── alembic/        # Database migrations
-│       │   ├── versions/   # Migration files
-│       │   ├── env.py     # Alembic configuration
-│       │   └── alembic.ini # Alembic settings
-│       └── htmlcov/        # Coverage reports
-├── infrastructure/         # Infrastructure as code
-│   └── docker/            # Docker configurations
-│       ├── backend/       # Backend Dockerfile
-│       ├── frontend/      # Frontend Dockerfile
-│       └── postgres/      # PostgreSQL initialization
-├── docs/                  # Project documentation
-│   ├── architecture.md   # Architecture documentation
-│   ├── prd.md            # Product requirements
-│   └── stories/          # User stories
-├── docker-compose.yml     # Container orchestration
-├── Caddyfile             # Reverse proxy configuration
-├── Makefile              # Development shortcuts
-├── .env.example          # Environment variables template
-├── .gitignore            # Git ignore patterns
-├── README.md             # Project documentation
-└── CLAUDE.md             # This file
-```
-
-## 🛠️ Technology Stack
-
-### Backend Stack
-- **FastAPI**: Modern Python web framework
-- **SQLModel**: Database ORM combining SQLAlchemy + Pydantic
-- **PostgreSQL**: Primary database with pgvector extension
-- **Agno**: Multi-agent framework (https://github.com/agno-agi/agno)
-- **Celery + Redis**: Asynchronous task processing
-- **Alembic**: Database migrations
-- **pytest**: Testing framework
-- **Gunicorn + Uvicorn**: ASGI server
-
-### Frontend Stack
-- **Next.js 15**: React framework with App Router
-- **React 19**: UI library with new features
-- **TypeScript**: Type-safe JavaScript
-- **shadcn/ui**: Component library for theming
-- **Tailwind CSS**: Utility-first CSS framework
-- **Zod**: Runtime type validation
-- **TanStack Query**: Server state management
-- **React Hook Form**: Form handling with validation
-- **@hookform/resolvers**: Form validation resolvers
-
-### Infrastructure & Deployment
-- **Docker + Docker Compose**: Containerization
-- **Terraform**: Infrastructure as code for VPS provisioning
-- **Ansible**: Configuration management and deployment automation
-- **Caddy**: Reverse proxy with automatic HTTPS
-- **Ubuntu Server 24.x**: Host operating system
-
-## 🎨 Custom Branding & Theming System
-
-### Custom Branding Architecture
-The system implements a complete **custom branding solution** for each client implementation using shadcn/ui's CSS variable system:
-
-#### CSS Variables Structure
-```css
-:root {
-  /* Primary Colors */
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
-  
-  /* Secondary Colors */
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  
-  /* Complete color system for theming */
-  --background: 0 0% 100%;
-  --foreground: 222.2 47.4% 11.2%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 47.4% 11.2%;
-  
-  /* Typography */
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  
-  /* Layout */
-  --radius: 0.5rem;
-}
-```
-
-#### Customizable Elements
-- **Colors**: Primary, secondary, accent, background, foreground
-- **Typography**: Font families from pre-approved list
-- **Branding**: Logos, favicons, company names
-- **Layout**: Border radius, spacing (within limits)
-
-#### Non-Customizable Elements (Security)
-- Main navigation structure
-- Agent workflow processes
-- Security components (2FA, login)
-- Critical form layouts
-
-### 100% Responsive Design
-- **Mobile-first approach** with Tailwind CSS
-- **Adaptive components** for phone, tablet, desktop
-- **Consistent behavior** across all screen sizes
-- **Touch-friendly interfaces** with proper tap targets
-
-## 🔐 Security Requirements
-
-### Authentication & Authorization
-- **2FA Authentication**: TOTP-based two-factor authentication
-- **JWT Tokens**: Secure session management
-- **OAuth2**: Standard authentication protocol
-- **Role-based access**: sysadmin, admin, user levels
-
-### Input Validation
-- **Zod validation**: ALL external data must be validated
-- **Fail fast**: Validate at system boundaries
-- **Sanitization**: Prevent XSS and injection attacks
-- **File upload security**: Type, size, and content validation
-
-### Data Protection
-- **Single-tenant isolation**: Each client has own VPS
-- **Database isolation**: Row-level security where applicable
-- **Encryption**: Sensitive data encrypted at rest
-- **Audit logging**: Complete access and modification logs
-
-## 🧪 Testing Strategy
-
-### Required Testing Standards
-- **Minimum 80% code coverage** - NO EXCEPTIONS
-- **Test-Driven Development (TDD)** when possible
-- **Co-located tests** with components
-- **Integration tests** for agent interactions
-- **End-to-end tests** for critical user workflows
-
-### Testing Tools
-- **pytest**: Backend testing
-- **Vitest**: Frontend testing
-- **React Testing Library**: Component testing
-- **Factory patterns**: Test data generation
-
-### Example Test Structure
-```python
-# Backend test example
-def test_client_agent_creates_client():
-    """Test that Agent1 can create a new client with valid data."""
-    client_data = ClientCreateFactory()
-    result = agent1.create_client(client_data)
-    
-    assert result.success is True
-    assert result.client.name == client_data.name
-    assert validate_ssn(result.client.ssn) is True
-```
-
-## 🗄️ Database Design
-
-### Database Design Principles
-
-#### Naming Conventions
-- **Primary Keys**: `{entity}_id` UUID (e.g., `client_id`, `user_id`)
-- **Foreign Keys**: `{referenced_entity}_id` with proper REFERENCES constraints
-- **Timestamps**: `{action}_at` with TIME ZONE (e.g., `created_at`, `updated_at`)
-- **Booleans**: `is_{state}` with NOT NULL DEFAULT (e.g., `is_active`, `is_processed`)
-- **Enums**: Use CHECK constraints for small fixed sets, separate tables for dynamic sets
-- **JSON Data**: Use JSONB with proper constraints and GIN indexes
-
-#### Current Schema Status
-- **Users Table**: Complete with TOTP 2FA, role-based access, and audit fields
-- **Clients Table**: Implemented with SSN validation, status tracking, and audit trail
-- **Permission System**: Granular agent-based permissions with templates and audit logging
-- **Database Extensions**: uuid-ossp, pgcrypto, pgvector (for future document embeddings)
-- **Migrations**: Managed through Alembic with proper versioning and rollback support
-
-### Agent Table Structure
-Each agent maintains its own tables with references to other agents:
-
-```sql
--- Agent 1: Client Management
-CREATE TABLE agent1_clients (
-    client_id UUID PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    ssn VARCHAR(11) UNIQUE NOT NULL,
-    birth_date DATE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    is_active BOOLEAN DEFAULT TRUE
-);
-
--- Agent 2: PDF Processing
-CREATE TABLE agent2_documents (
-    document_id UUID PRIMARY KEY,
-    client_id UUID REFERENCES agent1_clients(client_id),
-    filename VARCHAR(255) NOT NULL,
-    file_size INTEGER NOT NULL,
-    processed_at TIMESTAMP WITH TIME ZONE,
-    vector_chunks JSONB,
-    is_processed BOOLEAN DEFAULT FALSE
-);
-```
-
-### Data Sharing Rules
-1. **Read-Only Access**: Agents can read from other agents' tables
-2. **No Modifications**: Agents CANNOT modify other agents' tables
-3. **Own Tables Only**: Agents only write to their own tables
-4. **Reference Integrity**: Use foreign keys to maintain relationships
-
-## 🤖 Agent Development with Agno
-
-### Agent Implementation Pattern
-```python
-from agno.agent import Agent
-from agno.models.openai import OpenAIChat
-from agno.storage.postgresql import PostgresStorage
-
-def create_client_agent():
-    """Create Agent1 for client management."""
-    return Agent(
-        name="Client Management Agent",
-        role="Register and manage client information",
-        model=OpenAIChat(id="gpt-4o"),
-        storage=PostgresStorage(
-            table_name="agent1_clients",
-            db_url=settings.database_url
-        ),
-        instructions=[
-            "Validate SSN format before registration",
-            "Check for duplicate SSN entries",
-            "Maintain complete audit trail of changes"
-        ],
-        structured_outputs=True
-    )
-```
-
-### Agent Communication
-```python
-# Agents communicate through database queries
-async def get_client_for_pdf_processing(client_id: UUID):
-    """Agent2 reads client data from Agent1's table."""
-    query = "SELECT * FROM agent1_clients WHERE client_id = $1"
-    return await database.fetch_one(query, client_id)
-```
-
-### Agent Independence
-- Each agent functions without others (except core dependencies)
-- Graceful degradation when dependencies are unavailable
-- Clear dependency hierarchy documentation
-
-## 💻 Development Commands
-
-### Monorepo Development Commands
-
-#### Root Level Commands (Recommended)
-```bash
-# Setup entire project
-npm run setup
-
-# Development (run both frontend and backend)
-npm run dev
-
-# Run individual services
-npm run dev:frontend  # Frontend only
-npm run dev:backend   # Backend only
-
-# Testing
-npm run test          # All workspaces
-npm run test:frontend # Frontend tests
-npm run test:backend  # Backend tests
-npm run test:e2e      # End-to-end tests
-
-# Code quality
-npm run lint          # All workspaces
-npm run lint:frontend # Frontend linting
-npm run lint:backend  # Backend linting
-
-npm run format        # All workspaces
-npm run format:frontend # Frontend formatting
-npm run format:backend  # Backend formatting
-
-npm run type-check    # All workspaces
-npm run type-check:frontend # Frontend type checking
-
-# Build
-npm run build         # All workspaces
-npm run build:frontend # Frontend build
-npm run build:backend  # Backend build
-
-# Database operations
-npm run db:migrate    # Run migrations
-npm run db:migration  # Create new migration
-
-# Docker operations
-npm run docker:up     # Start all services
-npm run docker:down   # Stop all services
-npm run docker:logs   # View logs
-```
-
-#### Backend Development (UV Package Manager)
-```bash
-# Setup UV environment
-cd apps/backend
-uv venv
-source .venv/bin/activate  # Linux/Mac
-uv sync
-
-# Add dependencies (NEVER edit pyproject.toml directly)
-uv add fastapi sqlmodel alembic
-uv add --dev pytest pytest-cov pytest-asyncio
-
-# Database migrations
-uv run alembic upgrade head
-uv run alembic revision --autogenerate -m "description"
-
-# Run development server
-uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
-
-# Code quality
-uv run ruff format .
-uv run ruff check .
-uv run mypy src/
-
-# Testing
-uv run pytest
-uv run pytest --cov=src --cov-report=html
-```
-
-#### Frontend Development
-```bash
-# Dependencies
-cd apps/frontend
-npm install
-
-# Development server
-npm run dev
-
-# Type checking
-npm run type-check
-
-# Testing
-npm run test
-npm run test:coverage
-npm run test:ui       # Vitest UI
-npm run test:e2e      # Playwright E2E tests
-
-# Build
 npm run build
 ```
 
-### Docker Development
+### Backend (UV Package Manager)
 ```bash
-# Build and run all services
-docker compose up --build
-
-# Run specific service
-docker compose up backend
-
-# View logs
-docker compose logs -f backend
-
-# Database shell
-docker compose exec postgres psql -U postgres -d dashboard
+cd apps/backend
+uv sync                      # Sync dependencies
+uv add fastapi              # Add dependencies (NEVER edit pyproject.toml)
+uv run alembic upgrade head  # Database migrations
+uv run pytest              # Run tests
 ```
 
-### Deployment Automation
-```bash
-# Infrastructure provisioning with Terraform
-cd infrastructure
-terraform init
-terraform plan -var="client_name=example-client"
-terraform apply
+## 📋 Development Philosophy
 
-# Configuration management with Ansible
-cd deployment
-ansible-playbook -i inventory deploy-client.yml --extra-vars "client_name=example-client"
+### Core Principles
+- **KISS**: Keep it simple, choose straightforward solutions
+- **YAGNI**: Implement only when needed, not anticipated
+- **Fail Fast**: Validate inputs early, throw errors immediately
+- **Component-First**: Reusable, single-responsibility components
 
-# Custom branding deployment
-ansible-playbook -i inventory customize-branding.yml --extra-vars "client_name=example-client"
-```
+## 🏗️ Tech Stack
 
-## 🚀 Performance Guidelines
+- **Frontend**: Next.js 15 + React 19 + TypeScript + shadcn/ui
+- **Backend**: FastAPI + SQLModel + PostgreSQL + Alembic
+- **Testing**: pytest + Vitest + Playwright + React Testing Library
+- **Package Management**: npm workspaces + UV (Python)
 
-### Backend Optimization
-- **Async/await**: Use asyncio for I/O operations
-- **Database indexing**: Proper indexes on foreign keys and search fields
-- **Query optimization**: Use SQLModel's query optimization features
-- **Caching**: Redis for frequently accessed data
-- **Connection pooling**: Optimize database connections
-
-### Frontend Optimization
-- **Server Components**: Use React Server Components by default
-- **Client Components**: Only when interactivity is needed
-- **Dynamic imports**: Code splitting for large components
-- **Image optimization**: next/image for all images
-- **Bundle analysis**: Regular bundle size monitoring
-
-## 📝 Code Style & Quality
-
-### Python Style (Backend)
-- **PEP 8 compliance**: Use `ruff format` (faster than black)
-- **Line length**: Maximum 100 characters (configured in pyproject.toml)
-- **Type hints**: Required for all functions and variables
-- **Docstrings**: Google-style docstrings for all public functions
-- **Error handling**: Explicit exception handling with custom exceptions
-- **Logging**: Structured logging with proper levels
-- **UV package management**: NEVER edit pyproject.toml directly, always use `uv add/remove`
-- **File limits**: Maximum 500 lines per file, functions under 50 lines
-
-### TypeScript Style (Frontend)
-- **Strict mode**: Enable all strict TypeScript options
-- **No `any` type**: Use proper typing or `unknown`
-- **React 19 patterns**: Use modern React patterns and hooks
-- **Component documentation**: JSDoc for all exported components
-- **Zod validation**: Validate all external data
-
-### File Organization
-- **Maximum 500 lines per file**: Split larger files into modules
-- **Co-located tests**: Tests in `__tests__` folders next to code
-- **Clear naming**: Descriptive file and function names
-- **Single responsibility**: Each file should have one clear purpose
-
-## 🔧 Configuration Management
-
-### Environment Variables
-```bash
-# Backend (.env)
-DATABASE_URL=postgresql://user:pass@localhost:5432/dashboard
-REDIS_URL=redis://localhost:6379
-SECRET_KEY=your-secret-key
-OPENAI_API_KEY=your-openai-key
-
-# Frontend (.env.local)
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_APP_NAME=IAM Dashboard
-```
-
-### Docker Configuration
-All services configured in `docker-compose.yml`:
-- **Backend**: FastAPI application
-- **Frontend**: Next.js application
-- **Database**: PostgreSQL with pgvector
-- **Cache**: Redis
-- **Proxy**: Caddy reverse proxy
-- **Queue**: Celery worker
-
-## 📊 Monitoring & Observability
-
-### Logging Strategy
-- **Structured logging**: JSON format for all logs with consistent schema
-- **Log levels**: DEBUG (development), INFO (operations), WARNING (issues), ERROR (failures), CRITICAL (system down)
-- **Request tracking**: Unique request IDs for distributed tracing across services
-- **Agent activity**: Comprehensive logging of agent interactions and decision points
-- **Security events**: Authentication attempts, authorization failures, permission changes
-- **Performance metrics**: Query execution times, API response times, resource usage
-
-### Health Checks & Monitoring
-- **Database connectivity**: PostgreSQL connection pool health and query performance
-- **Application health**: FastAPI `/health` endpoint with dependency checks
-- **Frontend status**: Next.js build status and runtime errors
-- **Test coverage**: Continuous monitoring of test coverage across all modules
-- **Error tracking**: Comprehensive error logging with stack traces and context
-
-### Development Metrics
-```bash
-# Backend health check
-curl http://localhost:8000/health
-
-# Database connection test
-npm run db:migrate --dry-run
-
-# Test coverage reports
-npm run test:coverage  # Frontend
-uv run pytest --cov=src --cov-report=html  # Backend
-
-# Performance monitoring
-npm run build  # Build time monitoring
-```
-
-## 🔧 Troubleshooting Guide
-
-### Common Issues & Solutions
-
-#### Database Issues
-```bash
-# Migration fails
-npm run db:migrate --dry-run  # Check migration without applying
-cd apps/backend && uv run alembic history  # View migration history
-cd apps/backend && uv run alembic downgrade -1  # Rollback one migration
-
-# Connection issues
-docker compose logs postgres  # Check PostgreSQL logs
-docker compose restart postgres  # Restart database
-
-# Permission denied errors
-sudo chown -R $USER:$USER .  # Fix file permissions
-```
-
-#### Frontend Issues
-```bash
-# Build fails
-rm -rf apps/frontend/.next  # Clear Next.js cache
-npm run clean  # Clean all node_modules
-npm install  # Reinstall dependencies
-
-# Type errors
-npm run type-check  # Check TypeScript errors
-npx tsc --noEmit --incremental false  # Force type check
-
-# Test failures
-npm run test -- --reporter=verbose  # Detailed test output
-npm run test -- --ui  # Open Vitest UI for debugging
-```
-
-#### Backend Issues
-```bash
-# Import errors
-cd apps/backend && uv sync  # Sync dependencies
-cd apps/backend && uv run mypy src/  # Check type issues
-
-# Server won't start
-cd apps/backend && uv run uvicorn src.main:app --reload --port 8001  # Try different port
-lsof -ti:8000 | xargs kill -9  # Kill process on port 8000
-
-# Test failures
-cd apps/backend && uv run pytest -v --tb=short  # Verbose output with short traceback
-cd apps/backend && uv run pytest --lf  # Run only failed tests
-```
-
-#### Authentication Issues
-```bash
-# JWT token issues
-# Check token expiration in browser devtools
-# Verify SECRET_KEY in environment variables
-# Clear browser localStorage/sessionStorage
-
-# 2FA not working
-# Verify system time synchronization
-# Check TOTP secret generation
-# Test with authenticator app manual entry
-```
-
-#### Performance Issues
-```bash
-# Slow queries
-docker compose exec postgres psql -U postgres -d dashboard -c "SELECT * FROM pg_stat_activity;"
-
-# Memory issues
-docker compose stats  # Monitor container resource usage
-npm run build -- --analyze  # Analyze bundle size
-
-# Test coverage too low
-npm run test:coverage  # Check detailed coverage report
-# Focus on uncovered lines in HTML reports
-```
-
-### Environment Setup Issues
-```bash
-# Node version issues
-nvm use 20  # Switch to Node.js 20+
-node --version  # Verify version
-
-# Python version issues
-uv python install 3.13  # Install Python 3.13
-uv python pin 3.13  # Pin to specific version
-
-# Docker issues
-docker compose down -v  # Remove volumes
-docker system prune -f  # Clean up Docker
-docker compose up --build  # Rebuild containers
-```
-
-## ⚠️ Critical Development Rules
+## ⚠️ CRITICAL DEVELOPMENT RULES
 
 ### MUST DO
-1. **Follow KISS and YAGNI principles** in all decisions
+1. **Follow KISS and YAGNI principles**
 2. **Validate ALL external data** with Zod (frontend) and Pydantic (backend)
-3. **Write tests BEFORE implementation** when possible (TDD approach)
-4. **Maintain 80%+ test coverage** across all modules
-5. **Use TypeScript strictly** - no `any` types allowed
-6. **Document all public APIs** with comprehensive JSDoc/docstrings
-7. **Follow the agent independence principle** - no tight coupling
-8. **Implement proper error handling** with custom exceptions
-9. **Use async/await patterns** for I/O operations
-10. **Maintain responsive design** across all screen sizes
-11. **Use UV for Python package management** - never edit pyproject.toml directly
-12. **Use `rg` (ripgrep)** instead of grep/find commands
-13. **Co-locate tests** with code in `__tests__` or `tests/` directories
-14. **Implement fail-fast validation** at system boundaries
-15. **Follow vertical slice architecture** organized by features
+3. **Maintain 80%+ test coverage** - NO EXCEPTIONS
+4. **Use TypeScript strictly** - no `any` types
+5. **Use UV for Python packages** - NEVER edit pyproject.toml directly
+6. **Co-locate tests** in `__tests__` folders
+7. **CRITICAL: Frontend Test Commands** - Use EXACT commands:
+   - ✅ `npm run test:coverage` (correct)
+   - ✅ `npx vitest run --coverage` (correct)
+   - ❌ NEVER use bash redirections with test commands (`2>&1`, etc.)
 
 ### NEVER DO
 1. **Never access `.secret-vault` directory**
-2. **Never modify other agents' database tables**
+2. **Never mock internal business logic in tests**
 3. **Never ignore TypeScript errors** with `@ts-ignore`
 4. **Never skip input validation** for external data
-5. **Never hardcode sensitive information** in code
-6. **Never break the single-tenant isolation** model
-7. **Never exceed file size limits** (500 lines max)
-8. **Never compromise on test coverage** requirements
-9. **Never use `any` type** in TypeScript
-10. **Never commit without passing all quality checks**
-
-## 🔍 Development Workflow
-
-### Git Strategy
-- **Main branch**: Production-ready code
-- **Feature branches**: `feature/agent-name-functionality`
-- **Semantic commits**: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
-- **Pull requests**: Required for all changes to main
-
-### Quality Gates
-Before any merge to main:
-- [ ] All tests pass with 80%+ coverage
-- [ ] TypeScript compiles without errors
-- [ ] Code style checks pass (black, eslint)
-- [ ] Security scans pass
-- [ ] Performance benchmarks meet requirements
-- [ ] Documentation is updated
+5. **Never exceed 500 lines per file**
+6. **Never use `any` type** in TypeScript
+7. **Never commit without passing quality checks**
 
 ---
 
-**Last Updated**: Agosto 2025  
-**Project**: Multi-Agent IAM Dashboard Custom Implementation Service  
-**Language**: 100% English (native)  
-**Architecture**: Custom Implementation Service with Dedicated VPS and Independent Agents
-
-*This document is the single source of truth for development guidelines. Keep it updated as the project evolves and new patterns emerge.*
+*Essential development guidelines for Claude Code - Keep focused and functional*

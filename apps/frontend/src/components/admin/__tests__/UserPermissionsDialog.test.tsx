@@ -11,7 +11,9 @@ import {
   screen,
   waitFor,
   act,
-  useTestSetup
+  useTestSetup,
+  mockSuccessfulFetch,
+  mockFailedFetch
 } from '@/test/test-template'
 import { 
   createMockAdminUser,
@@ -44,6 +46,22 @@ const mockTestUser = createMockAdminUser({
   role: 'user',
   full_name: 'João Silva'
 })
+
+// Mock permissions data for the test user
+const mockPermissions = {
+  user_id: mockTestUser.user_id,
+  permissions: [
+    createMockUserAgentPermission(mockTestUser.user_id, AgentName.CLIENT_MANAGEMENT, 
+      { create: true, read: true, update: true, delete: false }),
+    createMockUserAgentPermission(mockTestUser.user_id, AgentName.PDF_PROCESSING, 
+      { create: false, read: true, update: false, delete: false }),
+    createMockUserAgentPermission(mockTestUser.user_id, AgentName.REPORTS_ANALYSIS, 
+      { create: false, read: true, update: false, delete: false }),
+    createMockUserAgentPermission(mockTestUser.user_id, AgentName.AUDIO_RECORDING, 
+      { create: false, read: false, update: false, delete: false })
+  ],
+  last_updated: new Date().toISOString()
+}
 
 describe('UserPermissionsDialog', () => {
   const mockOnOpenChange = vi.fn()
@@ -114,34 +132,50 @@ describe('UserPermissionsDialog', () => {
 
   describe('Dialog Rendering', () => {
     it('should not render when user is null', async () => {
-      await renderComponent(null)
+      await act(async () => {
+        await renderComponent(null)
+      })
 
-      expect(screen.queryByText(/permissões de/i)).not.toBeInTheDocument()
+      await act(async () => {
+        expect(screen.queryByText(/permissões de/i)).not.toBeInTheDocument()
+      })
     })
 
     it('should not render when dialog is closed', async () => {
-      await renderComponent(mockTestUser, false)
+      await act(async () => {
+        await renderComponent(mockTestUser, false)
+      })
 
-      expect(screen.queryByText(/permissões de/i)).not.toBeInTheDocument()
+      await act(async () => {
+        expect(screen.queryByText(/permissões de/i)).not.toBeInTheDocument()
+      })
     })
 
     it('should render dialog header with user name', async () => {
-      await renderComponent()
+      await act(async () => {
+        await renderComponent()
+      })
 
-      await waitFor(() => {
-        expect(screen.getByText(`Permissões de ${mockTestUser.full_name}`)).toBeInTheDocument()
-        expect(screen.getByText(/gerencie as permissões de acesso aos agentes/i)).toBeInTheDocument()
+      await waitFor(async () => {
+        await act(async () => {
+          expect(screen.getByText(`Permissões de ${mockTestUser.full_name}`)).toBeInTheDocument()
+          expect(screen.getByText(/gerencie as permissões de acesso aos agentes/i)).toBeInTheDocument()
+        })
       }, { timeout: 3000 })
     })
 
     it('should display user information card', async () => {
-      await renderComponent()
+      await act(async () => {
+        await renderComponent()
+      })
 
-      await waitFor(() => {
-        expect(screen.getByText(/nome completo/i)).toBeInTheDocument()
-        expect(screen.getByText(mockTestUser.full_name!)).toBeInTheDocument()
-        expect(screen.getByText(mockTestUser.email)).toBeInTheDocument()
-        expect(screen.getByText(mockTestUser.role)).toBeInTheDocument()
+      await waitFor(async () => {
+        await act(async () => {
+          expect(screen.getByText(/nome completo/i)).toBeInTheDocument()
+          expect(screen.getByText(mockTestUser.full_name!)).toBeInTheDocument()
+          expect(screen.getByText(mockTestUser.email)).toBeInTheDocument()
+          expect(screen.getByText(mockTestUser.role)).toBeInTheDocument()
+        })
       }, { timeout: 3000 })
     })
   })
@@ -166,7 +200,7 @@ describe('UserPermissionsDialog', () => {
       
       // Clear existing mocks and set up delayed response
       vi.clearAllMocks()
-      const mockFetch = vi.mocked(global.fetch)
+      const mockedFetch = vi.mocked(global.fetch)
       
       // First call for admin user permissions (immediate)
       setupPermissionAPITest({ 
@@ -178,7 +212,7 @@ describe('UserPermissionsDialog', () => {
       })
       
       // Second call for target user permissions (delayed)
-      mockFetch.mockReturnValueOnce(delayedPermissionsPromise as any)
+      mockedFetch.mockReturnValueOnce(delayedPermissionsPromise as any)
 
       await renderComponent()
 
@@ -218,18 +252,18 @@ describe('UserPermissionsDialog', () => {
 
     it('should display permissions form when loaded successfully', async () => {
       // Mock successful response
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve(mockPermissions)
-      } as Response)
+      mockSuccessfulFetch('/permissions/user/', mockPermissions)
 
-      renderComponent()
+      await act(async () => {
+        await renderComponent()
+      })
 
-      await waitFor(() => {
-        expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
-        expect(screen.getByText(/permissões por agente/i)).toBeInTheDocument()
-        expect(screen.getByPlaceholderText(/descreva o motivo desta alteração/i)).toBeInTheDocument()
+      await waitFor(async () => {
+        await act(async () => {
+          expect(screen.getByText(/motivo da alteração/i)).toBeInTheDocument()
+          expect(screen.getByText(/permissões por agente/i)).toBeInTheDocument()
+          expect(screen.getByPlaceholderText(/descreva o motivo desta alteração/i)).toBeInTheDocument()
+        })
       })
     })
   })
@@ -237,22 +271,22 @@ describe('UserPermissionsDialog', () => {
   describe('Agent Permission Cards', () => {
     beforeEach(() => {
       // Reset fetch mock and provide default successful response
-      mockFetch.mockClear()
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve(mockPermissions)
-      } as Response)
+      vi.mocked(global.fetch).mockClear()
+      mockSuccessfulFetch('/permissions/user/', mockPermissions)
     })
 
     it('should display all agent permission cards', async () => {
-      renderComponent()
+      await act(async () => {
+        await renderComponent()
+      })
 
-      await waitFor(() => {
-        expect(screen.getByText(/gestão de clientes/i)).toBeInTheDocument()
-        expect(screen.getByText(/processamento de pdfs/i)).toBeInTheDocument()
-        expect(screen.getByText(/relatórios e análises/i)).toBeInTheDocument()
-        expect(screen.getByText(/gravação de áudio/i)).toBeInTheDocument()
+      await waitFor(async () => {
+        await act(async () => {
+          expect(screen.getByText(/gestão de clientes/i)).toBeInTheDocument()
+          expect(screen.getByText(/processamento de pdfs/i)).toBeInTheDocument()
+          expect(screen.getByText(/relatórios e análises/i)).toBeInTheDocument()
+          expect(screen.getByText(/gravação de áudio/i)).toBeInTheDocument()
+        })
       })
     })
 
@@ -360,17 +394,8 @@ describe('UserPermissionsDialog', () => {
   describe('Change Reason Requirement', () => {
     beforeEach(() => {
       // Mock authentication and permissions APIs for reason requirement tests
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ user: mockAdminUser })
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(mockPermissions)
-        } as Response)
+      mockSuccessfulFetch('/auth/user', { user: mockAdminUser })
+      mockSuccessfulFetch('/permissions/user/', mockPermissions)
     })
 
     it('should require change reason to enable save button', async () => {
@@ -429,17 +454,8 @@ describe('UserPermissionsDialog', () => {
   describe('Permission History', () => {
     beforeEach(() => {
       // Mock authentication and permissions APIs for history tests
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ user: mockAdminUser })
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(mockPermissions)
-        } as Response)
+      mockSuccessfulFetch('/auth/user', { user: mockAdminUser })
+      mockSuccessfulFetch('/permissions/user/', mockPermissions)
     })
 
     it('should show/hide permission history when toggle clicked', async () => {
@@ -505,28 +521,15 @@ describe('UserPermissionsDialog', () => {
   describe('Form Submission', () => {
     beforeEach(() => {
       // Mock authentication and permissions APIs for form submission tests
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ user: mockAdminUser })
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(mockPermissions)
-        } as Response)
+      mockSuccessfulFetch('/auth/user', { user: mockAdminUser })
+      mockSuccessfulFetch('/permissions/user/', mockPermissions)
     })
 
     it('should save permissions when save button is clicked', async () => {
       const user = userEvent.setup()
       
       // Mock successful save API
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ success: true })
-      } as Response)
+      mockSuccessfulFetch('/permissions', { success: true })
       
       renderComponent()
 
@@ -563,7 +566,7 @@ describe('UserPermissionsDialog', () => {
           json: () => Promise.resolve({ success: true })
         }), 100)
       )
-      mockFetch.mockResolvedValueOnce(slowSavePromise as any)
+      vi.mocked(global.fetch).mockResolvedValueOnce(slowSavePromise as any)
       
       renderComponent()
 
@@ -589,7 +592,7 @@ describe('UserPermissionsDialog', () => {
       const user = userEvent.setup()
       
       // Mock save API error
-      mockFetch.mockRejectedValueOnce(new Error('Save failed'))
+      vi.mocked(global.fetch).mockRejectedValueOnce(new Error('Save failed'))
       
       renderComponent()
 
@@ -617,11 +620,7 @@ describe('UserPermissionsDialog', () => {
       const user = userEvent.setup()
       
       // Mock successful create API
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        status: 201,
-        json: () => Promise.resolve({ success: true })
-      } as Response)
+      mockSuccessfulFetch('/permissions', { success: true }, 201)
       
       renderComponent()
 
@@ -642,7 +641,7 @@ describe('UserPermissionsDialog', () => {
 
       await waitFor(() => {
         // Should call API to create new permission
-        expect(mockFetch).toHaveBeenLastCalledWith(
+        expect(vi.mocked(global.fetch)).toHaveBeenLastCalledWith(
           expect.stringContaining('/api/v1/permissions'),
           expect.objectContaining({
             method: 'POST'
@@ -655,17 +654,8 @@ describe('UserPermissionsDialog', () => {
   describe('Dialog Actions', () => {
     beforeEach(() => {
       // Mock authentication and permissions APIs for dialog actions
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ user: mockAdminUser })
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(mockPermissions)
-        } as Response)
+      mockSuccessfulFetch('/auth/user', { user: mockAdminUser })
+      mockSuccessfulFetch('/permissions/user/', mockPermissions)
     })
 
     it('should close dialog when cancel button is clicked', async () => {
@@ -726,17 +716,8 @@ describe('UserPermissionsDialog', () => {
   describe('Accessibility', () => {
     beforeEach(() => {
       // Mock authentication and permissions APIs for accessibility tests
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ user: mockAdminUser })
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(mockPermissions)
-        } as Response)
+      mockSuccessfulFetch('/auth/user', { user: mockAdminUser })
+      mockSuccessfulFetch('/permissions/user/', mockPermissions)
     })
 
     it('should have proper dialog structure', async () => {
@@ -776,17 +757,8 @@ describe('UserPermissionsDialog', () => {
   describe('Responsive Behavior', () => {
     beforeEach(() => {
       // Mock authentication and permissions APIs for responsive tests
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ user: mockAdminUser })
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve(mockPermissions)
-        } as Response)
+      mockSuccessfulFetch('/auth/user', { user: mockAdminUser })
+      mockSuccessfulFetch('/permissions/user/', mockPermissions)
     })
 
     it('should layout agent cards in responsive grid', async () => {

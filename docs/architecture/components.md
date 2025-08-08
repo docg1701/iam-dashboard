@@ -104,7 +104,7 @@ graph TD
 **Responsibility:** Autonomous client data operations with validation, deduplication, and audit trail integration
 
 **Key Interfaces:**
-- Client registration with SSN validation and duplicate prevention
+- Client registration with CPF validation and duplicate prevention
 - Advanced search and filtering capabilities
 - Bulk operations for data import/export
 - Direct database access to clients table

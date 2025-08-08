@@ -330,6 +330,20 @@ export const waitForAsyncUpdates = () =>
   new Promise(resolve => setTimeout(resolve, 0))
 
 /**
+ * Enhanced act wrapper that handles multiple async updates
+ * Specifically for shadcn/ui components like Select that trigger multiple state updates
+ */
+export const actWithMultipleUpdates = async (fn: () => Promise<void> | void) => {
+  await act(async () => {
+    await fn()
+    // Wait for additional state updates from shadcn components
+    await waitForAsyncUpdates()
+  })
+  // Additional wait for DOM updates to settle
+  await waitForAsyncUpdates()
+}
+
+/**
  * Trigger window resize event for responsive testing
  */
 export const triggerWindowResize = (width: number = 1024, height: number = 768) => {
@@ -416,6 +430,45 @@ export const mockNetworkError = (endpoint: string, errorMessage: string = 'Netwo
   })
 }
 
+/**
+ * Mock multiple sequential fetch responses for complex flows
+ * Useful for testing login + 2FA verification flows
+ */
+export const mockSequentialFetch = (...mocks: Array<{ endpoint: string; responseData: any; status?: number }>) => {
+  let callCount = 0
+  
+  vi.mocked(global.fetch).mockImplementation((url) => {
+    const urlStr = url.toString()
+    
+    for (const mock of mocks) {
+      if (urlStr.includes(mock.endpoint)) {
+        const response = {
+          ok: (mock.status || 200) < 400,
+          status: mock.status || 200,
+          statusText: (mock.status || 200) < 400 ? 'OK' : 'Error',
+          json: () => Promise.resolve(mock.responseData),
+          text: () => Promise.resolve(JSON.stringify(mock.responseData)),
+          headers: new Headers({ 'content-type': 'application/json' }),
+          clone: function() { return this },
+          body: null,
+          bodyUsed: false,
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+          blob: () => Promise.resolve(new Blob()),
+          formData: () => Promise.resolve(new FormData()),
+        } as Response
+        
+        // Remove this mock after use to allow for sequential calls
+        mocks.splice(mocks.indexOf(mock), 1)
+        
+        return Promise.resolve(response)
+      }
+    }
+    
+    // Fall back to default mock behavior
+    return global.fetch(url as any)
+  })
+}
+
 // ============================================================================
 // Re-export commonly used testing utilities
 // ============================================================================
@@ -470,8 +523,10 @@ export default {
   
   // Advanced utilities
   waitForAsyncUpdates,
+  actWithMultipleUpdates,
   triggerWindowResize,
   mockSuccessfulFetch,
   mockFailedFetch,
   mockNetworkError,
+  mockSequentialFetch,
 }

@@ -78,7 +78,7 @@ CREATE TABLE permission_templates (
 CREATE TABLE clients (
     client_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     full_name VARCHAR(255) NOT NULL,
-    ssn VARCHAR(11) NOT NULL UNIQUE, -- Format: XXX-XX-XXXX
+    cpf VARCHAR(14) NOT NULL UNIQUE, -- Format: XXX.XXX.XXX-XX
     birth_date DATE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'archived')),
     notes TEXT,
@@ -87,7 +87,7 @@ CREATE TABLE clients (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
-    CONSTRAINT clients_ssn_format CHECK (ssn ~ '^\d{3}-\d{2}-\d{4}$'),
+    CONSTRAINT clients_cpf_format CHECK (cpf ~ '^\d{3}\.\d{3}\.\d{3}-\d{2}$'),
     CONSTRAINT clients_name_length CHECK (length(trim(full_name)) >= 2),
     CONSTRAINT clients_birth_date_range CHECK (
         birth_date >= '1900-01-01' AND 
@@ -155,7 +155,7 @@ CREATE TABLE permission_audit_log (
 
 -- Performance indexes
 CREATE INDEX idx_clients_full_name ON clients USING gin(to_tsvector('english', full_name));
-CREATE INDEX idx_clients_ssn ON clients(ssn);
+CREATE INDEX idx_clients_cpf ON clients(cpf);
 CREATE INDEX idx_clients_status ON clients(status);
 CREATE INDEX idx_clients_created_at ON clients(created_at DESC);
 
