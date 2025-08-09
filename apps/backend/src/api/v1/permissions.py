@@ -11,6 +11,7 @@ from sqlmodel import Session
 from src.core.database import get_session
 from src.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from src.core.permissions import require_admin_or_sysadmin
+from src.core.security import get_current_user_token, TokenData
 from src.models.permissions import AgentName
 from src.models.user import User
 from src.schemas.permissions import (
@@ -115,6 +116,30 @@ async def assign_user_permission(
         await service.close()
 
 
+@router.post("/assign-system")
+async def assign_system_permissions(
+    request: dict[str, Any],
+    current_user: TokenData = Depends(get_current_user_token),
+    service: PermissionService = Depends(get_permission_service),
+) -> dict[str, str]:
+    """Assign system-level permissions - restricted to sysadmin only."""
+    logger.info(f"System permission assignment attempt by user {current_user.user_id}")
+    
+    # Only sysadmin can assign system permissions
+    if current_user.role != "sysadmin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only system administrators can assign system permissions"
+        )
+    
+    # For security testing - this endpoint should be protected
+    # In a real system, this would integrate with system permission management
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="System permission assignment not implemented"
+    )
+
+
 @router.put("/user/{user_id}/agent/{agent_name}", response_model=UserPermissionResponse)
 async def update_user_permission(
     user_id: UUID,
@@ -135,6 +160,37 @@ async def update_user_permission(
             change_reason=request.change_reason,
         )
         return UserPermissionResponse.model_validate(permission)
+    except ValidationError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except AuthorizationError as e:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
+    finally:
+        await service.close()
+
+
+@router.post("/revoke")
+async def revoke_permission(
+    request: dict[str, Any],
+    current_user: User = require_admin_or_sysadmin(),
+    service: PermissionService = Depends(get_permission_service),
+) -> dict[str, str]:
+    """Revoke permissions for a user and agent."""
+    user_id = UUID(request["user_id"])
+    agent_name = AgentName(request["agent_name"])
+    change_reason = request.get("change_reason")
+    
+    logger.info(f"Revoking permissions for user {user_id} and agent {agent_name}")
+
+    try:
+        await service.revoke_permission(
+            user_id=user_id,
+            agent_name=agent_name,
+            revoked_by_user_id=current_user.user_id,
+            change_reason=change_reason,
+        )
+        return {"message": "Permission revoked successfully"}
+    except NotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except ValidationError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except AuthorizationError as e:

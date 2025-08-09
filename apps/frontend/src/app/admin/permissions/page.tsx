@@ -31,6 +31,7 @@ import {
   UserPermissionMatrix,
   BulkPermissionAssignResponse,
 } from '@/types/permissions'
+import { User } from '@/types/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -49,16 +50,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-// Types for the page
-interface User {
-  user_id: string
-  name: string
-  email: string
-  role: 'sysadmin' | 'admin' | 'user'
-  is_active: boolean
-  created_at: string
-  last_login?: string
-}
+// Types for the page - User interface imported from @/types/auth
 
 interface PageFilters {
   search: string
@@ -320,7 +312,7 @@ export default function AdminPermissionsPage() {
       // Search filter
       if (filters.search) {
         const searchLower = filters.search.toLowerCase()
-        if (!user.name.toLowerCase().includes(searchLower) &&
+        if (!user.full_name.toLowerCase().includes(searchLower) &&
             !user.email.toLowerCase().includes(searchLower)) {
           return false
         }
@@ -620,10 +612,20 @@ export default function AdminPermissionsPage() {
         />
 
         <BulkPermissionDialog
-          users={selectedUsers}
+          selectedUsers={selectedUsers}
           open={showBulkDialog}
-          onOpenChange={setShowBulkDialog}
-          onBulkOperationComplete={handleBulkOperationComplete}
+          onClose={() => setShowBulkDialog(false)}
+          onComplete={(results) => {
+            // Refresh permissions data
+            queryClient.invalidateQueries({ queryKey: ['admin-user-permissions'] })
+            setSelectedUsers([])
+            
+            toast({
+              title: 'Operação concluída',
+              description: `${results.length} usuários processados com sucesso.`,
+              variant: 'success',
+            })
+          }}
         />
       </div>
     </PermissionGuard>

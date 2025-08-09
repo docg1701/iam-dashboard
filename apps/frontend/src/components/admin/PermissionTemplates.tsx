@@ -551,7 +551,7 @@ export const PermissionTemplates: React.FC<PermissionTemplatesProps> = ({
 
   return (
     <PermissionGuard agent={AgentName.CLIENT_MANAGEMENT} operation="read">
-      <div className={`space-y-6 ${className}`}>
+      <main className={`space-y-6 ${className}`}>
         {/* Header */}
         <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
           <div>
@@ -766,7 +766,7 @@ export const PermissionTemplates: React.FC<PermissionTemplatesProps> = ({
             )}
           </DialogContent>
         </Dialog>
-      </div>
+      </main>
     </PermissionGuard>
   )
 }

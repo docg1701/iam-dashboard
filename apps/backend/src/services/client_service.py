@@ -135,14 +135,17 @@ class ClientService:
             DatabaseError: If database operation fails
         """
         try:
-            # Query for client
-            statement = select(Client).where(Client.client_id == client_id)
+            # Query for client with ownership validation
+            statement = select(Client).where(
+                Client.client_id == client_id,
+                Client.created_by_user_id == user_id  # Ownership check
+            )
             result = self.session.exec(statement)
             client = result.first()
 
             if not client:
                 raise NotFoundError(
-                    message=f"Client with ID {client_id} not found",
+                    message=f"Client with ID {client_id} not found or access denied",
                     error_code="CLIENT_NOT_FOUND",
                     details={"client_id": str(client_id)},
                 )
@@ -191,8 +194,11 @@ class ClientService:
             DatabaseError: If database operation fails
         """
         try:
-            # Get existing client
-            statement = select(Client).where(Client.client_id == client_id)
+            # Get existing client with ownership validation
+            statement = select(Client).where(
+                Client.client_id == client_id,
+                Client.created_by_user_id == user_id  # Ownership check
+            )
             result = self.session.exec(statement)
             client = result.first()
 
@@ -290,14 +296,17 @@ class ClientService:
             DatabaseError: If database operation fails
         """
         try:
-            # Get existing client
-            statement = select(Client).where(Client.client_id == client_id)
+            # Get existing client with ownership validation
+            statement = select(Client).where(
+                Client.client_id == client_id,
+                Client.created_by_user_id == user_id  # Ownership check
+            )
             result = self.session.exec(statement)
             client = result.first()
 
             if not client:
                 raise NotFoundError(
-                    message=f"Client with ID {client_id} not found",
+                    message=f"Client with ID {client_id} not found or access denied",
                     error_code="CLIENT_NOT_FOUND",
                     details={"client_id": str(client_id)},
                 )
@@ -361,8 +370,8 @@ class ClientService:
             DatabaseError: If database operation fails
         """
         try:
-            # Base query
-            statement = select(Client)
+            # Base query with ownership filtering
+            statement = select(Client).where(Client.created_by_user_id == user_id)
 
             # Apply filters if provided
             if hasattr(search_params, "full_name") and search_params.full_name:

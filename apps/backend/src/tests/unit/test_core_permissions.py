@@ -287,8 +287,10 @@ class TestPermissionDecoratorsRefactored:
         async def test_function(user: User, data: str) -> str:
             return f"Success: {data}"
 
-        # Execute with REAL security logic - no mocks of PermissionService!
-        result = await test_function(user=user, data="test")
+        # Execute with REAL security logic - but inject test session
+        with patch('src.services.permission_service.get_session') as mock_get_session:
+            mock_get_session.side_effect = lambda: iter([test_session])
+            result = await test_function(user=user, data="test")
 
         # Admin should have read access by role inheritance  
         assert result == "Success: test"
@@ -357,7 +359,9 @@ class TestPermissionDecoratorsRefactored:
             return f"Sysadmin access: {data}"
 
         # Execute - sysadmin should have access to everything
-        result = await test_function(user_id=user.user_id, data="test")
+        with patch('src.services.permission_service.get_session') as mock_get_session:
+            mock_get_session.side_effect = lambda: iter([test_session])
+            result = await test_function(user_id=user.user_id, data="test")
         assert result == "Sysadmin access: test"
 
     @pytest.mark.asyncio
@@ -491,7 +495,7 @@ class TestSyncPermissionCheckingRefactored:
     """Test synchronous permission checking - CLAUDE.md compliant."""
 
     @patch('src.core.security.redis')  # ✅ External boundary only
-    def test_check_user_permission_sync_with_sysadmin_real_logic(self, mock_redis) -> None:
+    def test_check_user_permission_sync_with_sysadmin_real_logic(self, mock_redis, test_session: Session) -> None:
         """
         Test synchronous permission checking with sysadmin using REAL logic.
         
@@ -512,14 +516,18 @@ class TestSyncPermissionCheckingRefactored:
             is_active=True,
             full_name="System Admin"
         )
+        test_session.add(user)
+        test_session.commit()
 
-        # Test REAL synchronous permission logic
-        checker = check_user_permission_sync(user.user_id, AgentName.CLIENT_MANAGEMENT, "delete")
-        result = checker()  # Execute the returned callable
+        # Test REAL synchronous permission logic with session injection
+        with patch('src.services.permission_service.get_session') as mock_get_session:
+            mock_get_session.side_effect = lambda: iter([test_session])
+            checker = check_user_permission_sync(user.user_id, AgentName.CLIENT_MANAGEMENT, "delete")
+            result = checker()  # Execute the returned callable
         assert result is True  # Sysadmin should bypass all checks
 
     @patch('src.core.security.redis')  # ✅ External boundary only
-    def test_check_user_permission_sync_with_admin_real_inheritance(self, mock_redis) -> None:
+    def test_check_user_permission_sync_with_admin_real_inheritance(self, mock_redis, test_session: Session) -> None:
         """
         Test admin role inheritance using REAL synchronous logic.
         """
@@ -535,17 +543,21 @@ class TestSyncPermissionCheckingRefactored:
             is_active=True,
             full_name="Admin User"
         )
+        test_session.add(user)
+        test_session.commit()
 
-        # Test REAL admin inheritance logic
-        # Admin should have access to client_management by role inheritance
-        checker = check_user_permission_sync(user.user_id, AgentName.CLIENT_MANAGEMENT, "create")
-        result = checker()
-        assert result is True
+        # Test REAL admin inheritance logic with session injection
+        with patch('src.services.permission_service.get_session') as mock_get_session:
+            mock_get_session.side_effect = lambda: iter([test_session])
+            # Admin should have access to client_management by role inheritance
+            checker = check_user_permission_sync(user.user_id, AgentName.CLIENT_MANAGEMENT, "create")
+            result = checker()
+            assert result is True
 
-        # Admin should NOT have access to PDF processing by default
-        checker = check_user_permission_sync(user.user_id, AgentName.PDF_PROCESSING, "create")
-        result = checker()
-        assert result is False  # Should require explicit permission
+            # Admin should NOT have access to PDF processing by default
+            checker = check_user_permission_sync(user.user_id, AgentName.PDF_PROCESSING, "create")
+            result = checker()
+            assert result is False  # Should require explicit permission
 
 
 class TestPermissionMiddlewareRefactored:
@@ -553,7 +565,7 @@ class TestPermissionMiddlewareRefactored:
 
     @pytest.mark.asyncio
     @patch('src.core.security.redis')  # ✅ External boundary only
-    async def test_permission_middleware_sysadmin_bypass_real_logic(self, mock_redis) -> None:
+    async def test_permission_middleware_sysadmin_bypass_real_logic(self, mock_redis, test_session: Session) -> None:
         """
         Test permission middleware sysadmin bypass using REAL logic.
         
@@ -574,6 +586,8 @@ class TestPermissionMiddlewareRefactored:
             is_active=True,
             full_name="System Admin"
         )
+        test_session.add(user)
+        test_session.commit()
 
         # Create real HTTP request mock
         request = MagicMock(spec=Request)
@@ -582,14 +596,16 @@ class TestPermissionMiddlewareRefactored:
         # Test REAL permission checker with REAL security logic
         checker = PermissionChecker(agent_name=AgentName.AUDIO_RECORDING, operation="delete")
         
-        # Should not raise exception for sysadmin
-        try:
-            result = await checker(current_user=user, permission_service=PermissionService())
-            # If we reach here, checker allowed access (correct for sysadmin)
-            assert result == user  # Should return the user
-        except AuthorizationError:
-            # Should not happen for sysadmin
-            assert False, "Sysadmin should bypass all permission checks"
+        # Should not raise exception for sysadmin - inject test session
+        with patch('src.services.permission_service.get_session') as mock_get_session:
+            mock_get_session.side_effect = lambda: iter([test_session])
+            try:
+                result = await checker(current_user=user, permission_service=PermissionService())
+                # If we reach here, checker allowed access (correct for sysadmin)
+                assert result == user  # Should return the user
+            except AuthorizationError:
+                # Should not happen for sysadmin
+                assert False, "Sysadmin should bypass all permission checks"
 
     @pytest.mark.asyncio  
     @patch('src.core.security.redis')  # ✅ External boundary only

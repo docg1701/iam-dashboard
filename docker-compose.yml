@@ -82,8 +82,8 @@ services:
   # Frontend Service
   frontend:
     build:
-      context: ./apps/frontend
-      dockerfile: ../../infrastructure/docker/frontend/Dockerfile
+      context: .
+      dockerfile: ./infrastructure/docker/frontend/Dockerfile
     container_name: iam-dashboard-frontend
     restart: unless-stopped
     ports:
@@ -93,9 +93,9 @@ services:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
       - NEXT_PUBLIC_APP_NAME=IAM Dashboard
     volumes:
-      - ./apps/frontend:/app
-      - /app/node_modules
-      - /app/.next
+      - ./apps/frontend:/app/apps/frontend
+      - /app/apps/frontend/node_modules
+      - /app/apps/frontend/.next
     depends_on:
       - backend
     healthcheck:

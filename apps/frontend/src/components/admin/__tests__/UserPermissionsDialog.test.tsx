@@ -117,7 +117,7 @@ describe('UserPermissionsDialog', () => {
     })
   })
 
-  const renderComponent = async (user = mockTestUser, open = true) => {
+  const renderComponent = async (user: typeof mockTestUser | null = mockTestUser, open = true) => {
     return await act(async () => {
       return renderWithProviders(
         <UserPermissionsDialog
@@ -133,7 +133,7 @@ describe('UserPermissionsDialog', () => {
   describe('Dialog Rendering', () => {
     it('should not render when user is null', async () => {
       await act(async () => {
-        await renderComponent(null)
+        await renderComponent(undefined)
       })
 
       await act(async () => {

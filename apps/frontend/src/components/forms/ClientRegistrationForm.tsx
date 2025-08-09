@@ -24,7 +24,7 @@ import type { ClientCreate, ClientResponse } from "@iam-dashboard/shared"
 
 // Client registration form validation schema with Portuguese messages
 // Based on shared ClientFormDataSchema but with localized messages
-const clientRegistrationSchema = ClientFormDataSchema.extend({
+const clientRegistrationSchema = z.object({
   full_name: z
     .string()
     .min(1, "Nome completo é obrigatório")
@@ -51,10 +51,12 @@ const clientRegistrationSchema = ClientFormDataSchema.extend({
     .refine((date) => {
       const birthDate = new Date(date)
       const today = new Date()
-      const minAge = new Date(today.getFullYear() - 13, today.getMonth(), today.getDate())
-      const maxAge = new Date(today.getFullYear() - 120, today.getMonth(), today.getDate())
       
-      return birthDate <= minAge && birthDate >= maxAge
+      // Calculate age in years more precisely
+      const ageInMs = today.getTime() - birthDate.getTime()
+      const ageInYears = ageInMs / (1000 * 60 * 60 * 24 * 365.25)
+      
+      return ageInYears >= 13 && ageInYears <= 120
     }, "Idade deve estar entre 13 e 120 anos"),
   notes: z
     .string()
@@ -89,6 +91,8 @@ export function ClientRegistrationForm({
       birth_date: "",
       notes: "",
     },
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
   })
 
   // CPF formatting handler
@@ -149,7 +153,11 @@ export function ClientRegistrationForm({
   return (
     <div className={cn("w-full max-w-2xl mx-auto", className)}>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form 
+          role="form"
+          onSubmit={form.handleSubmit(handleSubmit)} 
+          className="space-y-6"
+        >
           {/* Full Name Field */}
           <FormField
             control={form.control}
@@ -168,6 +176,7 @@ export function ClientRegistrationForm({
                       className="pl-10"
                       disabled={isLoading}
                       autoComplete="name"
+                      aria-label="Nome completo"
                     />
                   </div>
                 </FormControl>
@@ -198,6 +207,7 @@ export function ClientRegistrationForm({
                       disabled={isLoading}
                       autoComplete="off"
                       onChange={(e) => handleCPFChange(e.target.value, field.onChange)}
+                      aria-label="CPF"
                     />
                   </div>
                 </FormControl>
@@ -228,6 +238,7 @@ export function ClientRegistrationForm({
                       disabled={isLoading}
                       max={new Date(new Date().getFullYear() - 13, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0]}
                       min={new Date(new Date().getFullYear() - 120, new Date().getMonth(), new Date().getDate()).toISOString().split('T')[0]}
+                      aria-label="Data de nascimento"
                     />
                   </div>
                 </FormControl>
@@ -254,6 +265,7 @@ export function ClientRegistrationForm({
                     placeholder="Informações adicionais sobre o cliente..."
                     disabled={isLoading}
                     rows={4}
+                    aria-label="Observações"
                   />
                 </FormControl>
                 <FormDescription>
@@ -266,7 +278,10 @@ export function ClientRegistrationForm({
 
           {/* Error Message */}
           {error && (
-            <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+            <div 
+              role="alert"
+              className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md"
+            >
               {error}
             </div>
           )}

@@ -2,11 +2,11 @@ import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
 // Configure React Testing Library environment for better act() handling
-global.IS_REACT_ACT_ENVIRONMENT = true
+;(global as any).IS_REACT_ACT_ENVIRONMENT = true
 
 // Mock React's internal DevTools to reduce act() warnings from third-party components
 if (typeof globalThis !== 'undefined') {
-  globalThis.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+  ;(globalThis as any).__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
     isDisabled: true,
     supportsFiber: true,
     inject: () => {},
@@ -44,11 +44,11 @@ const createMockResponse = (data: any, status = 200, ok = true) => ({
 })
 
 // Global fetch mock setup with smart defaults
-global.fetch = vi.fn()
+;(global as any).fetch = vi.fn()
 
 // Default successful mock responses based on endpoint patterns
 const setupDefaultFetchMocks = () => {
-  vi.mocked(global.fetch).mockImplementation((url, options) => {
+  vi.mocked((global as any).fetch).mockImplementation((url: any, options?: any) => {
     const method = options?.method || 'GET'
     const urlStr = url.toString()
     
@@ -102,9 +102,9 @@ const setupDefaultFetchMocks = () => {
     
     // Permissions API endpoints
     if (urlStr.includes('/permissions')) {
-      if (urlStr.includes('/users/') && method === 'GET') {
-        // Extract user ID from URL (e.g., /permissions/users/admin-123)
-        const userIdMatch = urlStr.match(/\/users\/([^/?]+)/)
+      if ((urlStr.includes('/users/') || urlStr.includes('/user/')) && method === 'GET') {
+        // Extract user ID from URL (e.g., /permissions/user/admin-123 or /permissions/users/admin-123)
+        const userIdMatch = urlStr.match(/\/users?\/([^/?]+)/)
         const requestedUserId = userIdMatch ? userIdMatch[1] : 'test-user-123'
         
         // Provide full permissions for admin users and basic permissions for regular users

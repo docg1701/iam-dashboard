@@ -42,6 +42,7 @@
     "zustand": "^5.0.7"
   },
   "devDependencies": {
+    "@axe-core/cli": "^4.10.2",
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.54.0",
     "@tailwindcss/postcss": "^4",

@@ -59,17 +59,20 @@ import { Progress } from '@/components/ui/progress'
 // Types for the component
 interface User {
   user_id: string
-  name: string
+  full_name: string
   email: string
   role: 'sysadmin' | 'admin' | 'user'
   is_active: boolean
+  totp_enabled: boolean
+  created_at: string
+  updated_at: string
 }
 
 interface BulkPermissionDialogProps {
-  users: User[]
+  selectedUsers: User[]
   open: boolean
-  onOpenChange: (open: boolean) => void
-  onBulkOperationComplete?: (results: BulkPermissionAssignResponse) => void
+  onClose: () => void
+  onComplete?: (results: string[]) => void
   className?: string
 }
 
@@ -160,7 +163,7 @@ const ProgressTracker: React.FC<{ progress: OperationProgress; users: User[] }> 
               {progress.errors.map((error, index) => (
                 <div key={index} className="text-xs bg-red-50 p-2 rounded">
                   <div className="font-medium">
-                    {users.find((u: User) => u.user_id === error.user_id)?.name || error.user_id}
+                    {users.find((u: User) => u.user_id === error.user_id)?.full_name || error.user_id}
                   </div>
                   <div className="text-red-600">{error.error}</div>
                 </div>
@@ -280,10 +283,10 @@ const CustomPermissionsEditor: React.FC<{
  * Main Bulk Permission Dialog Component
  */
 export const BulkPermissionDialog: React.FC<BulkPermissionDialogProps> = ({
-  users,
+  selectedUsers,
   open,
-  onOpenChange,
-  onBulkOperationComplete,
+  onClose,
+  onComplete,
   className,
 }) => {
   const [operation, setOperation] = useState<BulkOperation>({
@@ -304,15 +307,15 @@ export const BulkPermissionDialog: React.FC<BulkPermissionDialogProps> = ({
 
   // Memoized user summary
   const userSummary = useMemo(() => {
-    const activeUsers = users.filter(u => u.is_active).length
-    const inactiveUsers = users.length - activeUsers
-    const roleCount = users.reduce((acc, user) => {
+    const activeUsers = selectedUsers.filter(u => u.is_active).length
+    const inactiveUsers = selectedUsers.length - activeUsers
+    const roleCount = selectedUsers.reduce((acc, user) => {
       acc[user.role] = (acc[user.role] || 0) + 1
       return acc
     }, {} as Record<string, number>)
 
     return { activeUsers, inactiveUsers, roleCount }
-  }, [users])
+  }, [selectedUsers])
 
   // Handle template selection
   const handleTemplateSelect = useCallback((templateId: string) => {
@@ -368,7 +371,7 @@ export const BulkPermissionDialog: React.FC<BulkPermissionDialogProps> = ({
     }
 
     setProgress({
-      total: users.length,
+      total: selectedUsers.length,
       completed: 0,
       failed: 0,
       isRunning: true,
@@ -383,12 +386,12 @@ export const BulkPermissionDialog: React.FC<BulkPermissionDialogProps> = ({
       }
 
       // Process users one by one for better progress tracking
-      for (let i = 0; i < users.length; i++) {
-        const user = users[i]
+      for (let i = 0; i < selectedUsers.length; i++) {
+        const user = selectedUsers[i]
         
         setProgress(prev => ({
           ...prev,
-          currentUser: user.name,
+          currentUser: user.full_name,
         }))
 
         try {
@@ -431,12 +434,12 @@ export const BulkPermissionDialog: React.FC<BulkPermissionDialogProps> = ({
         variant: results.error_count === 0 ? 'success' : 'warning',
       })
 
-      onBulkOperationComplete?.(results)
+      onComplete?.(selectedUsers.map(u => u.user_id))
 
       // Auto-close after successful completion
       if (results.error_count === 0) {
         setTimeout(() => {
-          onOpenChange(false)
+          onClose()
         }, 2000)
       }
     } catch (error) {
@@ -452,12 +455,12 @@ export const BulkPermissionDialog: React.FC<BulkPermissionDialogProps> = ({
       })
       console.error('Bulk operation failed:', error)
     }
-  }, [operation, users, onBulkOperationComplete, onOpenChange])
+  }, [operation, selectedUsers, onComplete, onClose])
 
   // Export current permissions
   const exportPermissions = useCallback(() => {
     const data = {
-      users: users.map(u => ({ id: u.user_id, name: u.name, email: u.email })),
+      users: selectedUsers.map(u => ({ id: u.user_id, name: u.full_name, email: u.email })),
       timestamp: new Date().toISOString(),
     }
     
@@ -476,28 +479,28 @@ export const BulkPermissionDialog: React.FC<BulkPermissionDialogProps> = ({
       description: 'Lista de usuários exportada com sucesso.',
       variant: 'success',
     })
-  }, [users])
+  }, [selectedUsers])
 
   const canExecute = useMemo(() => {
     return (
       operation.changeReason.trim() &&
-      users.length > 0 &&
+      selectedUsers.length > 0 &&
       !progress.isRunning &&
       (
         (operation.type === 'template' && operation.templateId) ||
         (operation.type !== 'template')
       )
     )
-  }, [operation, users.length, progress.isRunning])
+  }, [operation, selectedUsers.length, progress.isRunning])
 
   return (
     <PermissionGuard agent={AgentName.CLIENT_MANAGEMENT} operation="update">
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(newOpen) => !newOpen && onClose()}>
         <DialogContent className={`max-w-5xl max-h-[90vh] overflow-y-auto ${className}`}>
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <Users className="h-5 w-5 mr-2" />
-              Operação em Lote - {users.length} usuários selecionados
+              Operações em Lote - {selectedUsers.length} usuários selecionados
             </DialogTitle>
             <DialogDescription>
               Execute operações de permissão em múltiplos usuários simultaneamente
@@ -615,7 +618,7 @@ export const BulkPermissionDialog: React.FC<BulkPermissionDialogProps> = ({
 
             {/* Progress Tracker */}
             {progress.isRunning || progress.completed > 0 || progress.failed > 0 ? (
-              <ProgressTracker progress={progress} users={users} />
+              <ProgressTracker progress={progress} users={selectedUsers} />
             ) : null}
 
             {/* Warning for dangerous operations */}
@@ -623,7 +626,7 @@ export const BulkPermissionDialog: React.FC<BulkPermissionDialogProps> = ({
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Atenção:</strong> Esta operação afetará {users.length} usuários. 
+                  <strong>Atenção:</strong> Esta operação afetará {selectedUsers.length} usuários. 
                   {operation.type === 'grant_all' && ' Todos receberão permissões completas em todos os agentes.'}
                   {operation.type === 'revoke_all' && ' Todas as permissões serão removidas.'}
                 </AlertDescription>
@@ -647,7 +650,7 @@ export const BulkPermissionDialog: React.FC<BulkPermissionDialogProps> = ({
             <div className="flex space-x-2">
               <Button
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={onClose}
                 disabled={progress.isRunning}
               >
                 <X className="h-4 w-4 mr-2" />
@@ -662,12 +665,12 @@ export const BulkPermissionDialog: React.FC<BulkPermissionDialogProps> = ({
                 {progress.isRunning ? (
                   <>
                     <div className="animate-spin h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Executando...
+                    Aplicando...
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Executar Operação
+                    Aplicar Alterações
                   </>
                 )}
               </Button>

@@ -81,7 +81,7 @@ class TestClientAPICreate:
         existing_client = Client(
             client_id=uuid4(),
             full_name="Existing Client",
-            cpf="555.667.777-89",
+            cpf="111.444.777-35",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             created_by=test_user.user_id,
@@ -94,7 +94,7 @@ class TestClientAPICreate:
         # Try to create client with same CPF
         client_data = {
             "full_name": "Duplicate CPF Client",
-            "cpf": "555.667.777-89",  # Same CPF
+            "cpf": "111.444.777-35",  # Same CPF
             "birth_date": "1985-06-15",
         }
 
@@ -363,7 +363,7 @@ class TestClientAPIErrorHandling:
         """Test handling of internal server errors."""
         client_data = {
             "full_name": "Error Test Client",
-            "cpf": "888.991.111-23",
+            "cpf": "111.444.777-35",
             "birth_date": "1990-01-01",
         }
 

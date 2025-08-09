@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlalchemy import JSON, CheckConstraint, Column, Index
+from sqlalchemy import CheckConstraint, Column, Index
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
@@ -43,7 +44,7 @@ class UserAgentPermissionBase(SQLModel):
     permissions: dict[str, Any] = Field(
         default_factory=lambda: {"create": False, "read": False, "update": False, "delete": False},
         description="JSONB permissions structure with CRUD operations",
-        sa_column=Column(JSON),
+        sa_column=Column(JSONB),
     )
 
     @field_validator("permissions")
@@ -123,7 +124,7 @@ class PermissionTemplateBase(SQLModel):
     )
     description: str | None = Field(default=None, description="Template description")
     permissions: dict[str, Any] = Field(
-        description="JSONB permissions structure for all agents", sa_column=Column(JSON)
+        description="JSONB permissions structure for all agents", sa_column=Column(JSONB)
     )
     is_system_template: bool = Field(
         default=False, description="Whether this is a system-defined template"
@@ -201,10 +202,10 @@ class PermissionAuditLogBase(SQLModel):
         max_length=50, description="Action performed (CREATE, UPDATE, DELETE, BULK_ASSIGN)"
     )
     old_permissions: dict[str, Any] | None = Field(
-        default=None, description="Previous permissions before change", sa_column=Column(JSON)
+        default=None, description="Previous permissions before change", sa_column=Column(JSONB)
     )
     new_permissions: dict[str, Any] | None = Field(
-        default=None, description="New permissions after change", sa_column=Column(JSON)
+        default=None, description="New permissions after change", sa_column=Column(JSONB)
     )
     changed_by_user_id: UUID = Field(
         foreign_key="users.user_id", description="User who made the permission change"

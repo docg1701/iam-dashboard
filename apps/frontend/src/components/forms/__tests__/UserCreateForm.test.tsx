@@ -20,7 +20,8 @@ import {
   act,
 } from '@/test/test-template'
 import { UserCreateForm } from '../UserCreateForm'
-import type { UserCreate, User } from '@/types/auth'
+import type { User } from '@/types/auth'
+import type { UserCreateSchema as UserCreate } from '@/types'
 
 describe('UserCreateForm', () => {
   useTestSetup()
@@ -53,14 +54,18 @@ describe('UserCreateForm', () => {
     it('should render form with empty initial values', () => {
       renderComponent()
 
-      expect(screen.getByDisplayValue('')).toBeInTheDocument()
-      expect(screen.getByPlaceholderText(/selecione o role/i)).toBeInTheDocument()
+      // Check specific fields for empty values instead of searching for any empty value
+      expect(screen.getByLabelText(/nome completo/i)).toHaveValue('')
+      expect(screen.getByLabelText(/email/i)).toHaveValue('')
+      expect(screen.getByPlaceholderText(/digite uma senha segura/i)).toHaveValue('')
+      expect(screen.getByPlaceholderText(/digite a senha novamente/i)).toHaveValue('')
+      expect(screen.getByText(/selecione o role do usuário/i)).toBeInTheDocument()
     })
 
     it('should display password requirements', () => {
       renderComponent()
 
-      expect(screen.getByText(/mínimo 8 caracteres/i)).toBeInTheDocument()
+      expect(screen.getByText(/mínimo 8 caracteres com letra maiúscula, minúscula, número e caractere especial/i)).toBeInTheDocument()
     })
   })
 
@@ -82,13 +87,17 @@ describe('UserCreateForm', () => {
       renderComponent()
 
       const emailInput = screen.getByLabelText(/email/i)
+      const submitButton = screen.getByRole('button', { name: /criar usuário/i })
+      
+      // Fill in a name first so email validation can trigger
+      await user.type(screen.getByLabelText(/nome completo/i), 'Test User')
       await user.type(emailInput, 'invalid-email')
 
-      const submitButton = screen.getByRole('button', { name: /criar usuário/i })
       await user.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText(/digite um email válido/i)).toBeInTheDocument()
+        // Try exact text match
+        expect(screen.getByText('Digite um email válido')).toBeInTheDocument()
       })
     })
 
@@ -96,6 +105,10 @@ describe('UserCreateForm', () => {
       const user = userEvent.setup()
       renderComponent()
 
+      // Fill required fields first
+      await user.type(screen.getByLabelText(/nome completo/i), 'Test User')
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com')
+      
       const passwordInput = screen.getByPlaceholderText(/digite uma senha segura/i)
       await user.type(passwordInput, 'weak')
 
@@ -110,6 +123,10 @@ describe('UserCreateForm', () => {
     it('should show validation error when passwords do not match', async () => {
       const user = userEvent.setup()
       renderComponent()
+
+      // Fill required fields first
+      await user.type(screen.getByLabelText(/nome completo/i), 'Test User')
+      await user.type(screen.getByLabelText(/email/i), 'test@example.com')
 
       const passwordInput = screen.getByPlaceholderText(/digite uma senha segura/i)
       const confirmPasswordInput = screen.getByPlaceholderText(/digite a senha novamente/i)
@@ -235,11 +252,11 @@ describe('UserCreateForm', () => {
     it('should submit form with valid data', async () => {
       const user = userEvent.setup()
       const mockUser = { user_id: '123', ...validFormData, created_at: '2025-01-01T00:00:00Z' }
-      mockFetch.mockResolvedValue({
+      vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         status: 201,
         json: async () => mockUser
-      })
+      } as Response)
 
       renderComponent()
       await fillValidForm(user)
@@ -248,7 +265,7 @@ describe('UserCreateForm', () => {
       await user.click(submitButton)
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith(
+        expect(global.fetch).toHaveBeenCalledWith(
           expect.stringContaining('/api/v1/users'),
           expect.objectContaining({
             method: 'POST',
@@ -262,12 +279,12 @@ describe('UserCreateForm', () => {
 
     it('should show loading state during submission', async () => {
       const user = userEvent.setup()
-      mockFetch.mockImplementation(() => 
+      vi.mocked(global.fetch).mockImplementationOnce(() => 
         new Promise(resolve => setTimeout(() => resolve({
           ok: true,
           status: 201, 
           json: async () => ({})
-        }), 100))
+        } as Response), 100))
       )
 
       renderComponent()
@@ -285,11 +302,11 @@ describe('UserCreateForm', () => {
     it('should handle API errors gracefully', async () => {
       const user = userEvent.setup()
       const errorMessage = 'Email já existe'
-      mockFetch.mockResolvedValue({
+      vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: false,
         status: 409,
         json: async () => ({ detail: errorMessage })
-      })
+      } as Response)
 
       renderComponent()
       await fillValidForm(user)
@@ -305,7 +322,7 @@ describe('UserCreateForm', () => {
 
     it('should handle generic API errors', async () => {
       const user = userEvent.setup()
-      mockFetch.mockRejectedValue(new Error('Network error'))
+      vi.mocked(global.fetch).mockRejectedValueOnce(new Error('Network error'))
 
       renderComponent()
       await fillValidForm(user)
@@ -315,6 +332,7 @@ describe('UserCreateForm', () => {
 
       await waitFor(() => {
         // Toast de erro genérico será chamado através da implementação real
+        expect(mockOnSuccess).not.toHaveBeenCalled()
       })
     })
   })
@@ -343,7 +361,7 @@ describe('UserCreateForm', () => {
         expect(screen.getByText(/nome deve ter pelo menos 2 caracteres/i)).toBeInTheDocument()
       })
 
-      expect(mockFetch).not.toHaveBeenCalled()
+      expect(global.fetch).not.toHaveBeenCalled()
     })
   })
 
@@ -388,11 +406,11 @@ describe('UserCreateForm', () => {
     it('should reset form after successful submission', async () => {
       const user = userEvent.setup()
       const mockUser = { user_id: '123', email: 'test@example.com' }
-      mockFetch.mockResolvedValue({
+      vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         status: 201,
         json: async () => mockUser
-      })
+      } as Response)
 
       renderComponent()
 
@@ -407,8 +425,8 @@ describe('UserCreateForm', () => {
         expect(mockOnSuccess).toHaveBeenCalled()
       })
 
-      // Form should be reset after success
-      expect(screen.getByDisplayValue('')).toBeInTheDocument()
+      // Form should be reset after success - check specific field
+      expect(screen.getByLabelText(/nome completo/i)).toHaveValue('')
     })
   })
 })

@@ -155,7 +155,7 @@ class TestClientServiceCreate:
 
         # Client data with no notes
         client_data = ClientCreateSchema(
-            full_name="Minimal Client", cpf="987.654.321-00", birth_date=date(1995, 8, 12)
+            full_name="Minimal Client", cpf="111.444.777-35", birth_date=date(1995, 8, 12)
         )
 
         # Create client
@@ -195,7 +195,7 @@ class TestClientServiceCreate:
 
         # Client data
         client_data = ClientCreateSchema(
-            full_name="Audit Test Client", cpf="555.667.777-89", birth_date=date(1992, 4, 8)
+            full_name="Audit Test Client", cpf="111.444.777-35", birth_date=date(1992, 4, 8)
         )
 
         # Create client
@@ -230,13 +230,13 @@ class TestClientServiceCreate:
 
         # Create first client
         first_client_data = ClientCreateSchema(
-            full_name="First Client", cpf="888.991.111-23", birth_date=date(1990, 1, 1)
+            full_name="First Client", cpf="000.000.001-91", birth_date=date(1990, 1, 1)
         )
         await service.create_client(first_client_data, user.user_id, mock_request)
 
         # Try to create second client with same CPF - should raise ConflictError
         duplicate_client_data = ClientCreateSchema(
-            full_name="Second Client", cpf="888.991.111-23", birth_date=date(1991, 2, 2)
+            full_name="Second Client", cpf="000.000.001-91", birth_date=date(1991, 2, 2)
         )
 
         with pytest.raises(ConflictError) as exc_info:
@@ -350,7 +350,7 @@ class TestClientServiceGetById:
         test_client = Client(
             client_id=client_id,
             full_name="Audit Test Client",
-            cpf="999.887.777-56",
+            cpf="123.456.789-09",
             birth_date=date(1985, 12, 25),
             status="active",
             created_by=user.user_id,
@@ -405,7 +405,7 @@ class TestClientServiceValidation:
 
         # Create first client
         client_data1 = ClientCreateSchema(
-            full_name="First Client", cpf="111.222.333-33", birth_date=date(1990, 1, 1)
+            full_name="First Client", cpf="000.000.001-91", birth_date=date(1990, 1, 1)
         )
 
         await service.create_client(client_data1, user.user_id, mock_request)
@@ -413,7 +413,7 @@ class TestClientServiceValidation:
         # Try to create second client with same CPF - should fail
         client_data2 = ClientCreateSchema(
             full_name="Second Client",
-            cpf="111.222.333-33",  # Same CPF
+            cpf="000.000.001-91",  # Same CPF
             birth_date=date(1985, 6, 15),
         )
 
@@ -625,7 +625,7 @@ class TestClientServiceUpdate:
         client1 = Client(
             client_id=client1_id,
             full_name="Client 1",
-            cpf="111.111.111-23",
+            cpf="111.444.777-35",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -637,7 +637,7 @@ class TestClientServiceUpdate:
         client2 = Client(
             client_id=client2_id,
             full_name="Client 2",
-            cpf="222.222.222-34",
+            cpf="000.000.001-91",
             birth_date=date(1991, 2, 2),
             status="active",
             created_by=user.user_id,
@@ -658,7 +658,7 @@ class TestClientServiceUpdate:
 
         # Try to update client2's CPF to match client1's CPF
 
-        update_data = ClientUpdate(cpf="111.111.111-23")
+        update_data = ClientUpdate(cpf="111.444.777-35")
 
         with pytest.raises(ConflictError) as exc_info:
             await service.update_client(client2_id, update_data, user.user_id, mock_request)
@@ -978,7 +978,7 @@ class TestClientServiceList:
         client1 = Client(
             client_id=uuid4(),
             full_name="John Doe",
-            cpf="111.111.111-23",
+            cpf="111.444.777-35",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -989,7 +989,7 @@ class TestClientServiceList:
         client2 = Client(
             client_id=uuid4(),
             full_name="Jane Smith",
-            cpf="222.222.222-34",
+            cpf="000.000.001-91",
             birth_date=date(1991, 2, 2),
             status="active",
             created_by=user.user_id,
@@ -1000,7 +1000,7 @@ class TestClientServiceList:
         client3 = Client(
             client_id=uuid4(),
             full_name="John Johnson",
-            cpf="333.333.333-45",
+            cpf="111.444.777-35",
             birth_date=date(1992, 3, 3),
             status="active",
             created_by=user.user_id,
@@ -1054,7 +1054,7 @@ class TestClientServiceList:
         active_client = Client(
             client_id=uuid4(),
             full_name="Active Client",
-            cpf="111.111.111-23",
+            cpf="111.444.777-35",
             birth_date=date(1990, 1, 1),
             status=ClientStatus.ACTIVE,
             created_by=user.user_id,
@@ -1065,7 +1065,7 @@ class TestClientServiceList:
         inactive_client = Client(
             client_id=uuid4(),
             full_name="Inactive Client",
-            cpf="222.222.222-34",
+            cpf="000.000.001-91",
             birth_date=date(1991, 2, 2),
             status=ClientStatus.INACTIVE,
             created_by=user.user_id,
@@ -1302,7 +1302,7 @@ class TestClientServiceErrorHandlingExtended:
         test_client1 = Client(
             client_id=client1_id,
             full_name="Client 1",
-            cpf="111.111.111-23",
+            cpf="111.444.777-35",
             birth_date=date(1990, 1, 1),
             status="active",
             created_by=user.user_id,
@@ -1315,7 +1315,7 @@ class TestClientServiceErrorHandlingExtended:
         test_client2 = Client(
             client_id=client2_id,
             full_name="Client 2",
-            cpf="222.222.222-34",
+            cpf="000.000.001-91",
             birth_date=date(1991, 2, 2),
             status="active",
             created_by=user.user_id,
@@ -1335,7 +1335,7 @@ class TestClientServiceErrorHandlingExtended:
         mock_request.headers = {"user-agent": "test-agent"}
 
         # Try to update client2's CPF to match client1's CPF
-        update_data = ClientUpdate(cpf="111.111.111-23")
+        update_data = ClientUpdate(cpf="111.444.777-35")
 
         # Should raise ConflictError due to duplicate CPF
         with pytest.raises(ConflictError) as exc_info:
@@ -1495,7 +1495,7 @@ class TestClientServiceErrorHandlingExtended:
         test_client = Client(
             client_id=client_id,
             full_name="Business Logic Test Client",
-            cpf="999.887.777-56",
+            cpf="123.456.789-09",
             birth_date=date(1985, 12, 25),
             status="active",
             notes="Test client for business logic validation",
@@ -1521,7 +1521,7 @@ class TestClientServiceErrorHandlingExtended:
         assert isinstance(result, ClientRead)
         assert result.client_id == client_id
         assert result.full_name == "Business Logic Test Client"
-        assert result.cpf == "999.887.777-56"
+        assert result.cpf == "123.456.789-09"
         assert result.birth_date == date(1985, 12, 25)
         assert result.notes == "Test client for business logic validation"
         assert result.status == "active"

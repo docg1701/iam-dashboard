@@ -55,6 +55,7 @@ export function UserEditForm({ user, onSuccess, onCancel }: UserEditFormProps) {
 
   const form = useForm<UserEditFormData>({
     resolver: zodResolver(userEditSchema),
+    mode: 'onBlur', // Trigger validation on blur and submit
     defaultValues: {
       email: user.email,
       full_name: user.full_name,

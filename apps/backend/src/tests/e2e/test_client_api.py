@@ -116,7 +116,7 @@ class TestCreateClientAPI:
         # First, create a client
         client_data_1 = {
             "full_name": "First Client",
-            "cpf": "111.223.333-45",
+            "cpf": "111.223.333-40",
             "birth_date": "1990-01-01",
         }
 
@@ -126,7 +126,7 @@ class TestCreateClientAPI:
         # Try to create another client with the same CPF
         client_data_2 = {
             "full_name": "Second Client",
-            "cpf": "111.223.333-45",  # Same CPF
+            "cpf": "111.223.333-40",  # Same CPF
             "birth_date": "1985-06-15",
         }
 
@@ -150,7 +150,7 @@ class TestCreateClientAPI:
 
         client_data = {
             "full_name": "Young Client",
-            "cpf": "555.667.777-89",
+            "cpf": "555.667.777-83",
             "birth_date": too_young_date.isoformat(),
         }
 
@@ -172,7 +172,7 @@ class TestCreateClientAPI:
         self, client: TestClient, auth_headers: dict[str, str]
     ) -> None:
         """Test client creation with birth date before 1900."""
-        client_data = {"full_name": "Old Client", "cpf": "888.990.000-12", "birth_date": "1899-12-31"}
+        client_data = {"full_name": "Old Client", "cpf": "888.990.000-85", "birth_date": "1899-12-31"}
 
         response = client.post("/api/v1/clients", json=client_data, headers=auth_headers)
 
@@ -277,7 +277,7 @@ class TestGetClientAPI:
         # Create a client first
         create_data = {
             "full_name": "Maria Santos",
-            "cpf": "456.789.012-34",
+            "cpf": "456.789.012-49",
             "birth_date": "1992-03-20",
             "notes": "Test client for retrieval",
         }
@@ -294,7 +294,7 @@ class TestGetClientAPI:
 
         assert data["client_id"] == client_id
         assert data["full_name"] == create_data["full_name"]
-        assert data["cpf"] == "***.***.***-34"  # CPF should be masked
+        assert data["cpf"] == "***.***.***-49"  # CPF should be masked
         assert data["birth_date"] == create_data["birth_date"]
         assert data["notes"] == create_data["notes"]
         assert data["status"] == "active"
@@ -369,7 +369,7 @@ class TestClientAPIIntegration:
         # 1. Create client
         create_data = {
             "full_name": "Lifecycle Test Client",
-            "cpf": "999.887.777-56",
+            "cpf": "999.887.777-60",
             "birth_date": "1988-07-14",
             "notes": "Initial notes",
         }
@@ -392,7 +392,7 @@ class TestClientAPIIntegration:
         """Test data consistency between API and database."""
         client_data = {
             "full_name": "Consistency Test Client",
-            "cpf": "777.665.555-78",
+            "cpf": "777.665.555-49",
             "birth_date": "1991-09-25",
         }
 
@@ -412,7 +412,7 @@ class TestClientAPIIntegration:
         assert str(db_client.birth_date) == client_data["birth_date"]
 
         # Verify API response has masked CPF
-        assert api_data["cpf"] == "***.***.***-78"
+        assert api_data["cpf"] == "***.***.***-49"
 
     def test_client_creation_with_special_characters(
         self, client: TestClient, auth_headers: dict[str, str]

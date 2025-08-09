@@ -74,7 +74,7 @@ describe('LoginPage', () => {
       // Verify initial state shows login form, not 2FA
       expect(screen.getByPlaceholderText(/seu@email\.com/i)).toBeInTheDocument()
       expect(screen.getByPlaceholderText(/••••••••/)).toBeInTheDocument()
-      expect(screen.queryByText(/código de verificação/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/verificação em duas etapas/i)).not.toBeInTheDocument()
     })
 
     test('renders with responsive design classes', () => {
@@ -208,7 +208,8 @@ describe('LoginPage', () => {
       
       // Should transition to 2FA form
       await waitFor(() => {
-        expect(screen.getByText(/código de verificação/i)).toBeInTheDocument()
+        expect(screen.getByText(/verificação em duas etapas/i)).toBeInTheDocument()
+        expect(screen.getByText(/código 2fa/i)).toBeInTheDocument()
       })
       
       // Original login form should be hidden
@@ -280,13 +281,13 @@ describe('LoginPage', () => {
       
       // Wait for 2FA form to appear
       await waitFor(() => {
-        expect(screen.getByText(/código de verificação/i)).toBeInTheDocument()
+        expect(screen.getByText(/verificação em duas etapas/i)).toBeInTheDocument()
       })
       
       // Check 2FA form structure
       expect(screen.getByText(/verificação em duas etapas/i)).toBeInTheDocument()
-      expect(screen.getByText(/código de verificação/i)).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /verificar/i })).toBeInTheDocument()
+      expect(screen.getByText(/código 2fa/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /verificar código/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /voltar/i })).toBeInTheDocument()
     })
 
@@ -327,7 +328,7 @@ describe('LoginPage', () => {
       
       // Complete 2FA step
       await waitFor(() => {
-        expect(screen.getByText(/código de verificação/i)).toBeInTheDocument()
+        expect(screen.getByText(/verificação em duas etapas/i)).toBeInTheDocument()
       })
       
       // Type into 2FA code inputs (6 individual digit fields)
@@ -377,7 +378,7 @@ describe('LoginPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
       
       await waitFor(() => {
-        expect(screen.getByText(/código de verificação/i)).toBeInTheDocument()
+        expect(screen.getByText(/verificação em duas etapas/i)).toBeInTheDocument()
       })
       
       // Submit invalid 2FA code
@@ -395,7 +396,7 @@ describe('LoginPage', () => {
       })
       
       // Should remain on 2FA form after error
-      expect(screen.getByText(/código de verificação/i)).toBeInTheDocument()
+      expect(screen.getByText(/verificação em duas etapas/i)).toBeInTheDocument()
     })
 
     test('allows going back to login form from 2FA', async () => {
@@ -435,7 +436,7 @@ describe('LoginPage', () => {
       expect(authState.tempToken).toBe(null)
       
       // 2FA form should be hidden
-      expect(screen.queryByText(/código de verificação/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/verificação em duas etapas/i)).not.toBeInTheDocument()
     })
 
     test('handles missing temp token error in 2FA flow', async () => {
@@ -466,7 +467,7 @@ describe('LoginPage', () => {
       
       // Initial state: LOGIN step
       expect(screen.getByText('Entrar na sua conta')).toBeInTheDocument()
-      expect(screen.queryByText(/código de verificação/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/verificação em duas etapas/i)).not.toBeInTheDocument()
       
       // Verify initial auth state
       expectAuthState({
@@ -481,7 +482,7 @@ describe('LoginPage', () => {
       await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
       
       await waitFor(() => {
-        expect(screen.getByText(/código de verificação/i)).toBeInTheDocument()
+        expect(screen.getByText(/verificação em duas etapas/i)).toBeInTheDocument()
       })
       
       // Verify 2FA state
@@ -500,7 +501,7 @@ describe('LoginPage', () => {
       // Back to LOGIN step
       await waitFor(() => {
         expect(screen.getByText('Entrar na sua conta')).toBeInTheDocument()
-        expect(screen.queryByText(/código de verificação/i)).not.toBeInTheDocument()
+        expect(screen.queryByText(/verificação em duas etapas/i)).not.toBeInTheDocument()
       })
       
       // Verify auth state was cleared
@@ -629,7 +630,7 @@ describe('LoginPage', () => {
       
       // Go to 2FA step
       await waitFor(() => {
-        expect(screen.getByText(/código de verificação/i)).toBeInTheDocument()
+        expect(screen.getByText(/verificação em duas etapas/i)).toBeInTheDocument()
       })
       
       // Verify 2FA state is set correctly

@@ -67,6 +67,14 @@ class User(UserBase, table=True):
         default=None, description="List of backup codes for 2FA recovery", sa_column=Column(JSON)
     )
 
+    # Security fields
+    failed_login_attempts: int = Field(
+        default=0, description="Number of consecutive failed login attempts"
+    )
+    account_locked_until: datetime | None = Field(
+        default=None, description="Timestamp until which account is locked"
+    )
+
     # Relationships
     created_clients: list["Client"] = Relationship(
         back_populates="creator", sa_relationship_kwargs={"foreign_keys": "Client.created_by"}

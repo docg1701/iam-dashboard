@@ -200,13 +200,12 @@ class TestPermissionServiceIntegration:
         self, permission_service: PermissionService, test_user: User, sysadmin_user: User
     ) -> None:
         """Test revoking non-existent permission."""
-        result = await permission_service.revoke_permission(
-            user_id=test_user.user_id,
-            agent_name=AgentName.CLIENT_MANAGEMENT,
-            revoked_by_user_id=sysadmin_user.user_id,
-        )
-
-        assert result is False
+        with pytest.raises(NotFoundError, match="Permission for user .* on agent client_management not found"):
+            await permission_service.revoke_permission(
+                user_id=test_user.user_id,
+                agent_name=AgentName.CLIENT_MANAGEMENT,
+                revoked_by_user_id=sysadmin_user.user_id,
+            )
 
     async def test_bulk_assign_permissions_success(
         self,

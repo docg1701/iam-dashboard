@@ -47,11 +47,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 // Types for the component
 interface User {
   user_id: string
-  name: string
+  full_name?: string
   email: string
   role: 'sysadmin' | 'admin' | 'user'
   is_active: boolean
   created_at: string
+  updated_at: string
+  totp_enabled: boolean
   last_login?: string
 }
 
@@ -352,7 +354,7 @@ export const UserPermissionsDialog: React.FC<UserPermissionsDialogProps> = ({
 
       toast({
         title: 'Permissões atualizadas',
-        description: `Permissões de ${user.name} foram atualizadas com sucesso.`,
+        description: `Permissões de ${user.full_name} foram atualizadas com sucesso.`,
         variant: 'success',
       })
 
@@ -400,7 +402,7 @@ export const UserPermissionsDialog: React.FC<UserPermissionsDialogProps> = ({
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <User className="h-5 w-5 mr-2" />
-              Permissões de {user.name}
+              Permissões de {user.full_name}
             </DialogTitle>
             <DialogDescription>
               Gerencie as permissões de acesso aos agentes para este usuário
@@ -413,7 +415,7 @@ export const UserPermissionsDialog: React.FC<UserPermissionsDialogProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label className="text-xs text-muted-foreground">Nome Completo</Label>
-                  <p className="font-medium">{user.name}</p>
+                  <p className="font-medium">{user.full_name}</p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Email</Label>

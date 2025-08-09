@@ -8,10 +8,11 @@ including CRUD operations and role management.
 import math
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlmodel import Session
 
 from src.core.database import get_session
+from src.core.exceptions import ValidationError, NotFoundError, ConflictError
 from src.core.security import TokenData, require_role_with_fallback
 from src.schemas.common import PaginatedResponse, PaginationInfo, SuccessResponse
 from src.schemas.users import (
@@ -32,7 +33,7 @@ async def list_users(
     params: UserSearchParams = Depends(),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
-    token_data: TokenData = Depends(require_role_with_fallback("admin")),
+    token_data: TokenData = require_role_with_fallback("admin"),
     session: Session = Depends(get_session),
 ) -> PaginatedResponse[UserListItem]:
     """
@@ -80,7 +81,7 @@ async def list_users(
 async def create_user(
     request: Request,
     user_data: UserCreateRequest,
-    token_data: TokenData = Depends(require_role_with_fallback("sysadmin")),
+    token_data: TokenData = require_role_with_fallback("sysadmin"),
     session: Session = Depends(get_session),
 ) -> UserResponse:
     """
@@ -112,7 +113,7 @@ async def create_user(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: UUID,
-    token_data: TokenData = Depends(require_role_with_fallback("user")),
+    token_data: TokenData = require_role_with_fallback("user"),
     session: Session = Depends(get_session),
 ) -> UserResponse:
     """
@@ -131,12 +132,24 @@ async def get_user(
     """
     user_service = UserService(session)
 
-    user = await user_service.get_user_by_id(
-        user_id=user_id,
-        requesting_user_id=token_data.user_id,
-    )
+    try:
+        user = await user_service.get_user_by_id(
+            user_id=user_id,
+            requesting_user_id=token_data.user_id,
+        )
 
-    return UserResponse.model_validate(user)
+        return UserResponse.model_validate(user)
+        
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        ) from e
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        ) from e
 
 
 @router.put("/{user_id}", response_model=UserResponse)
@@ -144,7 +157,7 @@ async def update_user(
     user_id: UUID,
     user_data: UserUpdateRequest,
     request: Request,
-    token_data: TokenData = Depends(require_role_with_fallback("user")),
+    token_data: TokenData = require_role_with_fallback("user"),
     session: Session = Depends(get_session),
 ) -> UserResponse:
     """
@@ -165,21 +178,38 @@ async def update_user(
     """
     user_service = UserService(session)
 
-    updated_user = await user_service.update_user(
-        user_id=user_id,
-        user_data=user_data,
-        updated_by_user_id=token_data.user_id,
-        request=request,
-    )
+    try:
+        updated_user = await user_service.update_user(
+            user_id=user_id,
+            user_data=user_data,
+            updated_by_user_id=token_data.user_id,
+            request=request,
+        )
 
-    return UserResponse.model_validate(updated_user)
+        return UserResponse.model_validate(updated_user)
+        
+    except ValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(e)
+        ) from e
+    except NotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        ) from e
+    except ConflictError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        ) from e
 
 
 @router.delete("/{user_id}", response_model=SuccessResponse)
 async def delete_user(
     user_id: UUID,
     request: Request,
-    token_data: TokenData = Depends(require_role_with_fallback("sysadmin")),
+    token_data: TokenData = require_role_with_fallback("sysadmin"),
     session: Session = Depends(get_session),
 ) -> SuccessResponse:
     """

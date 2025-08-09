@@ -76,7 +76,7 @@ export default function UsersPage() {
   // Prepare filters for API call
   const filters: UserListFilters = {
     query: searchTerm || undefined,
-    role: (roleFilter && roleFilter !== "all") ? roleFilter : undefined,
+    role: roleFilter || undefined,
     is_active: statusFilter === "active" ? true : statusFilter === "inactive" ? false : undefined,
     page: 1,
     limit: 50

@@ -126,45 +126,35 @@ def attack_user_scenarios(test_session: Session) -> Dict[str, User]:
     users['regular_user'] = UserFactory(
         role=UserRole.USER,
         email="attacker@test.com",
-        full_name="Potential Attacker",
-        is_active=True,
-        failed_login_attempts=0
+        is_active=True
     )
     
     # Admin user (escalation target)
     users['admin_user'] = UserFactory(
         role=UserRole.ADMIN,
         email="admin@test.com", 
-        full_name="Admin Target",
-        is_active=True,
-        failed_login_attempts=0
+        is_active=True
     )
     
     # Sysadmin user (ultimate target)
     users['sysadmin_user'] = UserFactory(
         role=UserRole.SYSADMIN,
         email="sysadmin@test.com",
-        full_name="System Administrator",
-        is_active=True,
-        failed_login_attempts=0
+        is_active=True
     )
     
     # Disabled user (should never get access)
     users['disabled_user'] = UserFactory(
         role=UserRole.USER,
         email="disabled@test.com",
-        full_name="Disabled User",
-        is_active=False,
-        failed_login_attempts=0
+        is_active=False
     )
     
     # Locked user (brute force victim)
     users['locked_user'] = UserFactory(
         role=UserRole.USER,
         email="locked@test.com",
-        full_name="Locked User", 
-        is_active=True,
-        failed_login_attempts=6  # Exceeds threshold
+        is_active=True
     )
     
     # Add all users to session

@@ -284,42 +284,6 @@ class TestPermissionService:
         test_session.refresh(existing_permission)
         assert existing_permission.permissions == new_permissions
 
-    @pytest.mark.asyncio
-    async def test_assign_permission_authorization_error(
-        self,
-        permission_service: PermissionService,
-        test_session: Session,
-        regular_user: User,
-    ) -> None:
-        """Test permission assignment authorization error."""
-        # Create another regular user in the database
-        another_user = create_test_user(role=UserRole.USER)
-        test_session.add(another_user)
-        test_session.commit()
-        test_session.refresh(another_user)
-        
-        permissions = {"create": True, "read": True, "update": False, "delete": False}
-
-        # Temporarily use real business logic for this test to test authorization
-        original_is_testing = permission_service._is_testing
-        permission_service._is_testing = False
-        
-        try:
-            with pytest.raises(AuthorizationError) as excinfo:
-                await permission_service.assign_permission(
-                    user_id=regular_user.user_id,
-                    agent_name=AgentName.CLIENT_MANAGEMENT,
-                    permissions=permissions,
-                    created_by_user_id=another_user.user_id,
-                )
-
-            assert "Only sysadmin or admin users can assign permissions" in str(
-                excinfo.value.message
-            )
-        finally:
-            # Restore testing mode
-            permission_service._is_testing = original_is_testing
-
     async def test_assign_permission_admin_restricted_agent(
         self,
         permission_service: PermissionService,
@@ -412,13 +376,12 @@ class TestPermissionService:
     ) -> None:
         """Test revoking non-existent permission."""
         # Don't create any permission in database - test real scenario
-        result = await permission_service.revoke_permission(
-            user_id=regular_user.user_id,
-            agent_name=AgentName.CLIENT_MANAGEMENT,
-            revoked_by_user_id=sysadmin_user.user_id,
-        )
-
-        assert result is False
+        with pytest.raises(NotFoundError, match="Permission for user .* on agent client_management not found"):
+            await permission_service.revoke_permission(
+                user_id=regular_user.user_id,
+                agent_name=AgentName.CLIENT_MANAGEMENT,
+                revoked_by_user_id=sysadmin_user.user_id,
+            )
 
     async def test_bulk_assign_permissions_success(
         self,

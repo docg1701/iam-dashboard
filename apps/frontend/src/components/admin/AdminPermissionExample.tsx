@@ -10,6 +10,7 @@
 import React, { useState } from 'react'
 import { Users, Settings, Layout } from 'lucide-react'
 import { BulkPermissionAssignResponse } from '@/types/permissions'
+import { User } from '@/types/auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -23,27 +24,33 @@ import {
 const EXAMPLE_USERS = [
   {
     user_id: '1',
-    name: 'João Silva',
+    full_name: 'João Silva',
     email: 'joao.silva@empresa.com',
     role: 'user' as const,
     is_active: true,
+    totp_enabled: false,
     created_at: '2024-01-15T10:00:00Z',
+    updated_at: '2024-01-15T10:00:00Z',
   },
   {
     user_id: '2',
-    name: 'Maria Santos',
+    full_name: 'Maria Santos',
     email: 'maria.santos@empresa.com',
     role: 'admin' as const,
     is_active: true,
+    totp_enabled: true,
     created_at: '2024-01-20T14:30:00Z',
+    updated_at: '2024-01-20T14:30:00Z',
   },
   {
     user_id: '3',
-    name: 'Pedro Costa',  
+    full_name: 'Pedro Costa',  
     email: 'pedro.costa@empresa.com',
     role: 'user' as const,
     is_active: false,
+    totp_enabled: false,
     created_at: '2024-02-01T09:15:00Z',
+    updated_at: '2024-02-01T09:15:00Z',
   },
 ]
 
@@ -52,7 +59,7 @@ const EXAMPLE_USERS = [
  */
 export const AdminPermissionExample: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'matrix' | 'templates'>('matrix')
-  const [selectedUser] = useState<typeof EXAMPLE_USERS[0] | null>(null)
+  const [selectedUser] = useState<User | null>(null)
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [userDialogOpen, setUserDialogOpen] = useState(false)
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false)
@@ -221,10 +228,12 @@ export const AdminPermissionExample: React.FC = () => {
       />
       
       <BulkPermissionDialog
-        users={EXAMPLE_USERS.filter(u => selectedUsers.includes(u.user_id))}
+        selectedUsers={EXAMPLE_USERS.filter(u => selectedUsers.includes(u.user_id))}
         open={bulkDialogOpen}
-        onOpenChange={setBulkDialogOpen}
-        onBulkOperationComplete={handleBulkOperationComplete}
+        onClose={() => setBulkDialogOpen(false)}
+        onComplete={(results) => {
+          console.log('Bulk operation completed:', results)
+        }}
       />
     </div>
   )

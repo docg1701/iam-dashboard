@@ -43,6 +43,8 @@ describe('NewClientPage', () => {
     cpf: '123.456.789-09', // Formatted by backend
     birth_date: '1990-05-15',
     status: 'active',
+    created_by: 'user-123',
+    updated_by: 'user-123',
     created_at: '2023-01-01T00:00:00Z',
     updated_at: '2023-01-01T00:00:00Z'
   }
@@ -103,12 +105,12 @@ describe('NewClientPage', () => {
 
       await userEvent.type(nameInput, mockClientData.full_name)
       await userEvent.type(cpfInput, mockClientData.cpf)
-      await userEvent.type(birthDateInput, mockClientData.birth_date)
+      await userEvent.type(birthDateInput!, mockClientData.birth_date)
 
       expect(nameInput).toHaveValue(mockClientData.full_name)
-      // CPF gets formatted by the form component
-      expect(cpfInput.value).toMatch(/\d{3}-\d{2}-\d{4}/)
-      expect(birthDateInput).toHaveValue(mockClientData.birth_date)
+      // CPF gets formatted by the form component to Brazilian format
+      expect((cpfInput as HTMLInputElement).value).toMatch(/\d{3}\.\d{3}\.\d{3}-\d{2}/)
+      expect(birthDateInput!).toHaveValue(mockClientData.birth_date)
     })
 
     test('validates required fields', async () => {
@@ -143,7 +145,7 @@ describe('NewClientPage', () => {
       // Fill form
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
       await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)
-      await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
+      await userEvent.type(document.querySelector('input[name="birth_date"]')!, mockClientData.birth_date)
 
       // Submit form
       await userEvent.click(screen.getByRole('button', { name: /criar cliente/i }))
@@ -167,7 +169,7 @@ describe('NewClientPage', () => {
       // Fill and submit form
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
       await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)
-      await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
+      await userEvent.type(document.querySelector('input[name="birth_date"]')!, mockClientData.birth_date)
       await userEvent.click(screen.getByRole('button', { name: /criar cliente/i }))
 
       // Wait for success state
@@ -185,7 +187,7 @@ describe('NewClientPage', () => {
       // Fill and submit form
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
       await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)
-      await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
+      await userEvent.type(document.querySelector('input[name="birth_date"]')!, mockClientData.birth_date)
       await userEvent.click(screen.getByRole('button', { name: /criar cliente/i }))
 
       // Wait for success and click create another
@@ -204,16 +206,13 @@ describe('NewClientPage', () => {
 
   describe('Error Handling', () => {
     test('handles API errors gracefully', async () => {
-      mockFailedFetch('/api/v1/clients', { 
-        message: 'CPF já existe no sistema',
-        status: 400 
-      })
+      mockFailedFetch('/api/v1/clients', 'CPF já existe no sistema', 400)
       renderNewClientPage()
 
       // Fill and submit form
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
       await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)
-      await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
+      await userEvent.type(document.querySelector('input[name="birth_date"]')!, mockClientData.birth_date)
       await userEvent.click(screen.getByRole('button', { name: /criar cliente/i }))
 
       // Should remain on form (no success state)
@@ -226,16 +225,13 @@ describe('NewClientPage', () => {
     })
 
     test('handles network errors', async () => {
-      mockFailedFetch('/api/v1/clients', { 
-        message: 'Network error',
-        status: 500 
-      })
+      mockFailedFetch('/api/v1/clients', 'Network error', 500)
       renderNewClientPage()
 
       // Fill and submit form
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
       await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)  
-      await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
+      await userEvent.type(document.querySelector('input[name="birth_date"]')!, mockClientData.birth_date)
       await userEvent.click(screen.getByRole('button', { name: /criar cliente/i }))
 
       // Should handle error gracefully
@@ -265,7 +261,7 @@ describe('NewClientPage', () => {
       // Create client
       await userEvent.type(screen.getByPlaceholderText(/joão silva santos/i), mockClientData.full_name)
       await userEvent.type(screen.getByPlaceholderText(/123\.456\.789-12/i), mockClientData.cpf)
-      await userEvent.type(document.querySelector('input[name="birth_date"]'), mockClientData.birth_date)
+      await userEvent.type(document.querySelector('input[name="birth_date"]')!, mockClientData.birth_date)
       await userEvent.click(screen.getByRole('button', { name: /criar cliente/i }))
 
       // Click view client

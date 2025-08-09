@@ -32,12 +32,6 @@ export const createTestQueryClient = () => new QueryClient({
       // Always allow network requests (for mocked fetch)
       networkMode: 'always',
     }
-  },
-  // Suppress all logging during tests for clean output
-  logger: {
-    log: () => {},
-    warn: () => {},
-    error: () => {},
   }
 })
 

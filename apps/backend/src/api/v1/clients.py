@@ -374,3 +374,101 @@ async def delete_client(
                 "error_code": "INTERNAL_ERROR",
             },
         ) from e
+
+
+@router.post("/batch", response_model=dict)
+async def batch_update_clients(
+    batch_data: dict,
+    request: Request,
+    session: Session = Depends(get_session),
+    token_data: TokenData = require_client_management_access("update"),
+) -> dict:
+    """
+    Batch update operation for clients with ownership validation.
+
+    This endpoint performs batch operations on multiple clients while ensuring
+    that only resources owned by the current user are processed.
+
+    Args:
+        batch_data: Batch operation data including client_ids and operation
+        request: FastAPI request object for audit logging
+        session: Database session dependency
+        token_data: Current user token data for authorization and ownership validation
+
+    Returns:
+        dict: Batch operation results with processed and unauthorized clients
+
+    Raises:
+        HTTPException: 403 for unauthorized resources, 400 for validation errors
+    """
+    try:
+        client_ids = batch_data.get("client_ids", [])
+        operation = batch_data.get("operation", "")
+        operation_data = batch_data.get("data", {})
+
+        if not client_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No client IDs provided for batch operation"
+            )
+
+        if not operation:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No operation specified for batch operation"
+            )
+
+        # Initialize client service
+        client_service = ClientService(session)
+
+        # Validate ownership for each client - only process owned clients
+        processed = []
+        unauthorized = []
+        
+        for client_id in client_ids:
+            try:
+                # Check if user owns this client by trying to get it
+                client = await client_service.get_client_by_id(
+                    client_id=UUID(client_id),
+                    user_id=token_data.user_id,
+                    request=request,
+                )
+                
+                # If we get here, user owns the client
+                if operation == "update":
+                    # Perform update operation
+                    updated_client = await client_service.update_client(
+                        client_id=UUID(client_id),
+                        client_data=ClientUpdate(**operation_data),
+                        user_id=token_data.user_id,
+                        request=request,
+                    )
+                    processed.append(str(client_id))
+                    
+            except (DashboardException, HTTPException, ValueError):
+                # Client not found or not owned by user
+                unauthorized.append(str(client_id))
+                continue
+
+        # Return batch operation results
+        return {
+            "operation": operation,
+            "total_requested": len(client_ids),
+            "processed": processed,
+            "unauthorized": unauthorized,
+            "success_count": len(processed),
+            "unauthorized_count": len(unauthorized),
+        }
+
+    except DashboardException as e:
+        # Convert custom exceptions to HTTP exceptions
+        raise dashboard_exception_to_http(e) from e
+    except Exception as e:
+        # Handle unexpected errors
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": "An unexpected error occurred during batch operation",
+                "error_code": "INTERNAL_ERROR",
+            },
+        ) from e

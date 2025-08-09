@@ -22,8 +22,7 @@ const createTestQueryClient = () => {
     defaultOptions: {
       queries: { retry: false, gcTime: 0, staleTime: 0 },
       mutations: { retry: false }
-    },
-    logger: { log: () => {}, warn: () => {}, error: () => {} }
+    }
   })
 }
 
@@ -105,7 +104,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Step 2: Fill CPF with automatic formatting
       await user.type(cpfField, '12345678901')
-      expect(cpfField).toHaveValue('123.456.789-09')
+      expect(cpfField).toHaveValue('123.456.789-01')
       
       // Step 3: Fill birth date
       await user.type(birthDateField, '1990-05-15')
@@ -127,7 +126,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       await waitFor(() => {
         expect(mockOnSubmit).toHaveBeenCalledWith({
           full_name: 'João Silva Santos',
-          cpf: '123.456.789-09',
+          cpf: '123.456.789-01',
           birth_date: '1990-05-15',
           notes: 'Cliente preferencial com histórico excelente'
         })
@@ -208,7 +207,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Form should retain values for correction
       expect(nameField).toHaveValue('Maria Silva')
-      expect(cpfField).toHaveValue('123.456.789-09')
+      expect(cpfField).toHaveValue('123.456.789-01')
       expect(birthDateField).toHaveValue('1985-03-10')
     })
 
@@ -254,7 +253,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       
       // Should not reset form on error
       expect(nameField).toHaveValue('João Silva')
-      expect(cpfField).toHaveValue('123.456.789-09')
+      expect(cpfField).toHaveValue('123.456.789-01')
       expect(birthDateField).toHaveValue('1990-05-15')
     })
 
@@ -328,7 +327,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       })
       
       // Other fields should maintain their values
-      expect(cpfField).toHaveValue('123.456.789-09')
+      expect(cpfField).toHaveValue('123.456.789-01')
       expect(birthDateField).toHaveValue('1990-05-15')
       expect(notesField).toHaveValue('Some notes')
       
@@ -438,7 +437,7 @@ describe('ClientRegistrationForm - Integration Tests', () => {
       // During loading, form should show loading state but preserve values
       expect(screen.getByText(/criando cliente/i)).toBeInTheDocument()
       expect(nameField).toHaveValue('João Silva')
-      expect(cpfField).toHaveValue('123.456.789-09')
+      expect(cpfField).toHaveValue('123.456.789-01')
       expect(birthDateField).toHaveValue('1990-05-15')
       
       // Fields should be disabled during loading

@@ -6,9 +6,9 @@
  */
 
 import React from 'react'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 
 import { usePermissionCheck, useUserPermissions } from '../useUserPermissions'
 import { AgentName } from '@/types/permissions'
@@ -46,7 +46,22 @@ describe('useUserPermissions Debug', () => {
       send: vi.fn(),
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
-    }))
+      CONNECTING: 0,
+      OPEN: 1,
+      CLOSING: 2,
+      CLOSED: 3,
+      readyState: 1,
+      url: '',
+      protocol: '',
+      extensions: '',
+      bufferedAmount: 0,
+      binaryType: 'blob' as BinaryType,
+      onopen: null,
+      onclose: null,
+      onmessage: null,
+      onerror: null,
+      dispatchEvent: vi.fn(),
+    })) as any
   })
 
   afterEach(() => {
@@ -61,19 +76,21 @@ describe('useUserPermissions Debug', () => {
       email: 'debug.admin@test.com'
     })
 
-    // Setup auth state
-    setupAuthenticatedUser('admin')
-    useAuthStore.setState({ user: limitedAdminUser })
+    await act(async () => {
+      // Setup auth state
+      setupAuthenticatedUser('admin')
+      useAuthStore.setState({ user: limitedAdminUser })
 
-    // Setup API mock with NO delete permission for PDF processing
-    const adminPermissions = [
-      createMockUserAgentPermission(limitedAdminUser.user_id, AgentName.PDF_PROCESSING, 
-        { create: true, read: true, update: true, delete: false }) // NO delete permission
-    ]
+      // Setup API mock with NO delete permission for PDF processing
+      const adminPermissions = [
+        createMockUserAgentPermission(limitedAdminUser.user_id, AgentName.PDF_PROCESSING, 
+          { create: true, read: true, update: true, delete: false }) // NO delete permission
+      ]
 
-    setupPermissionAPITest({ 
-      userId: limitedAdminUser.user_id,
-      userPermissions: adminPermissions
+      setupPermissionAPITest({ 
+        userId: limitedAdminUser.user_id,
+        userPermissions: adminPermissions
+      })
     })
 
     // Test the hook directly
@@ -104,19 +121,21 @@ describe('useUserPermissions Debug', () => {
       email: 'matrix.admin@test.com'
     })
 
-    // Setup auth state
-    setupAuthenticatedUser('admin')
-    useAuthStore.setState({ user: limitedAdminUser })
+    await act(async () => {
+      // Setup auth state
+      setupAuthenticatedUser('admin')
+      useAuthStore.setState({ user: limitedAdminUser })
 
-    // Setup API mock with NO delete permission for PDF processing
-    const adminPermissions = [
-      createMockUserAgentPermission(limitedAdminUser.user_id, AgentName.PDF_PROCESSING, 
-        { create: true, read: true, update: true, delete: false }) // NO delete permission
-    ]
+      // Setup API mock with NO delete permission for PDF processing
+      const adminPermissions = [
+        createMockUserAgentPermission(limitedAdminUser.user_id, AgentName.PDF_PROCESSING, 
+          { create: true, read: true, update: true, delete: false }) // NO delete permission
+      ]
 
-    setupPermissionAPITest({ 
-      userId: limitedAdminUser.user_id,
-      userPermissions: adminPermissions
+      setupPermissionAPITest({ 
+        userId: limitedAdminUser.user_id,
+        userPermissions: adminPermissions
+      })
     })
 
     // Test the main hook

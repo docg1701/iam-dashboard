@@ -52,6 +52,8 @@ class PasswordSecurityService:
         self.max_failed_attempts = 5  # Lock account after 5 failed attempts
         self.lockout_duration_minutes = 15  # Lock account for 15 minutes
         self.password_history_count = 5  # Remember last 5 passwords
+        self.rate_limit_window_seconds = 60  # Rate limiting window
+        self.rate_limit_max_attempts = 3  # Max attempts per window (lower than lockout threshold)
 
     def generate_reset_token(self, user_id: UUID, user_email: str) -> str:
         """Generate a secure password reset token."""
@@ -100,7 +102,7 @@ class PasswordSecurityService:
             if self.redis_client is not None:
                 self.redis_client.delete(f"password_reset:{token}")
 
-    def record_login_attempt(self, email: str, ip_address: str, success: bool) -> None:
+    def record_login_attempt(self, email: str, ip_address: str, success: bool, user=None, session=None) -> None:
         """Record a login attempt for tracking failed attempts."""
         attempt = LoginAttempt(
             email=email,
@@ -108,6 +110,23 @@ class PasswordSecurityService:
             attempted_at=datetime.utcnow().isoformat(),
             success=success,
         )
+
+        # Track failed attempts in database if user and session provided
+        if user is not None and session is not None:
+            if success:
+                # Clear failed attempts on successful login
+                user.failed_login_attempts = 0
+                user.account_locked_until = None
+            else:
+                # Increment failed attempts
+                user.failed_login_attempts += 1
+                
+                # Lock account if threshold exceeded
+                if user.failed_login_attempts > self.max_failed_attempts:
+                    user.account_locked_until = datetime.utcnow() + timedelta(minutes=self.lockout_duration_minutes)
+            
+            session.add(user)
+            session.commit()
 
         try:
             # Store in Redis with expiration based on lockout duration
@@ -125,8 +144,25 @@ class PasswordSecurityService:
             # If Redis is unavailable, don't fail the login process
             pass
 
-    def is_account_locked(self, email: str) -> bool:
+    def is_account_locked(self, email: str, user=None) -> bool:
         """Check if an account is locked due to failed login attempts."""
+        # First check database lockout if user provided
+        if user is not None:
+            if user.account_locked_until:
+                # Check if lockout has expired
+                if datetime.utcnow() < user.account_locked_until:
+                    return True
+                else:
+                    # Lockout has expired, clear it
+                    user.account_locked_until = None
+                    user.failed_login_attempts = 0
+                    return False
+            
+            # Also check if failed attempts exceed threshold (in case lockout timestamp is missing)
+            if user.failed_login_attempts > self.max_failed_attempts:
+                return True
+
+        # Fall back to Redis-based checking
         try:
             attempts_json = []
             if self.redis_client is not None:
@@ -240,6 +276,59 @@ class PasswordSecurityService:
             "unlock_in_minutes": self.lockout_duration_minutes,
             "failed_attempts": self.max_failed_attempts,
         }
+
+    def is_rate_limited(self, email: str, ip_address: str) -> bool:
+        """Check if login attempts are being rate limited."""
+        try:
+            # Check rate limiting by email
+            email_key = f"rate_limit_email:{email}"
+            ip_key = f"rate_limit_ip:{ip_address}"
+            
+            current_time = datetime.utcnow()
+            window_start = current_time - timedelta(seconds=self.rate_limit_window_seconds)
+            
+            if self.redis_client is not None:
+                # Count recent attempts by email
+                attempts_json = self.redis_client.lrange(f"login_attempts:{email}", 0, -1)
+                recent_attempts = 0
+                for attempt_json in attempts_json:
+                    try:
+                        attempt = LoginAttempt.model_validate_json(attempt_json)
+                        attempt_time = datetime.fromisoformat(attempt.attempted_at)
+                        if attempt_time > window_start:
+                            recent_attempts += 1
+                    except Exception:
+                        continue
+                
+                if recent_attempts > self.rate_limit_max_attempts:
+                    return True
+                
+                # Also check by IP address (simple counter)
+                ip_attempts = self.redis_client.get(ip_key)
+                if ip_attempts and int(ip_attempts) > self.rate_limit_max_attempts:
+                    return True
+            
+            return False
+            
+        except Exception:
+            # If Redis is unavailable, don't rate limit
+            return False
+
+    def record_rate_limit_attempt(self, ip_address: str) -> None:
+        """Record an attempt for rate limiting by IP."""
+        try:
+            if self.redis_client is not None:
+                ip_key = f"rate_limit_ip:{ip_address}"
+                
+                # Increment counter
+                self.redis_client.incr(ip_key)
+                
+                # Set expiration if it's a new key
+                self.redis_client.expire(ip_key, self.rate_limit_window_seconds)
+                
+        except Exception:
+            # If Redis is unavailable, don't fail
+            pass
 
 
 # Global password security service instance

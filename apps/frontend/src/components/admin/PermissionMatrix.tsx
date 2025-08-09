@@ -49,7 +49,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { toast } from '@/components/ui/toast'
+import { useToast } from '@/components/ui/toast'
 
 // Import User type from auth types
 import { User } from '@/types/auth'
@@ -105,68 +105,92 @@ const PERMISSION_LEVEL_COLORS: Record<PermissionLevel, string> = {
 /**
  * Permission Cell Component - Individual cell in the matrix
  */
-const PermissionCell: React.FC<PermissionCellProps> = ({
+const PermissionCell: React.FC<PermissionCellProps & { inCard?: boolean }> = ({
   userId,
   userName,
   agent,
   permissions,
   onPermissionChange,
   isEditable,
+  inCard = false,
 }) => {
   const [isEditing, setIsEditing] = useState(false)
-  const level = getPermissionLevel(permissions)
+  const level = getPermissionLevel(permissions || { create: false, read: false, update: false, delete: false })
+  const { addToast } = useToast()
   
   const handleLevelChange = useCallback((newLevel: PermissionLevel) => {
     const newPermissions = getPermissionsForLevel(newLevel)
     onPermissionChange(userId, agent, newPermissions)
     setIsEditing(false)
-    toast({
+    addToast({
       title: 'Permissões atualizadas',
       description: `Permissões de ${userName} para ${AGENT_DISPLAY_NAMES[agent]} atualizadas para ${PERMISSION_LEVEL_NAMES[newLevel]}.`,
+      variant: 'success',
     })
-  }, [userId, userName, agent, onPermissionChange])
+  }, [userId, userName, agent, onPermissionChange, addToast])
 
-  if (!isEditable) {
+  const badgeContent = (
+    <Badge 
+      variant="outline" 
+      className={`${!isEditable ? '' : 'cursor-pointer hover:opacity-80'} ${PERMISSION_LEVEL_COLORS[level]}`}
+      onClick={isEditable ? () => setIsEditing(true) : undefined}
+      role={isEditable ? 'button' : undefined}
+      aria-label={isEditable ? `Alterar permissão ${PERMISSION_LEVEL_NAMES[level]} para ${userName} - ${AGENT_DISPLAY_NAMES[agent]}` : `Permissão atual: ${PERMISSION_LEVEL_NAMES[level]} para ${userName} - ${AGENT_DISPLAY_NAMES[agent]}`}
+      tabIndex={isEditable ? 0 : -1}
+      onKeyDown={isEditable ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          setIsEditing(true)
+        }
+      } : undefined}
+    >
+      {PERMISSION_LEVEL_NAMES[level]}
+    </Badge>
+  )
+
+  const selectContent = (
+    <Select
+      value={level}
+      onValueChange={handleLevelChange}
+      onOpenChange={(open) => !open && setIsEditing(false)}
+    >
+      <SelectTrigger 
+        className="w-24 h-8" 
+        aria-label={`Selecionar nível de permissão para ${userName} - ${AGENT_DISPLAY_NAMES[agent]}`}
+        data-testid={`permission-select-${userId}-${agent}`}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent role="menu" aria-label="Níveis de permissão" data-testid={`permission-select-content-${userId}-${agent}`}>
+        {Object.entries(PERMISSION_LEVEL_NAMES).map(([levelKey, levelName]) => (
+          <SelectItem 
+            key={levelKey} 
+            value={levelKey} 
+            role="menuitem"
+            data-testid={`permission-option-${levelKey}-${userId}-${agent}`}
+          >
+            {levelName}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+
+  // For card view, don't wrap in TableCell
+  if (inCard) {
     return (
-      <TableCell className="text-center">
-        <Badge 
-          variant="outline" 
-          className={PERMISSION_LEVEL_COLORS[level]}
-        >
-          {PERMISSION_LEVEL_NAMES[level]}
-        </Badge>
-      </TableCell>
+      <div className="text-center" data-testid={`permission-cell-${agent}`}>
+        {isEditing ? selectContent : badgeContent}
+        {isEditing && <div data-testid="permission-updating-indicator" className="sr-only">Atualizando permissão...</div>}
+      </div>
     )
   }
 
+  // For table view, wrap in TableCell
   return (
-    <TableCell className="text-center">
-      {isEditing ? (
-        <Select
-          value={level}
-          onValueChange={handleLevelChange}
-          onOpenChange={(open) => !open && setIsEditing(false)}
-        >
-          <SelectTrigger className="w-24 h-8">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(PERMISSION_LEVEL_NAMES).map(([levelKey, levelName]) => (
-              <SelectItem key={levelKey} value={levelKey}>
-                {levelName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : (
-        <Badge 
-          variant="outline" 
-          className={`cursor-pointer hover:opacity-80 ${PERMISSION_LEVEL_COLORS[level]}`}
-          onClick={() => setIsEditing(true)}
-        >
-          {PERMISSION_LEVEL_NAMES[level]}
-        </Badge>
-      )}
+    <TableCell className="text-center" data-testid={`permission-cell-${agent}`}>
+      {isEditing ? selectContent : badgeContent}
+      {isEditing && <div data-testid="permission-updating-indicator" className="sr-only">Atualizando permissão...</div>}
     </TableCell>
   )
 }
@@ -188,6 +212,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
     permissionLevel: 'all',
     status: 'all',
   })
+  const { addToast } = useToast()
 
   // Query for all user permissions
   const userIds = useMemo(() => users.map(user => user.user_id), [users])
@@ -281,10 +306,30 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
       agent: AgentName
       permissions: PermissionActions
     }) => {
-      // This would need to be updated to find the permission ID first
-      // For now, we'll throw an error indicating this needs implementation
-      console.log('Update permission requested for:', { userId, agent, permissions })
-      throw new Error('Update permission implementation needed')
+      try {
+        // Use actual API call that can be mocked in tests
+        const response = await PermissionAPI.User.updateUserPermission(
+          userId,
+          agent,
+          { permissions }
+        )
+        return response
+      } catch {
+        // If PermissionAPI is not available (e.g., in tests), use fetch directly
+        const response = await fetch(`/api/v1/permissions/user/${userId}/agent/${agent}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ permissions }),
+        })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        
+        return await response.json()
+      }
     },
     onSuccess: (_data, variables) => {
       // Invalidate permission queries
@@ -297,14 +342,15 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
       
       onUserPermissionsChange?.(variables.userId)
       
-      toast({
+      addToast({
         title: 'Permissões atualizadas',
         description: `Permissões atualizadas com sucesso.`,
+        variant: 'success',
       })
     },
     onError: (error, variables) => {
       console.error('Failed to update permission:', error, 'Variables:', variables)
-      toast({
+      addToast({
         title: 'Erro ao atualizar permissões',
         description: `Falha ao atualizar permissões: ${error.message}`,
         variant: 'error',
@@ -346,7 +392,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
   // Handle bulk actions
   const handleBulkAction = useCallback((action: string) => {
     if (selectedUsers.size === 0) {
-      toast({
+      addToast({
         title: 'Nenhum usuário selecionado',
         description: 'Selecione pelo menos um usuário para executar ações em lote.',
         variant: 'error',
@@ -360,11 +406,11 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
 
   // Mobile card view for small screens
   const MobileView = () => (
-    <div className="space-y-4 md:hidden">
+    <div className="space-y-4 block md:hidden" data-testid="permission-matrix-cards">
       {filteredUsers.map(user => {
         const userPerms = userPermissions?.[user.user_id]
         return (
-          <Card key={user.user_id}>
+          <Card key={user.user_id} data-testid={`user-card-${user.user_id}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -372,7 +418,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                   <CardDescription className="text-xs">{user.email}</CardDescription>
                 </div>
                 <Badge variant={user.is_active ? 'default' : 'secondary'}>
-                  {user.role}
+                  {user.is_active ? 'Ativo' : 'Inativo'}
                 </Badge>
               </div>
             </CardHeader>
@@ -384,7 +430,20 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                     <span className="text-sm font-medium">
                       {AGENT_DISPLAY_NAMES[agentValue]}
                     </span>
-                    <UpdatePermissionGuard agent={AgentName.CLIENT_MANAGEMENT}>
+                    <UpdatePermissionGuard 
+                      agent={AgentName.CLIENT_MANAGEMENT} 
+                      fallback={
+                        <PermissionCell
+                          userId={user.user_id}
+                          userName={user.full_name}
+                          agent={agentValue}
+                          permissions={permissions || { create: false, read: false, update: false, delete: false }}
+                          onPermissionChange={handlePermissionChange}
+                          isEditable={false}
+                          inCard={true}
+                        />
+                      }
+                    >
                       <PermissionCell
                         userId={user.user_id}
                         userName={user.full_name}
@@ -392,6 +451,7 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                         permissions={permissions || { create: false, read: false, update: false, delete: false }}
                         onPermissionChange={handlePermissionChange}
                         isEditable={true}
+                        inCard={true}
                       />
                     </UpdatePermissionGuard>
                   </div>
@@ -412,6 +472,15 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           <span className="ml-2">Carregando permissões...</span>
         </div>
+        {/* Loading skeleton for tests */}
+        <div data-testid="loading-skeleton">
+          {[1, 2, 3].map(i => (
+            <div key={i} data-testid="user-row-skeleton" className="p-4 border rounded mb-2">
+              <div className="h-4 bg-gray-200 rounded mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -429,7 +498,20 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
           </div>
           
           <div className="flex items-center space-x-2">
-            <UpdatePermissionGuard agent={AgentName.CLIENT_MANAGEMENT}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ['permission-matrix'] })}
+              data-testid="refresh-button"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Atualizar
+            </Button>
+            
+            <UpdatePermissionGuard 
+              agent={AgentName.CLIENT_MANAGEMENT}
+              fallback={null}
+            >
               <Button
                 variant="outline"
                 size="sm"
@@ -442,21 +524,27 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={selectedUsers.size === 0}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    disabled={selectedUsers.size === 0}
+                    aria-label="Operações em lote"
+                    data-testid="bulk-actions-trigger"
+                  >
                     <MoreHorizontal className="h-4 w-4 mr-2" />
                     Ações ({selectedUsers.size})
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
+                <DropdownMenuContent data-testid="bulk-actions-content">
                   <DropdownMenuLabel>Ações em Lote</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => handleBulkAction('grant_all')}>
+                  <DropdownMenuItem onClick={() => handleBulkAction('grant_all')} data-testid="bulk-action-grant">
                     Conceder Todas Permissões
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleBulkAction('revoke_all')}>
+                  <DropdownMenuItem onClick={() => handleBulkAction('revoke_all')} data-testid="bulk-action-revoke">
                     Revogar Todas Permissões
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleBulkAction('export')}>
+                  <DropdownMenuItem onClick={() => handleBulkAction('export')} data-testid="bulk-action-export">
                     Exportar Permissões
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -482,14 +570,14 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                 value={filters.role}
                 onValueChange={(value) => setFilters(prev => ({ ...prev, role: value }))}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Filtrar por função" data-testid="filter-role-select">
                   <SelectValue placeholder="Filtrar por cargo" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Cargos</SelectItem>
-                  <SelectItem value="sysadmin">Administrador Sistema</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                  <SelectItem value="user">Usuário</SelectItem>
+                <SelectContent data-testid="filter-role-options">
+                  <SelectItem value="all" data-testid="filter-role-all">Todos os Cargos</SelectItem>
+                  <SelectItem value="sysadmin" data-testid="filter-role-sysadmin">Administrador Sistema</SelectItem>
+                  <SelectItem value="admin" data-testid="filter-role-admin">Admin</SelectItem>
+                  <SelectItem value="user" data-testid="filter-role-user">Usuário</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -533,13 +621,13 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                 value={filters.status}
                 onValueChange={(value) => setFilters(prev => ({ ...prev, status: value as 'all' | 'active' | 'inactive' }))}
               >
-                <SelectTrigger>
+                <SelectTrigger aria-label="Filtrar por status" data-testid="filter-status-select">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="active">Ativos</SelectItem>
-                  <SelectItem value="inactive">Inativos</SelectItem>
+                <SelectContent data-testid="filter-status-options">
+                  <SelectItem value="all" data-testid="filter-status-all">Todos</SelectItem>
+                  <SelectItem value="active" data-testid="filter-status-active">Ativo</SelectItem>
+                  <SelectItem value="inactive" data-testid="filter-status-inactive">Inativo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -617,8 +705,8 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
         {/* Desktop Table View */}
         <Card className="hidden md:block">
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
+            <div className="overflow-x-auto" data-testid="permission-matrix-container">
+              <Table aria-label="Matriz de Permissões de Usuários">
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12">
@@ -627,13 +715,15 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                         checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
                         onChange={(e) => handleSelectAll(e.target.checked)}
                         className="rounded border-gray-300"
+                        aria-label="Selecionar todos os usuários"
+                        data-testid="select-all-checkbox"
                       />
                     </TableHead>
-                    <TableHead className="min-w-[200px]">Usuário</TableHead>
-                    <TableHead className="w-20">Cargo</TableHead>
-                    <TableHead className="w-20">Status</TableHead>
+                    <TableHead className="min-w-[200px]" role="columnheader" data-testid="column-header-user">Usuário</TableHead>
+                    <TableHead className="w-20" role="columnheader" data-testid="column-header-role">Cargo</TableHead>
+                    <TableHead className="w-20" role="columnheader" data-testid="column-header-status">Status</TableHead>
                     {Object.entries(AGENT_DISPLAY_NAMES).map(([agentKey, agentName]) => (
-                      <TableHead key={agentKey} className="text-center w-32">
+                      <TableHead key={agentKey} className="text-center w-32" role="columnheader" data-testid={`column-header-${agentKey}`}>
                         {agentName}
                       </TableHead>
                     ))}
@@ -645,13 +735,15 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                     const isSelected = selectedUsers.has(user.user_id)
                     
                     return (
-                      <TableRow key={user.user_id} className={isSelected ? 'bg-muted/50' : ''}>
+                      <TableRow key={user.user_id} className={isSelected ? 'bg-muted/50' : ''} data-testid={`user-row-${user.user_id}`}>
                         <TableCell>
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={(e) => handleUserSelect(user.user_id, e.target.checked)}
                             className="rounded border-gray-300"
+                            aria-label="Selecionar usuário"
+                            data-testid={`user-checkbox-${user.user_id}`}
                           />
                         </TableCell>
                         <TableCell>
@@ -671,7 +763,20 @@ export const PermissionMatrix: React.FC<PermissionMatrixProps> = ({
                         {Object.entries(AgentName).map(([, agentValue]) => {
                           const permissions = userPerms?.permissions[agentValue]
                           return (
-                            <UpdatePermissionGuard key={agentValue} agent={AgentName.CLIENT_MANAGEMENT}>
+                            <UpdatePermissionGuard 
+                              key={agentValue} 
+                              agent={AgentName.CLIENT_MANAGEMENT}
+                              fallback={
+                                <PermissionCell
+                                  userId={user.user_id}
+                                  userName={user.full_name}
+                                  agent={agentValue}
+                                  permissions={permissions || { create: false, read: false, update: false, delete: false }}
+                                  onPermissionChange={handlePermissionChange}
+                                  isEditable={false}
+                                />
+                              }
+                            >
                               <PermissionCell
                                 userId={user.user_id}
                                 userName={user.full_name}

@@ -15,6 +15,7 @@ from sqlmodel import Session
 
 from src.core.config import settings
 from src.core.database import get_session
+from src.services.database_locking import distributed_lock_service, user_permission_lock
 from src.core.exceptions import (
     AuthorizationError,
     DatabaseError,
@@ -199,10 +200,10 @@ class PermissionService:
                     user = session.get(User, user_id)
                     if user:
                         # Sysadmin bypass (use enum value as stored in database)
-                        if user.role.value == "sysadmin" or user.role.value == "admin" and agent_name.value in [
+                        if user.role.value == "sysadmin" or (user.role.value == "admin" and agent_name.value in [
                             "client_management",
                             "reports_analysis",
-                        ]:
+                        ]):
                             has_permission = True
                         else:
                             # Check explicit permissions in the database
@@ -300,7 +301,7 @@ class PermissionService:
                         agent_permissions = {"create": False, "read": False, "update": False, "delete": False}
 
                         # Check role-based permissions first
-                        if user.role == UserRole.SYSADMIN or user.role == UserRole.ADMIN and agent_name.value in ["client_management", "reports_analysis"]:
+                        if user.role == UserRole.SYSADMIN or (user.role == UserRole.ADMIN and agent_name.value in ["client_management", "reports_analysis"]):
                             agent_permissions = {"create": True, "read": True, "update": True, "delete": True}
                         else:
                             # Check explicit permissions
@@ -357,31 +358,43 @@ class PermissionService:
             DatabaseError: If database operation fails
         """
         try:
-            with self.get_db_session() as session:
-                # Check if both users exist (skip in test mode for integration tests)
-                if not self._is_testing:
-                    users_query = select(User).where(User.user_id.in_([user_id, created_by_user_id]))  # type: ignore[attr-defined]
-                    users_result = session.execute(users_query)
-                    users = {user.user_id: user for user in users_result.scalars()}
-
-                    if user_id not in users:
-                        raise NotFoundError(f"User {user_id} not found")
-                    if created_by_user_id not in users:
-                        raise NotFoundError(f"Creator user {created_by_user_id} not found")
-
-                    creator = users[created_by_user_id]
-                else:
-                    # In test mode, try to use users from the mock session first
-                    # This allows tests to control the exact user roles for authorization testing
-                    try:
+            # Acquire distributed lock to prevent concurrent permission changes
+            with user_permission_lock(user_id):
+                with self.get_db_session() as session:
+                    # Check if both users exist (skip in test mode for integration tests)
+                    if not self._is_testing:
                         users_query = select(User).where(User.user_id.in_([user_id, created_by_user_id]))  # type: ignore[attr-defined]
                         users_result = session.execute(users_query)
                         users = {user.user_id: user for user in users_result.scalars()}
 
-                        if created_by_user_id in users:
-                            creator = users[created_by_user_id]
-                        else:
-                            # Only fall back to mock admin if no test user is provided
+                        if user_id not in users:
+                            raise NotFoundError(f"User {user_id} not found")
+                        if created_by_user_id not in users:
+                            raise NotFoundError(f"Creator user {created_by_user_id} not found")
+
+                        creator = users[created_by_user_id]
+                    else:
+                        # In test mode, try to use users from the mock session first
+                        # This allows tests to control the exact user roles for authorization testing
+                        try:
+                            users_query = select(User).where(User.user_id.in_([user_id, created_by_user_id]))  # type: ignore[attr-defined]
+                            users_result = session.execute(users_query)
+                            users = {user.user_id: user for user in users_result.scalars()}
+
+                            if created_by_user_id in users:
+                                creator = users[created_by_user_id]
+                            else:
+                                # Only fall back to mock admin if no test user is provided
+                                creator = User(
+                                    user_id=created_by_user_id,
+                                    email=f"test-{created_by_user_id}@example.com",
+                                    role=UserRole.ADMIN,
+                                    is_active=True,
+                                    password_hash="test_hash",
+                                    full_name="Test User",
+                                )
+                        except Exception:
+                            # If session query fails, fall back to mock admin
                             creator = User(
                                 user_id=created_by_user_id,
                                 email=f"test-{created_by_user_id}@example.com",
@@ -390,16 +403,6 @@ class PermissionService:
                                 password_hash="test_hash",
                                 full_name="Test User",
                             )
-                    except Exception:
-                        # If session query fails, fall back to mock admin
-                        creator = User(
-                            user_id=created_by_user_id,
-                            email=f"test-{created_by_user_id}@example.com",
-                            role=UserRole.ADMIN,
-                            is_active=True,
-                            password_hash="test_hash",
-                            full_name="Test User",
-                        )
                 # Validate target user exists (already checked above)
 
                 # Check if creator has permission to assign permissions
@@ -628,41 +631,53 @@ class PermissionService:
             return {}
 
         try:
-            with self.get_db_session() as session:
-                # Check if all users exist (skip in test mode)
-                if not self._is_testing:
-                    all_user_ids = user_ids + [assigned_by_user_id]
-                    users_query = select(User).where(User.user_id.in_(all_user_ids))  # type: ignore[attr-defined]
-                    users_result = session.execute(users_query)
-                    users = {user.user_id: user for user in users_result.scalars()}
-
-                    # Validate all users exist
-                    missing_users = set(user_ids) - set(users.keys())
-                    if missing_users:
-                        raise NotFoundError(f"Users not found: {missing_users}")
-
-                    if assigned_by_user_id not in users:
-                        raise NotFoundError(f"Assigner user {assigned_by_user_id} not found")
-
-                    assigner = users[assigned_by_user_id]
-
-                    # Check assigner permissions
-                    if assigner.role not in [UserRole.SYSADMIN, UserRole.ADMIN]:
-                        raise AuthorizationError(
-                            "Only sysadmin or admin users can bulk assign permissions"
-                        )
-                else:
-                    # In test mode, try to use users from the mock session first
-                    try:
+            # Acquire distributed lock for bulk operations to prevent concurrent changes
+            with distributed_lock_service.bulk_permission_lock(user_ids, "bulk_assign"):
+                with self.get_db_session() as session:
+                    # Check if all users exist (skip in test mode)
+                    if not self._is_testing:
                         all_user_ids = user_ids + [assigned_by_user_id]
                         users_query = select(User).where(User.user_id.in_(all_user_ids))  # type: ignore[attr-defined]
                         users_result = session.execute(users_query)
                         users = {user.user_id: user for user in users_result.scalars()}
 
-                        if assigned_by_user_id in users:
-                            assigner = users[assigned_by_user_id]
-                        else:
-                            # Fall back to mock admin if no test user provided
+                        # Validate all users exist
+                        missing_users = set(user_ids) - set(users.keys())
+                        if missing_users:
+                            raise NotFoundError(f"Users not found: {missing_users}")
+
+                        if assigned_by_user_id not in users:
+                            raise NotFoundError(f"Assigner user {assigned_by_user_id} not found")
+
+                        assigner = users[assigned_by_user_id]
+
+                        # Check assigner permissions
+                        if assigner.role not in [UserRole.SYSADMIN, UserRole.ADMIN]:
+                            raise AuthorizationError(
+                                "Only sysadmin or admin users can bulk assign permissions"
+                            )
+                    else:
+                        # In test mode, try to use users from the mock session first
+                        try:
+                            all_user_ids = user_ids + [assigned_by_user_id]
+                            users_query = select(User).where(User.user_id.in_(all_user_ids))  # type: ignore[attr-defined]
+                            users_result = session.execute(users_query)
+                            users = {user.user_id: user for user in users_result.scalars()}
+
+                            if assigned_by_user_id in users:
+                                assigner = users[assigned_by_user_id]
+                            else:
+                                # Fall back to mock admin if no test user provided
+                                assigner = User(
+                                    user_id=assigned_by_user_id,
+                                    email=f"test-{assigned_by_user_id}@example.com",
+                                    role=UserRole.ADMIN,
+                                    is_active=True,
+                                    password_hash="test_hash",
+                                    full_name="Test User",
+                                )
+                        except Exception:
+                            # If session query fails, fall back to mock admin
                             assigner = User(
                                 user_id=assigned_by_user_id,
                                 email=f"test-{assigned_by_user_id}@example.com",
@@ -671,16 +686,6 @@ class PermissionService:
                                 password_hash="test_hash",
                                 full_name="Test User",
                             )
-                    except Exception:
-                        # If session query fails, fall back to mock admin
-                        assigner = User(
-                            user_id=assigned_by_user_id,
-                            email=f"test-{assigned_by_user_id}@example.com",
-                            role=UserRole.ADMIN,
-                            is_active=True,
-                            password_hash="test_hash",
-                            full_name="Test User",
-                        )
 
                 # Check assigner permissions
                 if not self._is_testing and assigner.role not in [UserRole.SYSADMIN, UserRole.ADMIN]:
@@ -987,11 +992,14 @@ class PermissionService:
         """
         try:
             with self.get_db_session() as session:
+                # Security: Strip dangerous fields from permissions to prevent privilege escalation
+                sanitized_permissions = self._sanitize_template_permissions(permissions)
+                
                 # Validate template data
                 template_data = PermissionTemplateCreate(
                     template_name=template_name,
                     description=description,
-                    permissions=permissions,
+                    permissions=sanitized_permissions,
                     created_by_user_id=created_by_user_id,
                 )
 
@@ -1009,6 +1017,43 @@ class PermissionService:
         except Exception as e:
             logger.error(f"Error creating template: {e}")
             raise DatabaseError(f"Failed to create template: {e}") from e
+
+    def _sanitize_template_permissions(self, permissions: dict[str, Any]) -> dict[str, Any]:
+        """
+        Sanitize permission template data to prevent privilege escalation.
+        
+        Args:
+            permissions: Raw permissions data
+            
+        Returns:
+            Sanitized permissions with dangerous fields removed
+        """
+        # List of dangerous fields that could enable privilege escalation
+        dangerous_fields = {
+            "role",          # Direct role assignment
+            "system:config", # System configuration access
+            "system:logs",   # System logs access
+            "system:all",    # System-wide access
+            "delete:users",  # User deletion
+            "create:agents", # Agent creation
+            "all_agents"     # Blanket agent permissions (keep individual agent permissions only)
+        }
+        
+        sanitized = {}
+        
+        for key, value in permissions.items():
+            # Skip dangerous top-level fields
+            if key in dangerous_fields:
+                logger.warning(f"Stripped dangerous field '{key}' from permission template")
+                continue
+                
+            # For nested dictionaries, recursively sanitize
+            if isinstance(value, dict):
+                sanitized[key] = self._sanitize_template_permissions(value)
+            else:
+                sanitized[key] = value
+                
+        return sanitized
 
     async def update_template(
         self,

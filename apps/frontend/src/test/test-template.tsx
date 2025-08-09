@@ -8,10 +8,10 @@
  * - Test actual behavior, not implementation details
  */
 
-import { render, type RenderOptions } from '@testing-library/react'
-import { QueryClientProvider } from '@tanstack/react-query'
+import { render, type RenderOptions, act } from '@testing-library/react'
+import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
 import { vi, beforeEach, afterEach } from 'vitest'
-import { createTestQueryClient, type QueryClient } from './query-client'
+import { createTestQueryClient } from './query-client'
 import { clearTestAuth } from './auth-helpers'
 import { ToastProvider } from '@/components/ui/toast'
 
@@ -55,10 +55,11 @@ const setupExternalBrowserMocks = () => {
   }))
   
   // IntersectionObserver (external browser API)  
-  global.IntersectionObserver = vi.fn(() => ({
+  ;(global as any).IntersectionObserver = vi.fn(() => ({
     observe: vi.fn(),
     unobserve: vi.fn(),
     disconnect: vi.fn(),
+    takeRecords: vi.fn(() => []),
     root: null,
     rootMargin: '',
     thresholds: [],

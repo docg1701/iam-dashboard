@@ -171,7 +171,7 @@ export function TwoFactorForm({
           </CardTitle>
           <CardDescription>
             {isSetup 
-              ? "Escaneie o código QR abaixo com seu aplicativo autenticador e digite o código de 6 dígitos"
+              ? "Configure seu aplicativo autenticador escaneando o código QR abaixo e digite o código de 6 dígitos"
               : "Digite o código de 6 dígitos do seu aplicativo autenticador"
             }
           </CardDescription>
@@ -188,6 +188,7 @@ export function TwoFactorForm({
                   width={200}
                   height={200}
                   className="mx-auto"
+                  data-testid="qr-code-image"
                 />
               </div>
               <p className="text-sm text-muted-foreground">
@@ -204,7 +205,7 @@ export function TwoFactorForm({
                 render={() => (
                   <FormItem>
                     <FormLabel className="text-center block">
-                      Código de Verificação
+                      Código 2FA
                     </FormLabel>
                     <FormControl>
                       <div 
@@ -230,6 +231,7 @@ export function TwoFactorForm({
                             )}
                             disabled={isLoading}
                             autoComplete="one-time-code"
+                            data-testid={`totp-input-${index}`}
                           />
                         ))}
                       </div>
@@ -287,7 +289,7 @@ export function TwoFactorForm({
           {isSetup && setupData?.backup_codes && (
             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
               <h4 className="font-medium text-yellow-800 mb-2">
-                Códigos de Recuperação
+                Códigos de Backup
               </h4>
               <p className="text-sm text-yellow-700 mb-3">
                 Guarde estes códigos em local seguro. Eles podem ser usados para acessar sua conta se você perder seu dispositivo.

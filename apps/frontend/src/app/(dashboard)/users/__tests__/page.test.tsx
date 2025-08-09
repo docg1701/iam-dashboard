@@ -108,7 +108,7 @@ describe('UsersPage', () => {
 
     test('displays error message when loading fails', async () => {
       setupAuthenticatedUser('admin')
-      mockFailedFetch('/api/v1/users', { message: 'Failed to load users' })
+      mockFailedFetch('/api/v1/users', 'Failed to load users')
       
       renderWithProviders(<UsersPage />)
 
@@ -186,10 +186,7 @@ describe('UsersPage', () => {
   describe('Error Handling', () => {
     test('handles network errors gracefully', async () => {
       setupAuthenticatedUser('admin')
-      mockFailedFetch('/api/v1/users', { 
-        message: 'Network error',
-        status: 500 
-      })
+      mockFailedFetch('/api/v1/users', 'Network error', 500)
       
       renderWithProviders(<UsersPage />)
 
