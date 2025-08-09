@@ -2,14 +2,13 @@
 
 from datetime import datetime
 from typing import Any
-from uuid import uuid4
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from src.core.security import SessionData, TokenData, auth_service
+from src.core.security import SessionData, auth_service
 from src.models.user import User, UserRole
 
 
@@ -127,20 +126,27 @@ class TestAuthLogin:
         assert "Account is deactivated" in response.json()["detail"]
 
     def test_login_account_locked(
-        self, client: TestClient, test_session: Session, mock_redis_client, monkeypatch: pytest.MonkeyPatch
+        self,
+        client: TestClient,
+        test_session: Session,
+        mock_redis_client,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test login with locked account using real business logic."""
         # Mock Redis clients for all services that need it
-        from src.core import security
-        from src.core import password_security
         from src.api.v1 import auth as auth_module
-        
+        from src.core import password_security, security
+
         # Mock Redis for all instances
         monkeypatch.setattr(security.auth_service, "redis_client", mock_redis_client)
         monkeypatch.setattr(password_security.auth_service, "redis_client", mock_redis_client)
-        monkeypatch.setattr(password_security.password_security_service, "redis_client", mock_redis_client)
-        monkeypatch.setattr(auth_module.password_security_service, "redis_client", mock_redis_client)
-        
+        monkeypatch.setattr(
+            password_security.password_security_service, "redis_client", mock_redis_client
+        )
+        monkeypatch.setattr(
+            auth_module.password_security_service, "redis_client", mock_redis_client
+        )
+
         # Create test user
         password = "Test123!@#"
         user = User(
@@ -154,10 +160,10 @@ class TestAuthLogin:
 
         # Create actual failed login attempts to trigger account lockout
         # This tests the real business logic for account locking
-        for i in range(5):  # Make 5 failed attempts (threshold is 5)
+        for _i in range(5):  # Make 5 failed attempts (threshold is 5)
             response = client.post(
-                "/api/v1/auth/login", 
-                json={"email": "locked@example.com", "password": "wrong_password"}
+                "/api/v1/auth/login",
+                json={"email": "locked@example.com", "password": "wrong_password"},
             )
             # Should get 401 for failed attempts
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -165,8 +171,7 @@ class TestAuthLogin:
 
         # 6th attempt should trigger lockout (even with wrong password)
         response = client.post(
-            "/api/v1/auth/login", 
-            json={"email": "locked@example.com", "password": "wrong_password"}
+            "/api/v1/auth/login", json={"email": "locked@example.com", "password": "wrong_password"}
         )
         assert response.status_code == status.HTTP_423_LOCKED
         assert "Account is temporarily locked" in response.json()["detail"]
@@ -231,7 +236,7 @@ class TestAuth2FA:
         login_response = client.post(
             "/api/v1/auth/login", json={"email": "test2fa@example.com", "password": password}
         )
-        
+
         assert login_response.status_code == status.HTTP_200_OK
         login_data = login_response.json()
         assert login_data["requires_2fa"] is True
@@ -257,6 +262,7 @@ class TestAuth2FA:
 
         # Generate real TOTP code for the current time - tests real TOTP business logic
         import pyotp  # noqa: PLC0415
+
         totp = pyotp.TOTP("JBSWY3DPEHPK3PXP")  # Valid base32 secret
         current_code = totp.now()
 
@@ -272,33 +278,39 @@ class TestAuth2FA:
         assert data["requires_2fa"] is False
         assert data["user"]["email"] == "test2fa@example.com"
 
-    def test_verify_2fa_invalid_session(
-        self, client: TestClient
-    ) -> None:
+    def test_verify_2fa_invalid_session(self, client: TestClient) -> None:
         """Test 2FA verification with invalid session using real session validation."""
         # Use completely invalid session ID that was never created
         response = client.post(
-            "/api/v1/auth/2fa/verify", json={"session_id": "invalid_session_never_created", "totp_code": "123456"}
+            "/api/v1/auth/2fa/verify",
+            json={"session_id": "invalid_session_never_created", "totp_code": "123456"},
         )
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid or expired session" in response.json()["detail"]
 
     def test_verify_2fa_invalid_code(
-        self, client: TestClient, test_session: Session, mock_redis_client, monkeypatch: pytest.MonkeyPatch
+        self,
+        client: TestClient,
+        test_session: Session,
+        mock_redis_client,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test 2FA verification with invalid TOTP code using real validation."""
         # Mock Redis clients for all services that need it
-        from src.core import security
-        from src.core import password_security
         from src.api.v1 import auth as auth_module
-        
+        from src.core import password_security, security
+
         # Mock Redis for all instances
         monkeypatch.setattr(security.auth_service, "redis_client", mock_redis_client)
         monkeypatch.setattr(password_security.auth_service, "redis_client", mock_redis_client)
-        monkeypatch.setattr(password_security.password_security_service, "redis_client", mock_redis_client)
-        monkeypatch.setattr(auth_module.password_security_service, "redis_client", mock_redis_client)
-        
+        monkeypatch.setattr(
+            password_security.password_security_service, "redis_client", mock_redis_client
+        )
+        monkeypatch.setattr(
+            auth_module.password_security_service, "redis_client", mock_redis_client
+        )
+
         # Create test user with 2FA
         password = "password123"
         user = User(
@@ -316,7 +328,7 @@ class TestAuth2FA:
         login_response = client.post(
             "/api/v1/auth/login", json={"email": "test2fa@example.com", "password": password}
         )
-        
+
         assert login_response.status_code == status.HTTP_200_OK
         login_data = login_response.json()
         session_id = login_data["session_id"]
@@ -392,9 +404,7 @@ class TestAuth2FA:
 class TestAuthTokens:
     """Test token-related authentication endpoints."""
 
-    def test_refresh_token_success(
-        self, client: TestClient, test_session: Session
-    ) -> None:
+    def test_refresh_token_success(self, client: TestClient, test_session: Session) -> None:
         """Test successful token refresh using real authentication flow."""
         # Create test user
         password = "Test123!@#"
@@ -412,7 +422,7 @@ class TestAuthTokens:
         login_response = client.post(
             "/api/v1/auth/login", json={"email": "refresh@example.com", "password": password}
         )
-        
+
         assert login_response.status_code == status.HTTP_200_OK
         login_data = login_response.json()
         original_token = login_data["access_token"]
@@ -431,20 +441,27 @@ class TestAuthTokens:
         assert data["access_token"] != original_token
 
     def test_logout_success(
-        self, client: TestClient, test_session: Session, mock_redis_client, monkeypatch: pytest.MonkeyPatch
+        self,
+        client: TestClient,
+        test_session: Session,
+        mock_redis_client,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test successful logout using real authentication flow."""
         # Mock Redis clients for all services that need it
-        from src.core import security
-        from src.core import password_security
         from src.api.v1 import auth as auth_module
-        
+        from src.core import password_security, security
+
         # Mock Redis for all instances
         monkeypatch.setattr(security.auth_service, "redis_client", mock_redis_client)
         monkeypatch.setattr(password_security.auth_service, "redis_client", mock_redis_client)
-        monkeypatch.setattr(password_security.password_security_service, "redis_client", mock_redis_client)
-        monkeypatch.setattr(auth_module.password_security_service, "redis_client", mock_redis_client)
-        
+        monkeypatch.setattr(
+            password_security.password_security_service, "redis_client", mock_redis_client
+        )
+        monkeypatch.setattr(
+            auth_module.password_security_service, "redis_client", mock_redis_client
+        )
+
         # Create test user
         password = "Test123!@#"
         user = User(
@@ -461,7 +478,7 @@ class TestAuthTokens:
         login_response = client.post(
             "/api/v1/auth/login", json={"email": "logout@example.com", "password": password}
         )
-        
+
         assert login_response.status_code == status.HTTP_200_OK
         login_data = login_response.json()
         token = login_data["access_token"]
@@ -506,12 +523,13 @@ class TestAuthTokens:
         login_response = client.post(
             "/api/v1/auth/login", json={"email": "logout_fail@example.com", "password": password}
         )
-        
+
         token = login_response.json()["access_token"]
         auth_headers = {"Authorization": f"Bearer {token}"}
 
         # Mock external service failures (Redis blacklist, session store)
         import redis.exceptions  # noqa: PLC0415
+
         def mock_redis_failure(*args, **kwargs):
             raise redis.exceptions.ConnectionError("Redis connection failed")
 
@@ -553,13 +571,13 @@ class TestAuthTokens:
     def test_get_current_user_not_found(self, client: TestClient) -> None:
         """Test getting current user when user not found in database."""
         from fastapi import HTTPException  # noqa: PLC0415
-        from src.core import security  # noqa: PLC0415
-        from src.main import app  # noqa: PLC0415
 
         # Test with invalid token format - should return 401 or raise HTTPException
         try:
-            response = client.get("/api/v1/auth/me", headers={"Authorization": "Bearer invalid_token_format"})
-            
+            response = client.get(
+                "/api/v1/auth/me", headers={"Authorization": "Bearer invalid_token_format"}
+            )
+
             # Should return 401 because token format is invalid
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
             error_detail = response.json()["detail"]

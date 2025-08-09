@@ -70,23 +70,22 @@ class TestPermissionChecker:
             is_2fa_enabled=False,
         )
 
-    async def test_permission_checker_success(
-        self, test_user: User, test_session: Session
-    ) -> None:
+    async def test_permission_checker_success(self, test_user: User, test_session: Session) -> None:
         """Test successful permission check using real PermissionService."""
         # Add user to database
         test_session.add(test_user)
         test_session.commit()
-        
+
         # Create real PermissionService
         real_permission_service = PermissionService(session=test_session)
-        
+
         # Create permission for user in database
         from src.tests.factories import create_test_permission
+
         permission = create_test_permission(
             user_id=test_user.user_id,
             agent_name=AgentName.CLIENT_MANAGEMENT,
-            permissions={"read": True, "create": False, "update": False, "delete": False}
+            permissions={"read": True, "create": False, "update": False, "delete": False},
         )
         test_session.add(permission)
         test_session.commit()
@@ -97,18 +96,16 @@ class TestPermissionChecker:
         result = await checker(test_user, real_permission_service)
 
         assert result == test_user
-        
+
         # Clean up service
         await real_permission_service.close()
 
-    async def test_permission_checker_denied(
-        self, test_user: User, test_session: Session
-    ) -> None:
+    async def test_permission_checker_denied(self, test_user: User, test_session: Session) -> None:
         """Test permission denied using real PermissionService."""
         # Add user to database without permissions
         test_session.add(test_user)
         test_session.commit()
-        
+
         # Create real PermissionService
         real_permission_service = PermissionService(session=test_session)
 
@@ -120,7 +117,7 @@ class TestPermissionChecker:
 
         assert exc_info.value.status_code == 403
         assert "Insufficient permissions" in exc_info.value.detail
-        
+
         # Clean up service
         await real_permission_service.close()
 
@@ -131,7 +128,7 @@ class TestPermissionChecker:
         # Add user to database
         test_session.add(test_user)
         test_session.commit()
-        
+
         # Create real PermissionService
         real_permission_service = PermissionService(session=test_session)
 
@@ -142,7 +139,7 @@ class TestPermissionChecker:
         try:
             # Close the connection to force a real database error
             test_session.close()
-            
+
             # This should raise an exception due to closed connection
             with pytest.raises(HTTPException) as exc_info:
                 await checker(test_user, real_permission_service)

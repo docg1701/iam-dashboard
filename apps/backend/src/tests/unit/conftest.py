@@ -5,21 +5,11 @@ Unit tests should mock all external dependencies (Redis, SMTP, file I/O, time, r
 but test real business logic and internal service behavior.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from datetime import datetime, timedelta
-from uuid import UUID, uuid4
 
 # Import the main fixtures from parent conftest
-from src.tests.conftest import (
-    mock_redis_client,
-    mock_email_service,
-    mock_time,
-    mock_uuid,
-    mock_audit_logger,
-    test_engine,
-    test_session,
-)
 
 
 @pytest.fixture(name="mock_external_http", autouse=True)
@@ -38,10 +28,11 @@ def mock_external_http():
 @pytest.fixture(name="mock_file_operations", autouse=True)
 def mock_file_operations():
     """Mock file system operations for unit tests."""
-    with patch("builtins.open") as mock_open, \
-         patch("os.path.exists") as mock_exists, \
-         patch("os.makedirs") as mock_makedirs:
-        
+    with (
+        patch("builtins.open") as mock_open,
+        patch("os.path.exists") as mock_exists,
+        patch("os.makedirs") as mock_makedirs,
+    ):
         mock_exists.return_value = True
         yield {
             "open": mock_open,

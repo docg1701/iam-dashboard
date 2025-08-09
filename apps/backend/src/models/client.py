@@ -58,7 +58,7 @@ class ClientBase(SQLModel):
     def validate_cpf_format(cls, v: str) -> str:
         """Validate Brazilian CPF format and check digits."""
         from src.utils.validation import validate_cpf
-        
+
         # Check format
         if not re.match(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$", v):
             raise ValueError("CPF must be in XXX.XXX.XXX-XX format")

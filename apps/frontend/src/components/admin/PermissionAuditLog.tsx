@@ -1,18 +1,18 @@
 /**
  * Permission Audit Log Component
- * 
+ *
  * Component for displaying comprehensive permission audit trails with filtering,
  * search, and detailed change tracking for administrative oversight.
  */
 
-'use client'
+"use client";
 
-import React, { useState, useMemo, useCallback } from 'react'
-import { 
-  History, 
-  Filter, 
-  Search, 
-  Download, 
+import React, { useState, useMemo, useCallback } from "react";
+import {
+  History,
+  Filter,
+  Search,
+  Download,
   Calendar,
   User,
   Shield,
@@ -22,8 +22,8 @@ import {
   Clock,
   Eye,
   RefreshCw,
-} from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import {
   AgentName,
   PermissionAuditLog as PermissionAuditLogType,
@@ -31,9 +31,9 @@ import {
   getPermissionLevel,
   PERMISSION_LEVEL_NAMES,
   PERMISSION_LEVELS,
-} from '@/types/permissions'
-import { PermissionAPI } from '@/lib/api/permissions'
-import { PermissionGuard } from '@/components/common/PermissionGuard'
+} from "@/types/permissions";
+import { PermissionAPI } from "@/lib/api/permissions";
+import { PermissionGuard } from "@/components/common/PermissionGuard";
 import {
   Table,
   TableBody,
@@ -41,81 +41,87 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from "@/components/ui/select";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover'
-import { Calendar as CalendarComponent } from '@/components/ui/calendar'
-import { toast } from '@/components/ui/toast'
-import { format, subDays } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { toast } from "@/components/ui/toast";
+import { format, subDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 // Types for the component
 interface PermissionAuditLogProps {
-  userId?: string
-  agentFilter?: AgentName
-  className?: string
-  limit?: number
-  showUserColumn?: boolean
-  embedded?: boolean
+  userId?: string;
+  agentFilter?: AgentName;
+  className?: string;
+  limit?: number;
+  showUserColumn?: boolean;
+  embedded?: boolean;
 }
 
 interface AuditFilters {
-  search: string
-  agent: AgentName | 'all'
-  action: string
-  dateFrom: Date | null
-  dateTo: Date | null
-  changedBy: string
+  search: string;
+  agent: AgentName | "all";
+  action: string;
+  dateFrom: Date | null;
+  dateTo: Date | null;
+  changedBy: string;
 }
 
 interface AuditStats {
-  totalLogs: number
-  recentChanges: number
-  totalAdmins: number
-  mostActiveAgent: AgentName | null
+  totalLogs: number;
+  recentChanges: number;
+  totalAdmins: number;
+  mostActiveAgent: AgentName | null;
 }
 
 // Agent display names in Portuguese
 const AGENT_DISPLAY_NAMES: Record<AgentName, string> = {
-  [AgentName.CLIENT_MANAGEMENT]: 'Gestão de Clientes',
-  [AgentName.PDF_PROCESSING]: 'Processamento PDFs',
-  [AgentName.REPORTS_ANALYSIS]: 'Relatórios',
-  [AgentName.AUDIO_RECORDING]: 'Gravação de Áudio',
-}
+  [AgentName.CLIENT_MANAGEMENT]: "Gestão de Clientes",
+  [AgentName.PDF_PROCESSING]: "Processamento PDFs",
+  [AgentName.REPORTS_ANALYSIS]: "Relatórios",
+  [AgentName.AUDIO_RECORDING]: "Gravação de Áudio",
+};
 
 // Action display names in Portuguese
 const ACTION_DISPLAY_NAMES: Record<string, string> = {
-  'GRANT': 'Concedido',
-  'REVOKE': 'Revogado', 
-  'UPDATE': 'Atualizado',
-  'BULK_GRANT': 'Concessão em Lote',
-  'BULK_REVOKE': 'Revogação em Lote',
-  'TEMPLATE_APPLIED': 'Template Aplicado',
-}
+  GRANT: "Concedido",
+  REVOKE: "Revogado",
+  UPDATE: "Atualizado",
+  BULK_GRANT: "Concessão em Lote",
+  BULK_REVOKE: "Revogação em Lote",
+  TEMPLATE_APPLIED: "Template Aplicado",
+};
 
 // Action color mapping
 const ACTION_COLORS: Record<string, string> = {
-  'GRANT': 'bg-green-100 text-green-800 border-green-200',
-  'REVOKE': 'bg-red-100 text-red-800 border-red-200',
-  'UPDATE': 'bg-blue-100 text-blue-800 border-blue-200',
-  'BULK_GRANT': 'bg-purple-100 text-purple-800 border-purple-200',
-  'BULK_REVOKE': 'bg-orange-100 text-orange-800 border-orange-200',
-  'TEMPLATE_APPLIED': 'bg-indigo-100 text-indigo-800 border-indigo-200',
-}
+  GRANT: "bg-green-100 text-green-800 border-green-200",
+  REVOKE: "bg-red-100 text-red-800 border-red-200",
+  UPDATE: "bg-blue-100 text-blue-800 border-blue-200",
+  BULK_GRANT: "bg-purple-100 text-purple-800 border-purple-200",
+  BULK_REVOKE: "bg-orange-100 text-orange-800 border-orange-200",
+  TEMPLATE_APPLIED: "bg-indigo-100 text-indigo-800 border-indigo-200",
+};
 
 /**
  * Permission Change Comparison Component
@@ -124,43 +130,50 @@ const ACTION_COLORS: Record<string, string> = {
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const PermissionChangeComparison: React.FC<{
-  oldPermissions: PermissionActions | null
-  newPermissions: PermissionActions | null
+  oldPermissions: PermissionActions | null;
+  newPermissions: PermissionActions | null;
 }> = ({ oldPermissions, newPermissions }) => {
-  const oldLevel = oldPermissions ? getPermissionLevel(oldPermissions) : PERMISSION_LEVELS.NONE
-  const newLevel = newPermissions ? getPermissionLevel(newPermissions) : PERMISSION_LEVELS.NONE
+  const oldLevel = oldPermissions
+    ? getPermissionLevel(oldPermissions)
+    : PERMISSION_LEVELS.NONE;
+  const newLevel = newPermissions
+    ? getPermissionLevel(newPermissions)
+    : PERMISSION_LEVELS.NONE;
 
   const changes = useMemo(() => {
     if (!oldPermissions || !newPermissions) {
-      return []
+      return [];
     }
 
     const changeList: Array<{
-      operation: keyof PermissionActions
-      old: boolean
-      new: boolean
-      changed: boolean
-    }> = []
+      operation: keyof PermissionActions;
+      old: boolean;
+      new: boolean;
+      changed: boolean;
+    }> = [];
 
-    Object.entries(newPermissions).forEach(([operation, newValue]: [string, boolean]) => {
-      const oldValue = oldPermissions[operation as keyof PermissionActions] || false
-      changeList.push({
-        operation: operation as keyof PermissionActions,
-        old: oldValue,
-        new: newValue,
-        changed: oldValue !== newValue,
-      })
-    })
+    Object.entries(newPermissions).forEach(
+      ([operation, newValue]: [string, boolean]) => {
+        const oldValue =
+          oldPermissions[operation as keyof PermissionActions] || false;
+        changeList.push({
+          operation: operation as keyof PermissionActions,
+          old: oldValue,
+          new: newValue,
+          changed: oldValue !== newValue,
+        });
+      },
+    );
 
-    return changeList
-  }, [oldPermissions, newPermissions])
+    return changeList;
+  }, [oldPermissions, newPermissions]);
 
   const operationNames = {
-    create: 'Criar',
-    read: 'Visualizar', 
-    update: 'Editar',
-    delete: 'Excluir',
-  }
+    create: "Criar",
+    read: "Visualizar",
+    update: "Editar",
+    delete: "Excluir",
+  };
 
   return (
     <div className="space-y-2">
@@ -181,7 +194,7 @@ const PermissionChangeComparison: React.FC<{
           <div
             key={change.operation}
             className={`flex items-center justify-between p-1 rounded ${
-              change.changed ? 'bg-yellow-50' : 'bg-gray-50'
+              change.changed ? "bg-yellow-50" : "bg-gray-50"
             }`}
           >
             <span className="capitalize">
@@ -204,26 +217,28 @@ const PermissionChangeComparison: React.FC<{
         ))}
       </div>
     </div>
-  )
-}
+  );
+};
 
 /**
  * Audit Log Entry Component
  */
 const AuditLogEntry: React.FC<{
-  log: PermissionAuditLogType
-  showUser?: boolean
+  log: PermissionAuditLogType;
+  showUser?: boolean;
 }> = ({ log, showUser = false }) => {
-  const [showDetails, setShowDetails] = useState(false)
+  const [showDetails, setShowDetails] = useState(false);
 
   return (
     <TableRow>
       <TableCell>
         <div className="text-sm text-muted-foreground">
-          {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+          {format(new Date(log.created_at), "dd/MM/yyyy HH:mm", {
+            locale: ptBR,
+          })}
         </div>
       </TableCell>
-      
+
       {showUser && (
         <TableCell>
           <div className="flex items-center space-x-2">
@@ -234,15 +249,13 @@ const AuditLogEntry: React.FC<{
       )}
 
       <TableCell>
-        <Badge variant="outline">
-          {AGENT_DISPLAY_NAMES[log.agent_name]}
-        </Badge>
+        <Badge variant="outline">{AGENT_DISPLAY_NAMES[log.agent_name]}</Badge>
       </TableCell>
 
       <TableCell>
-        <Badge 
+        <Badge
           variant="outline"
-          className={ACTION_COLORS[log.action] || 'bg-gray-100 text-gray-800'}
+          className={ACTION_COLORS[log.action] || "bg-gray-100 text-gray-800"}
         >
           {ACTION_DISPLAY_NAMES[log.action] || log.action}
         </Badge>
@@ -274,8 +287,8 @@ const AuditLogEntry: React.FC<{
         </div>
       </TableCell>
     </TableRow>
-  )
-}
+  );
+};
 
 /**
  * Main Permission Audit Log Component
@@ -289,66 +302,67 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
   embedded = false,
 }) => {
   const [filters, setFilters] = useState<AuditFilters>({
-    search: '',
-    agent: agentFilter || 'all',
-    action: 'all',
+    search: "",
+    agent: agentFilter || "all",
+    action: "all",
     dateFrom: subDays(new Date(), 30), // Default to last 30 days
     dateTo: new Date(),
-    changedBy: '',
-  })
+    changedBy: "",
+  });
 
   // Fetch audit logs
-  const { 
-    data: auditData, 
-    isLoading, 
-    error, 
-    refetch 
+  const {
+    data: auditData,
+    isLoading,
+    error,
+    refetch,
   } = useQuery({
-    queryKey: ['permission-audit', userId, filters, limit],
+    queryKey: ["permission-audit", userId, filters, limit],
     queryFn: async () => {
       const queryParams = {
         user_id: userId,
-        agent_name: filters.agent !== 'all' ? filters.agent : undefined,
-        action: filters.action !== 'all' ? filters.action : undefined,
+        agent_name: filters.agent !== "all" ? filters.agent : undefined,
+        action: filters.action !== "all" ? filters.action : undefined,
         date_from: filters.dateFrom?.toISOString(),
         date_to: filters.dateTo?.toISOString(),
         changed_by: filters.changedBy || undefined,
         limit,
-      }
+      };
 
       if (userId) {
-        return PermissionAPI.Audit.getUserAuditLogs(userId, queryParams)
+        return PermissionAPI.Audit.getUserAuditLogs(userId, queryParams);
       } else {
         // Get recent changes when no specific user is selected
-        const recentLogs = await PermissionAPI.Audit.getRecentChanges(limit)
+        const recentLogs = await PermissionAPI.Audit.getRecentChanges(limit);
         return {
           logs: recentLogs,
           total: recentLogs.length,
           limit,
           offset: 0,
-        }
+        };
       }
     },
     staleTime: 1 * 60 * 1000, // 1 minute
     gcTime: 5 * 60 * 1000, // 5 minutes
-  })
+  });
 
   // Filter logs based on search
   const filteredLogs = useMemo(() => {
-    if (!auditData?.logs) return []
+    if (!auditData?.logs) return [];
 
     return auditData.logs.filter((log: PermissionAuditLogType) => {
       if (filters.search) {
-        const searchLower = filters.search.toLowerCase()
+        const searchLower = filters.search.toLowerCase();
         return (
           log.user_id.toLowerCase().includes(searchLower) ||
           log.changed_by_user_id.toLowerCase().includes(searchLower) ||
-          (log.change_reason && log.change_reason.toLowerCase().includes(searchLower))
-        )
+          (log.change_reason &&
+            log.change_reason.toLowerCase().includes(searchLower))
+        );
       }
-      return true
-    })
-  }, [auditData?.logs, filters.search])
+      return true;
+    });
+  }, [auditData?.logs, filters.search]);
 
   // Calculate audit statistics
   const auditStats = useMemo((): AuditStats => {
@@ -358,33 +372,46 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
         recentChanges: 0,
         totalAdmins: 0,
         mostActiveAgent: null,
-      }
+      };
     }
 
-    const recentChanges = auditData.logs.filter((log: PermissionAuditLogType) => {
-      const logDate = new Date(log.created_at)
-      const yesterday = subDays(new Date(), 1)
-      return logDate >= yesterday
-    }).length
+    const recentChanges = auditData.logs.filter(
+      (log: PermissionAuditLogType) => {
+        const logDate = new Date(log.created_at);
+        const yesterday = subDays(new Date(), 1);
+        return logDate >= yesterday;
+      },
+    ).length;
 
-    const admins = new Set(auditData.logs.map((log: PermissionAuditLogType) => log.changed_by_user_id))
-    
-    const agentCounts = auditData.logs.reduce((acc: Record<AgentName, number>, log: PermissionAuditLogType) => {
-      acc[log.agent_name] = (acc[log.agent_name] || 0) + 1
-      return acc
-    }, {} as Record<AgentName, number>)
+    const admins = new Set(
+      auditData.logs.map(
+        (log: PermissionAuditLogType) => log.changed_by_user_id,
+      ),
+    );
 
-    const mostActiveAgent = Object.entries(agentCounts).reduce((max: [string, number], [agent, count]: [string, number]) => {
-      return count > (max[1] || 0) ? [agent, count] : max
-    }, ['', 0])[0] as AgentName || null
+    const agentCounts = auditData.logs.reduce(
+      (acc: Record<AgentName, number>, log: PermissionAuditLogType) => {
+        acc[log.agent_name] = (acc[log.agent_name] || 0) + 1;
+        return acc;
+      },
+      {} as Record<AgentName, number>,
+    );
+
+    const mostActiveAgent =
+      (Object.entries(agentCounts).reduce(
+        (max: [string, number], [agent, count]: [string, number]) => {
+          return count > (max[1] || 0) ? [agent, count] : max;
+        },
+        ["", 0],
+      )[0] as AgentName) || null;
 
     return {
       totalLogs: auditData.logs.length,
       recentChanges,
       totalAdmins: admins.size,
       mostActiveAgent,
-    }
-  }, [auditData?.logs])
+    };
+  }, [auditData?.logs]);
 
   // Export audit logs
   const handleExport = useCallback(() => {
@@ -393,26 +420,26 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
       filters,
       exportDate: new Date().toISOString(),
       total: filteredLogs.length,
-    }
-    
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { 
-      type: 'application/json' 
-    })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `audit-log-${format(new Date(), 'yyyy-MM-dd-HHmm')}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `audit-log-${format(new Date(), "yyyy-MM-dd-HHmm")}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
     toast({
-      title: 'Exportação concluída',
+      title: "Exportação concluída",
       description: `${filteredLogs.length} registros de auditoria exportados.`,
-      variant: 'success',
-    })
-  }, [filteredLogs, filters])
+      variant: "success",
+    });
+  }, [filteredLogs, filters]);
 
   if (!embedded) {
     return (
@@ -429,7 +456,7 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
                 Histórico completo de alterações de permissões no sistema
               </p>
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm" onClick={() => refetch()}>
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -449,48 +476,59 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
                 <div className="flex items-center">
                   <History className="h-4 w-4 text-muted-foreground" />
                   <div className="ml-2">
-                    <p className="text-sm font-medium leading-none">Total de Registros</p>
+                    <p className="text-sm font-medium leading-none">
+                      Total de Registros
+                    </p>
                     <p className="text-2xl font-bold">{auditStats.totalLogs}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <div className="ml-2">
-                    <p className="text-sm font-medium leading-none">Últimas 24h</p>
-                    <p className="text-2xl font-bold">{auditStats.recentChanges}</p>
+                    <p className="text-sm font-medium leading-none">
+                      Últimas 24h
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {auditStats.recentChanges}
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <div className="ml-2">
-                    <p className="text-sm font-medium leading-none">Administradores Ativos</p>
-                    <p className="text-2xl font-bold">{auditStats.totalAdmins}</p>
+                    <p className="text-sm font-medium leading-none">
+                      Administradores Ativos
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {auditStats.totalAdmins}
+                    </p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center">
                   <Shield className="h-4 w-4 text-muted-foreground" />
                   <div className="ml-2">
-                    <p className="text-sm font-medium leading-none">Agente Mais Ativo</p>
+                    <p className="text-sm font-medium leading-none">
+                      Agente Mais Ativo
+                    </p>
                     <p className="text-sm font-bold">
-                      {auditStats.mostActiveAgent 
+                      {auditStats.mostActiveAgent
                         ? AGENT_DISPLAY_NAMES[auditStats.mostActiveAgent]
-                        : 'N/A'
-                      }
+                        : "N/A"}
                     </p>
                   </div>
                 </div>
@@ -518,85 +556,126 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
                     <Input
                       placeholder="Usuário, admin ou motivo..."
                       value={filters.search}
-                      onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          search: e.target.value,
+                        }))
+                      }
                       className="pl-10"
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Agente</label>
                   <Select
                     value={filters.agent}
-                    onValueChange={(value) => setFilters(prev => ({ 
-                      ...prev, 
-                      agent: value as AgentName | 'all' 
-                    }))}
+                    onValueChange={(value) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        agent: value as AgentName | "all",
+                      }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os Agentes</SelectItem>
-                      {Object.entries(AGENT_DISPLAY_NAMES).map(([key, name]) => (
-                        <SelectItem key={key} value={key}>{name}</SelectItem>
-                      ))}
+                      {Object.entries(AGENT_DISPLAY_NAMES).map(
+                        ([key, name]) => (
+                          <SelectItem key={key} value={key}>
+                            {name}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Ação</label>
                   <Select
                     value={filters.action}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, action: value }))}
+                    onValueChange={(value) =>
+                      setFilters((prev) => ({ ...prev, action: value }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todas as Ações</SelectItem>
-                      {Object.entries(ACTION_DISPLAY_NAMES).map(([key, name]) => (
-                        <SelectItem key={key} value={key}>{name}</SelectItem>
-                      ))}
+                      {Object.entries(ACTION_DISPLAY_NAMES).map(
+                        ([key, name]) => (
+                          <SelectItem key={key} value={key}>
+                            {name}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Data Inicial</label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
                         <Calendar className="mr-2 h-4 w-4" />
-                        {filters.dateFrom ? format(filters.dateFrom, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar'}
+                        {filters.dateFrom
+                          ? format(filters.dateFrom, "dd/MM/yyyy", {
+                              locale: ptBR,
+                            })
+                          : "Selecionar"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                       <CalendarComponent
                         mode="single"
                         selected={filters.dateFrom || undefined}
-                        onSelect={(date) => setFilters(prev => ({ ...prev, dateFrom: date || null }))}
+                        onSelect={(date) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            dateFrom: date || null,
+                          }))
+                        }
                         initialFocus
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Data Final</label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left font-normal"
+                      >
                         <Calendar className="mr-2 h-4 w-4" />
-                        {filters.dateTo ? format(filters.dateTo, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar'}
+                        {filters.dateTo
+                          ? format(filters.dateTo, "dd/MM/yyyy", {
+                              locale: ptBR,
+                            })
+                          : "Selecionar"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                       <CalendarComponent
                         mode="single"
                         selected={filters.dateTo || undefined}
-                        onSelect={(date) => setFilters(prev => ({ ...prev, dateTo: date || null }))}
+                        onSelect={(date) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            dateTo: date || null,
+                          }))
+                        }
                         initialFocus
                       />
                     </PopoverContent>
@@ -607,7 +686,7 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
           </Card>
         </div>
       </PermissionGuard>
-    )
+    );
   }
 
   // Embedded view for dialogs
@@ -625,7 +704,9 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
       {isLoading ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p className="text-sm text-muted-foreground">Carregando histórico...</p>
+          <p className="text-sm text-muted-foreground">
+            Carregando histórico...
+          </p>
         </div>
       ) : (
         <Card>
@@ -645,7 +726,10 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
               <TableBody>
                 {filteredLogs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={showUserColumn ? 7 : 6} className="text-center py-8">
+                    <TableCell
+                      colSpan={showUserColumn ? 7 : 6}
+                      className="text-center py-8"
+                    >
                       <History className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                       <p className="text-sm text-muted-foreground">
                         Nenhum registro de auditoria encontrado
@@ -654,9 +738,9 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
                   </TableRow>
                 ) : (
                   filteredLogs.map((log: PermissionAuditLogType) => (
-                    <AuditLogEntry 
-                      key={log.audit_id} 
-                      log={log} 
+                    <AuditLogEntry
+                      key={log.audit_id}
+                      log={log}
                       showUser={showUserColumn}
                     />
                   ))
@@ -667,7 +751,7 @@ export const PermissionAuditLog: React.FC<PermissionAuditLogProps> = ({
         </Card>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default PermissionAuditLog
+export default PermissionAuditLog;

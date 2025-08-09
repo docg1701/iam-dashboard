@@ -37,7 +37,9 @@ def debug_db_function():
 
         # Test the condition directly
         print("\n3. Testing role conditions...")
-        cond_query = text("SELECT role = 'sysadmin' as sysadmin_match, role = 'SYSADMIN' as upper_match FROM users WHERE user_id = :user_id")
+        cond_query = text(
+            "SELECT role = 'sysadmin' as sysadmin_match, role = 'SYSADMIN' as upper_match FROM users WHERE user_id = :user_id"
+        )
         cond_result = session.execute(cond_query, {"user_id": str(sysadmin.user_id)})
         cond_row = cond_result.fetchone()
         print(f"   role = 'sysadmin': {cond_row.sysadmin_match}")
@@ -58,10 +60,9 @@ def debug_db_function():
             FROM users
             WHERE user_id = :user_id
         """)
-        manual_result = session.execute(manual_query, {
-            "user_id": str(sysadmin.user_id),
-            "agent_name": "client_management"
-        })
+        manual_result = session.execute(
+            manual_query, {"user_id": str(sysadmin.user_id), "agent_name": "client_management"}
+        )
         manual_row = manual_result.fetchone()
         print(f"   Role: '{manual_row.role}'")
         print(f"   Is sysadmin (lower): {manual_row.is_sysadmin_lower}")
@@ -71,16 +72,20 @@ def debug_db_function():
         # Test the actual function
         print("\n5. Testing actual database function...")
         func_query = text("SELECT check_user_agent_permission(:user_id, :agent_name, :operation)")
-        func_result = session.execute(func_query, {
-            "user_id": str(sysadmin.user_id),
-            "agent_name": "client_management",
-            "operation": "create"
-        })
+        func_result = session.execute(
+            func_query,
+            {
+                "user_id": str(sysadmin.user_id),
+                "agent_name": "client_management",
+                "operation": "create",
+            },
+        )
         func_value = func_result.scalar()
         print(f"   Function result: {func_value}")
 
     finally:
         session.close()
+
 
 if __name__ == "__main__":
     debug_db_function()

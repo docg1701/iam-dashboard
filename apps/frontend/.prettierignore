@@ -1,0 +1,35 @@
+# Coverage reports
+coverage/
+htmlcov/
+
+# Build output
+.next/
+out/
+dist/
+build/
+
+# Node modules
+node_modules/
+
+# Generated files
+*.tsbuildinfo
+next-env.d.ts
+
+# Log files
+*.log
+*.log.*
+
+# Test artifacts
+test-results/
+test-debug.js
+
+# Public assets (no need to format)
+public/
+
+# Environment files
+.env*
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

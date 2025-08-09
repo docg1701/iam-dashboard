@@ -64,26 +64,22 @@ async def health_check() -> HealthCheckResponse:
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     """
     Custom handler for validation errors to prevent user enumeration.
-    
+
     Returns consistent error messages for path validation errors,
     particularly for user ID lookups to prevent enumeration attacks.
     """
     # Check if this is a path validation error on user endpoints
     if "users/" in str(request.url.path):
         # For user endpoints, return 404 to prevent enumeration
-        return JSONResponse(
-            status_code=404,
-            content={"detail": "User not found"}
-        )
-    
+        return JSONResponse(status_code=404, content={"detail": "User not found"})
+
     # For other endpoints, return generic validation error
-    return JSONResponse(
-        status_code=422,
-        content={"detail": "Invalid request format"}
-    )
+    return JSONResponse(status_code=422, content={"detail": "Invalid request format"})
 
 
 @app.exception_handler(404)

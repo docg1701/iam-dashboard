@@ -7,22 +7,7 @@ Only mock external services that are not part of the system under test.
 
 import pytest
 
-# Import the main fixtures from parent conftest  
-from src.tests.conftest import (
-    test_engine,
-    test_session,
-    test_user,
-    test_sysadmin,
-    test_regular_user,
-    admin_auth_token,
-    sysadmin_auth_token,  
-    user_auth_token,
-    authenticated_sysadmin_headers,
-    authenticated_admin_headers,
-    auth_headers,
-    user_auth_headers,
-    client,
-)
+# Import the main fixtures from parent conftest
 
 
 @pytest.fixture(name="e2e_client")

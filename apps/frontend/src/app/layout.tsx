@@ -32,9 +32,7 @@ export default function RootLayout({
       >
         <QueryClientProvider>
           <AuthProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
+            <ToastProvider>{children}</ToastProvider>
           </AuthProvider>
         </QueryClientProvider>
       </body>

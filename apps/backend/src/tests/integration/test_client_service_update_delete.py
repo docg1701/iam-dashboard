@@ -6,7 +6,6 @@ functionality in the ClientService class.
 """
 
 from datetime import date, datetime
-from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -58,9 +57,7 @@ class TestClientServiceUpdate:
 
         # Create real request - do NOT patch log_database_action (internal business logic)
         # This approach uses real Request behavior but mocks external audit logging
-        from starlette.datastructures import Headers
-        from starlette.requests import Request as StarletteRequest
-        
+
         # Create a minimal real request scope
         scope = {
             "type": "http",
@@ -71,9 +68,9 @@ class TestClientServiceUpdate:
             "path": "/api/v1/clients",
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
-            "client": ("127.0.0.1", 12345)
+            "client": ("127.0.0.1", 12345),
         }
-        
+
         # Create actual Request object (not mocked)
         real_request = Request(scope)
 
@@ -117,9 +114,7 @@ class TestClientServiceUpdate:
 
         # Create real request - do NOT patch log_database_action (internal business logic)
         # This approach uses real Request behavior but mocks external audit logging
-        from starlette.datastructures import Headers
-        from starlette.requests import Request as StarletteRequest
-        
+
         # Create a minimal real request scope
         scope = {
             "type": "http",
@@ -130,9 +125,9 @@ class TestClientServiceUpdate:
             "path": "/api/v1/clients",
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
-            "client": ("127.0.0.1", 12345)
+            "client": ("127.0.0.1", 12345),
         }
-        
+
         # Create actual Request object (not mocked)
         real_request = Request(scope)
 
@@ -193,9 +188,7 @@ class TestClientServiceUpdate:
 
         # Create real request - do NOT patch log_database_action (internal business logic)
         # This approach uses real Request behavior but mocks external audit logging
-        from starlette.datastructures import Headers
-        from starlette.requests import Request as StarletteRequest
-        
+
         # Create a minimal real request scope
         scope = {
             "type": "http",
@@ -206,9 +199,9 @@ class TestClientServiceUpdate:
             "path": "/api/v1/clients",
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
-            "client": ("127.0.0.1", 12345)
+            "client": ("127.0.0.1", 12345),
         }
-        
+
         # Create actual Request object (not mocked)
         real_request = Request(scope)
 
@@ -221,9 +214,7 @@ class TestClientServiceUpdate:
         assert "already exists" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_update_client_audit_logging(
-        self, test_session: Session
-    ) -> None:
+    async def test_update_client_audit_logging(self, test_session: Session) -> None:
         """Test that audit logging is called during client update."""
         # Create test user
         user = User(
@@ -256,9 +247,7 @@ class TestClientServiceUpdate:
 
         # Create real request - do NOT patch log_database_action (internal business logic)
         # This approach uses real Request behavior but mocks external audit logging
-        from starlette.datastructures import Headers
-        from starlette.requests import Request as StarletteRequest
-        
+
         # Create a minimal real request scope
         scope = {
             "type": "http",
@@ -269,9 +258,9 @@ class TestClientServiceUpdate:
             "path": "/api/v1/clients",
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
-            "client": ("127.0.0.1", 12345)
+            "client": ("127.0.0.1", 12345),
         }
-        
+
         # Create actual Request object (not mocked)
         real_request = Request(scope)
 
@@ -323,9 +312,7 @@ class TestClientServiceDelete:
 
         # Create real request - do NOT patch log_database_action (internal business logic)
         # This approach uses real Request behavior but mocks external audit logging
-        from starlette.datastructures import Headers
-        from starlette.requests import Request as StarletteRequest
-        
+
         # Create a minimal real request scope
         scope = {
             "type": "http",
@@ -336,9 +323,9 @@ class TestClientServiceDelete:
             "path": "/api/v1/clients",
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
-            "client": ("127.0.0.1", 12345)
+            "client": ("127.0.0.1", 12345),
         }
-        
+
         # Create actual Request object (not mocked)
         real_request = Request(scope)
 
@@ -375,9 +362,7 @@ class TestClientServiceDelete:
 
         # Create real request - do NOT patch log_database_action (internal business logic)
         # This approach uses real Request behavior but mocks external audit logging
-        from starlette.datastructures import Headers
-        from starlette.requests import Request as StarletteRequest
-        
+
         # Create a minimal real request scope
         scope = {
             "type": "http",
@@ -388,9 +373,9 @@ class TestClientServiceDelete:
             "path": "/api/v1/clients",
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
-            "client": ("127.0.0.1", 12345)
+            "client": ("127.0.0.1", 12345),
         }
-        
+
         # Create actual Request object (not mocked)
         real_request = Request(scope)
 
@@ -403,9 +388,7 @@ class TestClientServiceDelete:
         assert "not found" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_delete_client_audit_logging(
-        self, test_session: Session
-    ) -> None:
+    async def test_delete_client_audit_logging(self, test_session: Session) -> None:
         """Test that audit logging is called during client deletion."""
         # Create test user
         user = User(
@@ -438,9 +421,7 @@ class TestClientServiceDelete:
 
         # Create real request - do NOT patch log_database_action (internal business logic)
         # This approach uses real Request behavior but mocks external audit logging
-        from starlette.datastructures import Headers
-        from starlette.requests import Request as StarletteRequest
-        
+
         # Create a minimal real request scope
         scope = {
             "type": "http",
@@ -451,9 +432,9 @@ class TestClientServiceDelete:
             "path": "/api/v1/clients",
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
-            "client": ("127.0.0.1", 12345)
+            "client": ("127.0.0.1", 12345),
         }
-        
+
         # Create actual Request object (not mocked)
         real_request = Request(scope)
 

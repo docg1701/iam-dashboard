@@ -1,7 +1,7 @@
 """Integration tests for audit utility functions."""
 
 from datetime import datetime
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -109,7 +109,9 @@ class TestCreateAuditLog:
         return request
 
     @pytest.mark.asyncio
-    async def test_create_audit_log_success(self, test_session: Session, mock_request: Mock) -> None:
+    async def test_create_audit_log_success(
+        self, test_session: Session, mock_request: Mock
+    ) -> None:
         """Test successful audit log creation with real database session."""
         user_id = uuid4()
 
@@ -203,10 +205,11 @@ class TestLogDatabaseAction:
 
         # Verify audit log was created in database
         from sqlmodel import select
+
         audit_log = test_session.exec(
             select(AuditLog).where(AuditLog.table_name == "clients", AuditLog.record_id == "456")
         ).first()
-        
+
         assert audit_log is not None
         assert audit_log.action == AuditAction.CREATE
         assert audit_log.user_id == user_id

@@ -245,14 +245,18 @@ class TestPermissionSystemIntegration:
         )
         assert response.status_code == status.HTTP_201_CREATED
 
-    @pytest.mark.skip(reason="User API dependency resolution issue in test environment - tracked for future investigation")
+    @pytest.mark.skip(
+        reason="User API dependency resolution issue in test environment - tracked for future investigation"
+    )
     def test_user_api_backward_compatibility(
         self, client: TestClient, authenticated_admin_headers: dict[str, str]
     ) -> None:
         """Test that user API endpoints maintain backward compatibility."""
         # Test that admin can list users (existing behavior)
         # Add query parameters to ensure proper parsing
-        response = client.get("/api/v1/users?page=1&per_page=20", headers=authenticated_admin_headers)
+        response = client.get(
+            "/api/v1/users?page=1&per_page=20", headers=authenticated_admin_headers
+        )
         if response.status_code != status.HTTP_200_OK:
             print(f"Response status: {response.status_code}")
             print(f"Response content: {response.content}")

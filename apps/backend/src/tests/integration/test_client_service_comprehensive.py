@@ -6,16 +6,15 @@ in the ClientService class.
 """
 
 from datetime import date, datetime
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
 from fastapi import Request
 from pydantic import ValidationError as PydanticValidationError
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlmodel import Session
 
-from src.core.exceptions import ConflictError, DatabaseError, NotFoundError, ValidationError
+from src.core.exceptions import ConflictError, NotFoundError
 from src.models.client import Client, ClientStatus
 from src.models.user import User, UserRole
 from src.schemas.clients import ClientCreate as ClientCreateSchema
@@ -398,11 +397,9 @@ class TestClientServiceUpdate:
         test_session.add(conflicting_client)
         test_session.commit()
 
-        # Test real CPF constraint violation 
+        # Test real CPF constraint violation
         with pytest.raises(ConflictError) as exc_info:
-            await service.update_client(
-                client.client_id, update_data, user.user_id, mock_request
-            )
+            await service.update_client(client.client_id, update_data, user.user_id, mock_request)
 
         assert exc_info.value.error_code == "CPF_DUPLICATE"
 
@@ -540,7 +537,7 @@ class TestClientServiceUpdate:
         # Verify update succeeded with real database transaction
         assert result.full_name == "Updated Name"
         assert result.updated_by == user.user_id
-        
+
         # Verify persistence by refreshing from database
         test_session.refresh(result)
         assert result.full_name == "Updated Name"
@@ -659,7 +656,7 @@ class TestClientServiceDelete:
 
         # Verify deletion succeeded
         assert result is True
-        
+
         # Verify soft delete by checking status change
         test_session.refresh(client)
         assert client.status == ClientStatus.ARCHIVED

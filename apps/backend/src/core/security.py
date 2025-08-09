@@ -81,13 +81,17 @@ class SecureAuthService:
             logger.debug("AuthService initialized with provided Redis client")
         else:
             # Check if we're in testing mode
-            self._is_testing = "pytest" in sys.modules or "test" in sys.argv[0] if sys.argv else False
-            
+            self._is_testing = (
+                "pytest" in sys.modules or "test" in sys.argv[0] if sys.argv else False
+            )
+
             if self._is_testing:
                 # In testing mode, create a mock-like Redis client that fails gracefully
                 # This allows tests to override it with proper mocks when needed
                 self.redis_client = None
-                logger.debug("AuthService initialized in testing mode - Redis will be mocked by tests")
+                logger.debug(
+                    "AuthService initialized in testing mode - Redis will be mocked by tests"
+                )
             else:
                 # Initialize real Redis client
                 try:
@@ -110,7 +114,12 @@ class SecureAuthService:
         return pwd_context.hash(password)
 
     def create_access_token(
-        self, user_id: UUID, user_role: str, user_email: str, session_id: str | None = None, request=None
+        self,
+        user_id: UUID,
+        user_role: str,
+        user_email: str,
+        session_id: str | None = None,
+        request=None,
     ) -> TokenResponse:
         """Create secure JWT token with session tracking."""
         if session_id is None:
@@ -183,7 +192,7 @@ class SecureAuthService:
                     detail="Invalid token format",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            
+
             # Check for proper JWT format (3 parts separated by dots)
             token_parts = token.split(".")
             if len(token_parts) != 3:
@@ -192,7 +201,7 @@ class SecureAuthService:
                     detail="Invalid token format",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            
+
             # Check for empty parts (header and payload are required, signature can be empty for testing)
             if not token_parts[0].strip() or not token_parts[1].strip():
                 raise HTTPException(
@@ -200,16 +209,17 @@ class SecureAuthService:
                     detail="Invalid token format",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
-            
+
             # Verify header contains proper algorithm (prevent algorithm confusion)
             try:
                 import base64
                 import json
+
                 header_b64 = token_parts[0]
                 # Add padding if needed
-                header_b64 += '=' * (4 - len(header_b64) % 4)
+                header_b64 += "=" * (4 - len(header_b64) % 4)
                 header = json.loads(base64.urlsafe_b64decode(header_b64))
-                
+
                 # Strictly enforce algorithm
                 if header.get("alg") != self.algorithm:
                     raise HTTPException(
@@ -217,7 +227,7 @@ class SecureAuthService:
                         detail="Invalid token algorithm",
                         headers={"WWW-Authenticate": "Bearer"},
                     )
-                
+
                 # Prevent algorithm none attacks
                 if header.get("alg") == "none" or header.get("alg") is None:
                     raise HTTPException(
@@ -225,7 +235,7 @@ class SecureAuthService:
                         detail="Algorithm 'none' not allowed",
                         headers={"WWW-Authenticate": "Bearer"},
                     )
-                    
+
             except Exception as e:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -235,15 +245,15 @@ class SecureAuthService:
 
             # Decode with strict algorithm verification
             payload = jwt.decode(
-                token, 
-                self.secret_key, 
+                token,
+                self.secret_key,
                 algorithms=[self.algorithm],
                 options={
                     "verify_signature": True,
                     "verify_exp": True,
                     "verify_iat": True,
-                    "require": ["sub", "role", "email", "exp", "iat"]
-                }
+                    "require": ["sub", "role", "email", "exp", "iat"],
+                },
             )
 
             # Check if token is blacklisted (replay attack prevention)
@@ -271,7 +281,7 @@ class SecureAuthService:
                             detail="Session mismatch detected",
                             headers={"WWW-Authenticate": "Bearer"},
                         )
-                    
+
                     # Verify other session details match token
                     if session_data.user_email != email or session_data.user_role != role:
                         raise HTTPException(
@@ -279,13 +289,15 @@ class SecureAuthService:
                             detail="Session data mismatch detected",
                             headers={"WWW-Authenticate": "Bearer"},
                         )
-                
+
                 # Additional session security validation with fingerprinting
                 if request and session_id and not self._is_testing:
                     try:
                         # Import here to avoid circular imports
-                        from src.services.session_security import session_security_service  # noqa: PLC0415
-                        
+                        from src.services.session_security import (
+                            session_security_service,  # noqa: PLC0415
+                        )
+
                         # This would be an async operation in a real implementation
                         # For now, we'll add a note that this should be called async
                         pass
@@ -382,7 +394,7 @@ class SecureAuthService:
     def blacklist_token(self, jti: str, exp_timestamp: int, reason: str = "logout") -> None:
         """
         Add a token to the blacklist with enhanced logging for replay attack prevention.
-        
+
         Args:
             jti: JWT ID to blacklist
             exp_timestamp: Token expiration timestamp
@@ -403,17 +415,17 @@ class SecureAuthService:
                 blacklist_data = {
                     "blacklisted_at": datetime.utcnow().isoformat(),
                     "reason": reason,
-                    "expires_at": datetime.fromtimestamp(exp_timestamp).isoformat()
+                    "expires_at": datetime.fromtimestamp(exp_timestamp).isoformat(),
                 }
-                
+
                 self.redis_client.setex(f"blacklist:{jti}", ttl, str(blacklist_data))
                 logger.info(f"Token {jti[:8]}... blacklisted for reason: {reason}")
-                
+
                 # Track blacklisting statistics
                 stats_key = "blacklist_stats"
                 self.redis_client.hincrby(stats_key, f"reason:{reason}", 1)
                 self.redis_client.hincrby(stats_key, "total_blacklisted", 1)
-                
+
         except redis.RedisError as e:
             logger.warning(f"Failed to blacklist token: {e}")
             # If Redis is unavailable, log the error but don't fail the operation
@@ -484,11 +496,11 @@ class SecureAuthService:
     def _is_token_blacklisted(self, jti: str, log_attempt: bool = True) -> bool:
         """
         Check if a token is blacklisted with enhanced logging for replay attack detection.
-        
+
         Args:
             jti: JWT ID to check
             log_attempt: Whether to log blacklisted token usage attempts
-            
+
         Returns:
             True if token is blacklisted
         """
@@ -498,43 +510,45 @@ class SecureAuthService:
 
         try:
             blacklist_data = self.redis_client.get(f"blacklist:{jti}")
-            
+
             if blacklist_data:
                 if log_attempt:
                     # Log potential replay attack attempt
-                    logger.warning(f"Attempted use of blacklisted token {jti[:8]}... - potential replay attack")
-                    
+                    logger.warning(
+                        f"Attempted use of blacklisted token {jti[:8]}... - potential replay attack"
+                    )
+
                     # Track replay attack attempts
                     replay_key = f"replay_attempts:{jti[:16]}"  # Truncated for privacy
                     self.redis_client.incr(replay_key)
                     self.redis_client.expire(replay_key, timedelta(hours=24))  # Track for 24 hours
-                    
+
                     # Update global statistics
                     stats_key = "blacklist_stats"
                     self.redis_client.hincrby(stats_key, "replay_attempts", 1)
-                
+
                 return True
-                
+
             return False
-            
+
         except redis.RedisError:
             # If Redis is unavailable, assume token is not blacklisted
             # but log the issue for monitoring
             logger.error("Redis unavailable during blacklist check - security degraded")
             return False
-    
+
     def get_blacklist_statistics(self) -> dict[str, Any]:
         """Get blacklisting statistics for security monitoring."""
         if self.redis_client is None:
             return {"testing_mode": True}
-        
+
         try:
             stats_key = "blacklist_stats"
             stats = self.redis_client.hgetall(stats_key)
-            
+
             # Convert string values to integers
             return {key: int(value) for key, value in stats.items()}
-            
+
         except redis.RedisError as e:
             logger.error(f"Failed to get blacklist statistics: {e}")
             return {"error": "Unable to retrieve statistics"}

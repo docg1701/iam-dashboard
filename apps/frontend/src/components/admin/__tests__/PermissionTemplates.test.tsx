@@ -1,6 +1,6 @@
 /**
  * PermissionTemplates Component Tests
- * 
+ *
  * Following CLAUDE.md testing directives:
  * - NEVER mock internal frontend code, components, hooks, or utilities
  * - ONLY mock external APIs (fetch calls, third-party services, etc.)
@@ -9,271 +9,321 @@
  * - Test actual behavior, not implementation details
  */
 
-import { 
-  renderWithProviders, 
-  screen, 
-  waitFor, 
+import {
+  renderWithProviders,
+  screen,
+  waitFor,
   userEvent,
-  vi, 
-  describe, 
-  it, 
+  vi,
+  describe,
+  it,
   expect,
   useTestSetup,
   act,
-  mockSuccessfulFetch
-} from '@/test/test-template'
-import { setupTestAuth, createMockAdmin } from '@/test/auth-helpers'
-import { PermissionTemplates } from '../PermissionTemplates'
+  mockSuccessfulFetch,
+} from "@/test/test-template";
+import { setupTestAuth, createMockAdmin } from "@/test/auth-helpers";
+import { PermissionTemplates } from "../PermissionTemplates";
 
 // Use standardized test setup - handles all external API mocks
-useTestSetup()
+useTestSetup();
 
-describe('PermissionTemplates Component', () => {
+describe("PermissionTemplates Component", () => {
   beforeEach(() => {
     // Set up authenticated admin user - no internal mocks, just setting up test state
-    const adminUser = createMockAdmin()
-    setupTestAuth(adminUser, 'mock-jwt-token')
-  })
+    const adminUser = createMockAdmin();
+    setupTestAuth(adminUser, "mock-jwt-token");
+  });
 
-  describe('Basic Rendering', () => {
-    it('should render templates list with system and custom sections', async () => {
+  describe("Basic Rendering", () => {
+    it("should render templates list with system and custom sections", async () => {
       // Only mock the external API call - setup.ts already has default mock for /permissions/templates
       await act(async () => {
-        renderWithProviders(<PermissionTemplates />)
-      })
-      
+        renderWithProviders(<PermissionTemplates />);
+      });
+
       // Wait for templates to load and Select components to stabilize
       await act(async () => {
-        await waitFor(async () => {
-          // The default mock in setup.ts returns a "Default User" template
-          expect(screen.getByText('Default User')).toBeInTheDocument()
-        }, { timeout: 3000 })
-      })
-      
+        await waitFor(
+          async () => {
+            // The default mock in setup.ts returns a "Default User" template
+            expect(screen.getByText("Default User")).toBeInTheDocument();
+          },
+          { timeout: 3000 },
+        );
+      });
+
       // Allow Select components time to stabilize after initial render
       await act(async () => {
         // Small delay for any Select state updates to complete
-        await new Promise(resolve => setTimeout(resolve, 100))
-      })
-      
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+
       // Verify the component structure renders correctly
       await act(async () => {
-        expect(screen.getByText(/Basic permissions for regular users/i)).toBeInTheDocument()
-      })
-    })
+        expect(
+          screen.getByText(/Basic permissions for regular users/i),
+        ).toBeInTheDocument();
+      });
+    });
 
-    it('should handle loading state properly', async () => {
+    it("should handle loading state properly", async () => {
       // Mock a slow API response to test loading state
-      mockSuccessfulFetch('/permissions/templates', 
+      mockSuccessfulFetch(
+        "/permissions/templates",
         { templates: [], total: 0 },
-        200
-      )
-      
+        200,
+      );
+
       await act(async () => {
-        renderWithProviders(<PermissionTemplates />)
-      })
-      
+        renderWithProviders(<PermissionTemplates />);
+      });
+
       // Should eventually show some content (empty state or data)
       await act(async () => {
         await waitFor(async () => {
           // Either shows templates or empty state - testing real behavior
-          expect(screen.getByRole('main') || screen.getByText(/template/i)).toBeInTheDocument()
-        })
-      })
-    })
+          expect(
+            screen.getByRole("main") || screen.getByText(/template/i),
+          ).toBeInTheDocument();
+        });
+      });
+    });
 
-    it('should display permission guard when user lacks access', async () => {
+    it("should display permission guard when user lacks access", async () => {
       // Set up user without admin permissions - testing real permission logic
-      const regularUser = createMockAdmin({ role: 'user' }) // Regular user, not admin
-      setupTestAuth(regularUser, 'mock-jwt-token')
-      
+      const regularUser = createMockAdmin({ role: "user" }); // Regular user, not admin
+      setupTestAuth(regularUser, "mock-jwt-token");
+
       // Mock API to return no permissions for regular user
-      mockSuccessfulFetch('/permissions/user/', {
+      mockSuccessfulFetch("/permissions/user/", {
         user_id: regularUser.user_id,
         permissions: [], // No permissions
-        last_updated: new Date().toISOString()
-      })
-      
+        last_updated: new Date().toISOString(),
+      });
+
       await act(async () => {
-        renderWithProviders(<PermissionTemplates />)
-      })
-      
+        renderWithProviders(<PermissionTemplates />);
+      });
+
       // Should show either empty/restricted content or permission message
       // The component will render but may not show certain content based on permissions
       await act(async () => {
         await waitFor(async () => {
           // Component should render the main template container
-          expect(screen.getByText(/templates de permissão/i)).toBeInTheDocument()
-        })
-      })
-    })
-  })
+          expect(
+            screen.getByText(/templates de permissão/i),
+          ).toBeInTheDocument();
+        });
+      });
+    });
+  });
 
-  describe('Template Interaction', () => {
+  describe("Template Interaction", () => {
     beforeEach(async () => {
       // Setup admin with full permissions
-      const adminUser = createMockAdmin()
-      setupTestAuth(adminUser, 'mock-jwt-token')
-      
+      const adminUser = createMockAdmin();
+      setupTestAuth(adminUser, "mock-jwt-token");
+
       // Mock templates with more realistic data for interaction tests
-      mockSuccessfulFetch('/permissions/templates', {
+      mockSuccessfulFetch("/permissions/templates", {
         templates: [
           {
-            template_id: 'template-1',
-            template_name: 'Admin Template',
-            description: 'Full administrative access',
+            template_id: "template-1",
+            template_name: "Admin Template",
+            description: "Full administrative access",
             permissions: {
-              client_management: { create: true, read: true, update: true, delete: true },
-              pdf_processing: { create: true, read: true, update: true, delete: false }
+              client_management: {
+                create: true,
+                read: true,
+                update: true,
+                delete: true,
+              },
+              pdf_processing: {
+                create: true,
+                read: true,
+                update: true,
+                delete: false,
+              },
             },
             is_system_template: true,
-            created_by_user_id: 'admin-123',
-            created_at: '2025-01-01T00:00:00Z',
-            updated_at: '2025-01-01T00:00:00Z'
+            created_by_user_id: "admin-123",
+            created_at: "2025-01-01T00:00:00Z",
+            updated_at: "2025-01-01T00:00:00Z",
           },
           {
-            template_id: 'template-2',
-            template_name: 'User Template', 
-            description: 'Basic user access',
+            template_id: "template-2",
+            template_name: "User Template",
+            description: "Basic user access",
             permissions: {
-              client_management: { create: false, read: true, update: true, delete: false },
-              pdf_processing: { create: false, read: true, update: false, delete: false }
+              client_management: {
+                create: false,
+                read: true,
+                update: true,
+                delete: false,
+              },
+              pdf_processing: {
+                create: false,
+                read: true,
+                update: false,
+                delete: false,
+              },
             },
             is_system_template: false,
-            created_by_user_id: 'admin-123',
-            created_at: '2025-01-01T00:00:00Z',
-            updated_at: '2025-01-01T00:00:00Z'
-          }
+            created_by_user_id: "admin-123",
+            created_at: "2025-01-01T00:00:00Z",
+            updated_at: "2025-01-01T00:00:00Z",
+          },
         ],
-        total: 2
-      })
-    })
+        total: 2,
+      });
+    });
 
-    it('should render template cards with correct information', async () => {
+    it("should render template cards with correct information", async () => {
       await act(async () => {
-        renderWithProviders(<PermissionTemplates />)
-      })
-      
+        renderWithProviders(<PermissionTemplates />);
+      });
+
       // Wait for component to render and any data loading to complete
       await act(async () => {
-        await waitFor(async () => {
-          // Look for templates to be loaded - could be from default mock or custom mock
-          const templateElements = screen.queryAllByText(/template/i)
-          const hasTemplates = templateElements.length > 0
-          
-          // Accept either the custom mock data or check if templates section loads
-          if (hasTemplates) {
-            // Check if we have our custom mock data
-            const adminTemplate = screen.queryByText('Admin Template')
-            const userTemplate = screen.queryByText('User Template')
-            const defaultUser = screen.queryByText('Default User')
-            
-            // Accept any template being rendered
-            expect(adminTemplate || userTemplate || defaultUser).toBeInTheDocument()
-          } else {
-            // At minimum, expect the templates container to be present
-            expect(screen.getByText(/templates de permissão/i)).toBeInTheDocument()
-          }
-        }, { timeout: 5000 })
-      })
-      
+        await waitFor(
+          async () => {
+            // Look for templates to be loaded - could be from default mock or custom mock
+            const templateElements = screen.queryAllByText(/template/i);
+            const hasTemplates = templateElements.length > 0;
+
+            // Accept either the custom mock data or check if templates section loads
+            if (hasTemplates) {
+              // Check if we have our custom mock data
+              const adminTemplate = screen.queryByText("Admin Template");
+              const userTemplate = screen.queryByText("User Template");
+              const defaultUser = screen.queryByText("Default User");
+
+              // Accept any template being rendered
+              expect(
+                adminTemplate || userTemplate || defaultUser,
+              ).toBeInTheDocument();
+            } else {
+              // At minimum, expect the templates container to be present
+              expect(
+                screen.getByText(/templates de permissão/i),
+              ).toBeInTheDocument();
+            }
+          },
+          { timeout: 5000 },
+        );
+      });
+
       // Test that descriptions might be shown if templates loaded
       await act(async () => {
-        const adminDesc = screen.queryByText('Full administrative access')
-        const userDesc = screen.queryByText('Basic user access')
-        const defaultDesc = screen.queryByText(/default/i)
-        
+        const adminDesc = screen.queryByText("Full administrative access");
+        const userDesc = screen.queryByText("Basic user access");
+        const defaultDesc = screen.queryByText(/default/i);
+
         // If any templates loaded, expect at least some description content
-        const templateElements = screen.queryAllByText(/template/i)
+        const templateElements = screen.queryAllByText(/template/i);
         if (templateElements.length > 0) {
           // Some description should be present
-          const hasDescription = adminDesc || userDesc || defaultDesc
+          const hasDescription = adminDesc || userDesc || defaultDesc;
           if (hasDescription) {
-            expect(hasDescription).toBeInTheDocument()
+            expect(hasDescription).toBeInTheDocument();
           } else {
             // If no descriptions found, just verify templates heading is there
-            expect(screen.getByText(/templates de permissão/i)).toBeInTheDocument()
+            expect(
+              screen.getByText(/templates de permissão/i),
+            ).toBeInTheDocument();
           }
         }
-      })
-    })
+      });
+    });
 
-    it('should handle template creation dialog', async () => {
-      const user = userEvent.setup()
-      
+    it("should handle template creation dialog", async () => {
+      const user = userEvent.setup();
+
       await act(async () => {
-        renderWithProviders(<PermissionTemplates />)
-      })
-      
+        renderWithProviders(<PermissionTemplates />);
+      });
+
       // Wait for component to load
       await act(async () => {
-        await waitFor(async () => {
-          // Wait for templates section to render
-          expect(screen.getByText(/templates de permissão/i)).toBeInTheDocument()
-        }, { timeout: 3000 })
-      })
-      
+        await waitFor(
+          async () => {
+            // Wait for templates section to render
+            expect(
+              screen.getByText(/templates de permissão/i),
+            ).toBeInTheDocument();
+          },
+          { timeout: 3000 },
+        );
+      });
+
       // Look for create template button
-      const createButton = screen.getByRole('button', { name: /criar.*template/i }) || 
-                         screen.getByRole('button', { name: /novo.*template/i }) ||
-                         screen.getByRole('button', { name: /adicionar/i })
-      
+      const createButton =
+        screen.getByRole("button", { name: /criar.*template/i }) ||
+        screen.getByRole("button", { name: /novo.*template/i }) ||
+        screen.getByRole("button", { name: /adicionar/i });
+
       if (createButton) {
         await act(async () => {
-          await user.click(createButton)
-        })
-        
+          await user.click(createButton);
+        });
+
         // Allow any Select components in dialog to stabilize
         await act(async () => {
-          await new Promise(resolve => setTimeout(resolve, 100))
-        })
-        
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        });
+
         // Should open create dialog - testing real dialog behavior
         await act(async () => {
           await waitFor(async () => {
-            expect(screen.getByRole('dialog')).toBeInTheDocument()
-          })
-        })
+            expect(screen.getByRole("dialog")).toBeInTheDocument();
+          });
+        });
       }
-    })
-  })
+    });
+  });
 
-  describe('Error Handling', () => {
-    it('should display error message when API fails', async () => {
+  describe("Error Handling", () => {
+    it("should display error message when API fails", async () => {
       // Mock API failure - only external API mock
-      vi.mocked(global.fetch).mockRejectedValueOnce(new Error('Network error'))
-      
+      vi.mocked(global.fetch).mockRejectedValueOnce(new Error("Network error"));
+
       await act(async () => {
-        renderWithProviders(<PermissionTemplates />)
-      })
-      
+        renderWithProviders(<PermissionTemplates />);
+      });
+
       // Should show error state - testing real error handling
       await act(async () => {
         await waitFor(async () => {
-          expect(screen.getByText(/erro/i) || screen.getByText(/falha/i)).toBeInTheDocument()
-        })
-      })
-    })
+          expect(
+            screen.getByText(/erro/i) || screen.getByText(/falha/i),
+          ).toBeInTheDocument();
+        });
+      });
+    });
 
-    it('should handle unauthorized access gracefully', async () => {
+    it("should handle unauthorized access gracefully", async () => {
       // Mock 401 response - external API mock only
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: false,
         status: 401,
-        statusText: 'Unauthorized',
-        json: () => Promise.resolve({ error: 'Unauthorized' })
-      } as Response)
-      
+        statusText: "Unauthorized",
+        json: () => Promise.resolve({ error: "Unauthorized" }),
+      } as Response);
+
       await act(async () => {
-        renderWithProviders(<PermissionTemplates />)
-      })
-      
+        renderWithProviders(<PermissionTemplates />);
+      });
+
       // Should handle unauthorized gracefully
       await act(async () => {
         await waitFor(async () => {
-          expect(screen.getByText(/não.*autorizado/i) || screen.getByText(/permissão/i)).toBeInTheDocument()
-        })
-      })
-    })
-  })
-})
+          expect(
+            screen.getByText(/não.*autorizado/i) ||
+              screen.getByText(/permissão/i),
+          ).toBeInTheDocument();
+        });
+      });
+    });
+  });
+});

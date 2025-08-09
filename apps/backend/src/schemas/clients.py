@@ -65,11 +65,12 @@ class ClientCreate(BaseModel):
     def validate_cpf_format(cls, v: str) -> str:
         """Validate Brazilian CPF format and check digits with same rules as SQLModel."""
         # Import validation utility
-        import sys
         import os
+        import sys
+
         sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from src.utils.validation import validate_cpf
-        
+
         # Check format
         if not re.match(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$", v):
             raise ValueError("CPF must be in XXX.XXX.XXX-XX format")
@@ -137,11 +138,12 @@ class ClientUpdate(BaseModel):
             return v
 
         # Import validation utility
-        import sys
         import os
+        import sys
+
         sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from src.utils.validation import validate_cpf
-        
+
         # Check format
         if not re.match(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$", v):
             raise ValueError("CPF must be in XXX.XXX.XXX-XX format")
@@ -191,7 +193,7 @@ class ClientResponse(BaseModel):
     @classmethod
     def mask_cpf(cls, v: str) -> str:
         """Mask CPF for security (show only last 2 digits)."""
-        if len(v) >= 14 and v[11] == '-':  # Valid CPF format XXX.XXX.XXX-XX
+        if len(v) >= 14 and v[11] == "-":  # Valid CPF format XXX.XXX.XXX-XX
             # Extract the last 2 digits (check digits)
             last_two = v[12:14]  # Characters after the hyphen
             return f"***.***.***-{last_two}"

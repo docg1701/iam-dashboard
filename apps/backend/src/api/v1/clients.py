@@ -76,7 +76,11 @@ async def list_clients(
         client_list_items = []
         for client in clients:
             # Create masked CPF for list view
-            masked_cpf = f"***.***.*{client.cpf[-2:]}-{client.cpf[-2:]}" if len(client.cpf) >= 4 else "***.***.**-**"
+            masked_cpf = (
+                f"***.***.*{client.cpf[-2:]}-{client.cpf[-2:]}"
+                if len(client.cpf) >= 4
+                else "***.***.**-**"
+            )
 
             client_list_item = ClientListItem(
                 client_id=client.client_id,
@@ -409,13 +413,13 @@ async def batch_update_clients(
         if not client_ids:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No client IDs provided for batch operation"
+                detail="No client IDs provided for batch operation",
             )
 
         if not operation:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No operation specified for batch operation"
+                detail="No operation specified for batch operation",
             )
 
         # Initialize client service
@@ -424,7 +428,7 @@ async def batch_update_clients(
         # Validate ownership for each client - only process owned clients
         processed = []
         unauthorized = []
-        
+
         for client_id in client_ids:
             try:
                 # Check if user owns this client by trying to get it
@@ -433,7 +437,7 @@ async def batch_update_clients(
                     user_id=token_data.user_id,
                     request=request,
                 )
-                
+
                 # If we get here, user owns the client
                 if operation == "update":
                     # Perform update operation
@@ -444,7 +448,7 @@ async def batch_update_clients(
                         request=request,
                     )
                     processed.append(str(client_id))
-                    
+
             except (DashboardException, HTTPException, ValueError):
                 # Client not found or not owned by user
                 unauthorized.append(str(client_id))

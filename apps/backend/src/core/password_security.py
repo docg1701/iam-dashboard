@@ -102,7 +102,9 @@ class PasswordSecurityService:
             if self.redis_client is not None:
                 self.redis_client.delete(f"password_reset:{token}")
 
-    def record_login_attempt(self, email: str, ip_address: str, success: bool, user=None, session=None) -> None:
+    def record_login_attempt(
+        self, email: str, ip_address: str, success: bool, user=None, session=None
+    ) -> None:
         """Record a login attempt for tracking failed attempts."""
         attempt = LoginAttempt(
             email=email,
@@ -120,11 +122,13 @@ class PasswordSecurityService:
             else:
                 # Increment failed attempts
                 user.failed_login_attempts += 1
-                
+
                 # Lock account if threshold exceeded
                 if user.failed_login_attempts > self.max_failed_attempts:
-                    user.account_locked_until = datetime.utcnow() + timedelta(minutes=self.lockout_duration_minutes)
-            
+                    user.account_locked_until = datetime.utcnow() + timedelta(
+                        minutes=self.lockout_duration_minutes
+                    )
+
             session.add(user)
             session.commit()
 
@@ -157,7 +161,7 @@ class PasswordSecurityService:
                     user.account_locked_until = None
                     user.failed_login_attempts = 0
                     return False
-            
+
             # Also check if failed attempts exceed threshold (in case lockout timestamp is missing)
             if user.failed_login_attempts > self.max_failed_attempts:
                 return True
@@ -283,10 +287,10 @@ class PasswordSecurityService:
             # Check rate limiting by email
             email_key = f"rate_limit_email:{email}"
             ip_key = f"rate_limit_ip:{ip_address}"
-            
+
             current_time = datetime.utcnow()
             window_start = current_time - timedelta(seconds=self.rate_limit_window_seconds)
-            
+
             if self.redis_client is not None:
                 # Count recent attempts by email
                 attempts_json = self.redis_client.lrange(f"login_attempts:{email}", 0, -1)
@@ -299,17 +303,17 @@ class PasswordSecurityService:
                             recent_attempts += 1
                     except Exception:
                         continue
-                
+
                 if recent_attempts > self.rate_limit_max_attempts:
                     return True
-                
+
                 # Also check by IP address (simple counter)
                 ip_attempts = self.redis_client.get(ip_key)
                 if ip_attempts and int(ip_attempts) > self.rate_limit_max_attempts:
                     return True
-            
+
             return False
-            
+
         except Exception:
             # If Redis is unavailable, don't rate limit
             return False
@@ -319,13 +323,13 @@ class PasswordSecurityService:
         try:
             if self.redis_client is not None:
                 ip_key = f"rate_limit_ip:{ip_address}"
-                
+
                 # Increment counter
                 self.redis_client.incr(ip_key)
-                
+
                 # Set expiration if it's a new key
                 self.redis_client.expire(ip_key, self.rate_limit_window_seconds)
-                
+
         except Exception:
             # If Redis is unavailable, don't fail
             pass

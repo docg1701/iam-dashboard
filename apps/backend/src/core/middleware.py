@@ -11,12 +11,11 @@ import re
 import time
 import uuid
 from collections.abc import Awaitable, Callable
-from typing import Optional
 
 import redis
 from fastapi import FastAPI, HTTPException, Request, Response, status
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
@@ -511,15 +510,15 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
                     )
                     return JSONResponse(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        content={"detail": "Invalid request content"}
+                        content={"detail": "Invalid request content"},
                     )
         except UnicodeDecodeError as e:
             self._log_security_event(request, "INVALID_ENCODING", "Non-UTF-8 request body")
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": "Invalid request encoding"}
+                content={"detail": "Invalid request encoding"},
             )
-        
+
         return None
 
     def _contains_suspicious_content(self, content: str) -> bool:

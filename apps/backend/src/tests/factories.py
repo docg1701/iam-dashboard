@@ -206,36 +206,36 @@ def generate_valid_cpf() -> str:
     """Generate a valid CPF format using fallback implementation."""
     # Use fallback implementation since cnpj-cpf-validator doesn't have generate
     cpf = _generate_cpf_fallback()
-    
+
     # Double-check our generated CPF is valid
     assert validate_cpf(cpf), f"Generated invalid CPF: {cpf}"
-    
+
     return cpf
 
 
 def _generate_cpf_fallback() -> str:
     """Fallback CPF generation when cnpj-cpf-validator is not available."""
     import random
-    
+
     # Generate first 9 digits randomly
     digits = [random.randint(0, 9) for _ in range(9)]
-    
+
     # Avoid sequences like 000000000, 111111111, etc.
     while all(d == digits[0] for d in digits):
         digits = [random.randint(0, 9) for _ in range(9)]
-    
+
     # Calculate first check digit
     sum1 = sum(digits[i] * (10 - i) for i in range(9))
     remainder1 = sum1 % 11
     check_digit1 = 0 if remainder1 < 2 else 11 - remainder1
     digits.append(check_digit1)
-    
+
     # Calculate second check digit
     sum2 = sum(digits[i] * (11 - i) for i in range(10))
     remainder2 = sum2 % 11
     check_digit2 = 0 if remainder2 < 2 else 11 - remainder2
     digits.append(check_digit2)
-    
+
     # Format as XXX.XXX.XXX-XX
     return f"{digits[0]}{digits[1]}{digits[2]}.{digits[3]}{digits[4]}{digits[5]}.{digits[6]}{digits[7]}{digits[8]}-{digits[9]}{digits[10]}"
 
@@ -257,8 +257,6 @@ def generate_test_cpfs() -> dict[str, str]:
         "invalid_all_zeros": "000.000.000-00",  # All zeros (invalid)
         "invalid_all_same": "111.111.111-11",  # All same digits (invalid)
     }
-
-
 
 
 def generate_audit_values(

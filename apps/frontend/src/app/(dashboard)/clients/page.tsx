@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Plus, Users, Search } from "lucide-react"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Plus, Users, Search } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 export default function ClientsPage() {
-  const router = useRouter()
-  const [searchTerm, setSearchTerm] = useState("")
+  const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState("");
 
   const handleNewClient = () => {
-    router.push("/clients/new")
-  }
+    router.push("/clients/new");
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -32,7 +32,7 @@ export default function ClientsPage() {
               </p>
             </div>
           </div>
-          
+
           <Button onClick={handleNewClient} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Novo Cliente
@@ -58,11 +58,16 @@ export default function ClientsPage() {
             <Users className="h-8 w-8 text-muted-foreground" />
           </div>
           <div>
-            <h3 className="font-semibold text-lg mb-2">Nenhum cliente encontrado</h3>
+            <h3 className="font-semibold text-lg mb-2">
+              Nenhum cliente encontrado
+            </h3>
             <p className="text-muted-foreground mb-4">
               Comece criando o primeiro cliente do sistema.
             </p>
-            <Button onClick={handleNewClient} className="flex items-center gap-2">
+            <Button
+              onClick={handleNewClient}
+              className="flex items-center gap-2"
+            >
               <Plus className="h-4 w-4" />
               Criar Primeiro Cliente
             </Button>
@@ -72,9 +77,13 @@ export default function ClientsPage() {
 
       {/* Info Card */}
       <Card className="p-4 mt-6 bg-blue-50 border-blue-200">
-        <h4 className="font-medium text-blue-800 mb-2">💡 Sobre o Sistema de Clientes</h4>
+        <h4 className="font-medium text-blue-800 mb-2">
+          💡 Sobre o Sistema de Clientes
+        </h4>
         <ul className="text-sm text-blue-700 space-y-1">
-          <li>• Registre clientes com nome completo, CPF e data de nascimento</li>
+          <li>
+            • Registre clientes com nome completo, CPF e data de nascimento
+          </li>
           <li>• Todas as informações são validadas automaticamente</li>
           <li>• CPF deve ser único no sistema para cada cliente</li>
           <li>• Clientes devem ter pelo menos 13 anos de idade</li>
@@ -82,5 +91,5 @@ export default function ClientsPage() {
         </ul>
       </Card>
     </div>
-  )
+  );
 }

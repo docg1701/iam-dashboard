@@ -22,10 +22,13 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/test/vitest-matchers.d.ts", "src/test/vitest-globals.d.ts"],
-  "exclude": [
-    "node_modules", 
-    "tests/e2e/**/*", 
-    "playwright.config.ts"
-  ]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "src/test/vitest-matchers.d.ts",
+    "src/test/vitest-globals.d.ts"
+  ],
+  "exclude": ["node_modules", "tests/e2e/**/*", "playwright.config.ts"]
 }

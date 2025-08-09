@@ -16,11 +16,11 @@ const eslintConfig = [
       "src/__tests__/**/*",
       "**/*.test.ts",
       "**/*.test.tsx",
-      "**/*.spec.ts", 
+      "**/*.spec.ts",
       "**/*.spec.tsx",
       "src/test/**/*",
-      "**/__tests__/**/*"
-    ]
+      "**/__tests__/**/*",
+    ],
   },
 ];
 

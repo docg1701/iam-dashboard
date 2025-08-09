@@ -120,7 +120,9 @@ class TestClientBase:
 
         for invalid_name in invalid_names:
             with pytest.raises(ValidationError) as exc_info:
-                ClientBase(full_name=invalid_name, cpf="123.456.789-09", birth_date=date(1990, 1, 1))
+                ClientBase(
+                    full_name=invalid_name, cpf="123.456.789-09", birth_date=date(1990, 1, 1)
+                )
             assert "Full name can only contain letters, spaces, hyphens, and apostrophes" in str(
                 exc_info.value
             )

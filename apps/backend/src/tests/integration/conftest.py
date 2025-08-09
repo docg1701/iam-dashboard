@@ -5,21 +5,11 @@ Integration tests should use real database sessions, real services, and real per
 Only mock external systems (APIs, SMTP, file systems) but test real internal integrations.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
 
 # Import the main fixtures from parent conftest
-from src.tests.conftest import (
-    test_engine,
-    test_session,
-    test_user,
-    test_sysadmin,
-    test_regular_user,
-    admin_auth_token,
-    sysadmin_auth_token,
-    user_auth_token,
-    client,
-)
 
 
 @pytest.fixture(name="mock_external_apis", autouse=True)
@@ -28,7 +18,7 @@ def mock_external_apis():
     with patch("httpx.AsyncClient") as mock_client:
         mock_instance = AsyncMock()
         mock_client.return_value.__aenter__.return_value = mock_instance
-        
+
         # Mock external service responses
         mock_instance.get = AsyncMock()
         mock_instance.post = AsyncMock()
@@ -53,10 +43,12 @@ def real_redis_or_mock():
     """
     try:
         import redis
-        client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+
+        client = redis.Redis(host="localhost", port=6379, decode_responses=True)
         client.ping()
         yield client
     except (redis.ConnectionError, ImportError):
         # Fall back to mock if Redis is not available
         from src.tests.conftest import mock_redis_client
+
         yield mock_redis_client()

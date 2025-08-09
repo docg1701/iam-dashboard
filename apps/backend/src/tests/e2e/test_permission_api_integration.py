@@ -5,14 +5,12 @@ This module tests the actual API endpoints with real services to achieve better
 coverage of the API layer code.
 """
 
-
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from src.api.v1.permissions import get_permission_service
 from src.core.database import get_session
-from src.core.security import get_current_user
 from src.main import app
 from src.models.user import User, UserRole
 from src.services.permission_service import PermissionService
@@ -52,6 +50,7 @@ class TestPermissionAPIIntegration:
     @pytest.fixture(autouse=True)
     def setup_real_service(self, test_engine, test_admin: User) -> None:
         """Setup real permission service for tests."""
+
         def get_real_permission_service() -> PermissionService:
             # Don't inject session - let it use the dependency system
             service = PermissionService()
@@ -149,7 +148,7 @@ class TestPermissionAPIIntegration:
             "agent_name": "client_management",
             "permissions": {"create": True, "read": True, "update": False, "delete": False},
             # assigned_by_user_id comes from current_user in the API, not the request
-            "change_reason": "Test assignment"
+            "change_reason": "Test assignment",
         }
 
         response = client.post(
@@ -180,7 +179,7 @@ class TestPermissionAPIIntegration:
             "user_id": str(user_id),
             "agent_name": "client_management",
             "permissions": {"create": True, "read": True, "update": False, "delete": False},
-            "change_reason": "Test assignment"
+            "change_reason": "Test assignment",
         }
 
         assign_response = client.post(
@@ -215,7 +214,7 @@ class TestPermissionAPIIntegration:
             "user_ids": user_ids,
             "agent_name": "client_management",
             "permissions": {"create": True, "read": True, "update": False, "delete": False},
-            "change_reason": "Bulk test assignment"
+            "change_reason": "Bulk test assignment",
         }
 
         response = client.post(
@@ -267,10 +266,15 @@ class TestPermissionAPIIntegration:
             "template_name": "New Test Template",
             "description": "A template for testing",
             "permissions": {
-                "client_management": {"create": True, "read": True, "update": False, "delete": False}
+                "client_management": {
+                    "create": True,
+                    "read": True,
+                    "update": False,
+                    "delete": False,
+                }
             },
             "is_system": False,
-            "created_by_user_id": str(test_admin.user_id)
+            "created_by_user_id": str(test_admin.user_id),
         }
 
         response = client.post(
@@ -302,9 +306,14 @@ class TestPermissionAPIIntegration:
             "template_name": "Updated Template Name",
             "description": "Updated description",
             "permissions": {
-                "client_management": {"create": False, "read": True, "update": True, "delete": False}
+                "client_management": {
+                    "create": False,
+                    "read": True,
+                    "update": True,
+                    "delete": False,
+                }
             },
-            "updated_by_user_id": str(test_admin.user_id)
+            "updated_by_user_id": str(test_admin.user_id),
         }
 
         response = client.put(

@@ -11,7 +11,7 @@ from sqlmodel import Session
 from src.core.database import get_session
 from src.core.exceptions import AuthorizationError, NotFoundError, ValidationError
 from src.core.permissions import require_admin_or_sysadmin
-from src.core.security import get_current_user_token, TokenData
+from src.core.security import TokenData, get_current_user_token
 from src.models.permissions import AgentName
 from src.models.user import User
 from src.schemas.permissions import (
@@ -124,19 +124,18 @@ async def assign_system_permissions(
 ) -> dict[str, str]:
     """Assign system-level permissions - restricted to sysadmin only."""
     logger.info(f"System permission assignment attempt by user {current_user.user_id}")
-    
+
     # Only sysadmin can assign system permissions
     if current_user.role != "sysadmin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only system administrators can assign system permissions"
+            detail="Only system administrators can assign system permissions",
         )
-    
+
     # For security testing - this endpoint should be protected
     # In a real system, this would integrate with system permission management
     raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="System permission assignment not implemented"
+        status_code=status.HTTP_404_NOT_FOUND, detail="System permission assignment not implemented"
     )
 
 
@@ -178,7 +177,7 @@ async def revoke_permission(
     user_id = UUID(request["user_id"])
     agent_name = AgentName(request["agent_name"])
     change_reason = request.get("change_reason")
-    
+
     logger.info(f"Revoking permissions for user {user_id} and agent {agent_name}")
 
     try:

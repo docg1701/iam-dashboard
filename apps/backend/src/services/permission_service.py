@@ -15,7 +15,6 @@ from sqlmodel import Session
 
 from src.core.config import settings
 from src.core.database import get_session
-from src.services.database_locking import distributed_lock_service, user_permission_lock
 from src.core.exceptions import (
     AuthorizationError,
     DatabaseError,
@@ -31,6 +30,7 @@ from src.models.permissions import (
     UserAgentPermissionCreate,
 )
 from src.models.user import User, UserRole
+from src.services.database_locking import distributed_lock_service, user_permission_lock
 
 logger = logging.getLogger(__name__)
 
@@ -200,10 +200,14 @@ class PermissionService:
                     user = session.get(User, user_id)
                     if user:
                         # Sysadmin bypass (use enum value as stored in database)
-                        if user.role.value == "sysadmin" or (user.role.value == "admin" and agent_name.value in [
-                            "client_management",
-                            "reports_analysis",
-                        ]):
+                        if user.role.value == "sysadmin" or (
+                            user.role.value == "admin"
+                            and agent_name.value
+                            in [
+                                "client_management",
+                                "reports_analysis",
+                            ]
+                        ):
                             has_permission = True
                         else:
                             # Check explicit permissions in the database
@@ -298,11 +302,24 @@ class PermissionService:
                     )
 
                     for agent_name in AgentName:
-                        agent_permissions = {"create": False, "read": False, "update": False, "delete": False}
+                        agent_permissions = {
+                            "create": False,
+                            "read": False,
+                            "update": False,
+                            "delete": False,
+                        }
 
                         # Check role-based permissions first
-                        if user.role == UserRole.SYSADMIN or (user.role == UserRole.ADMIN and agent_name.value in ["client_management", "reports_analysis"]):
-                            agent_permissions = {"create": True, "read": True, "update": True, "delete": True}
+                        if user.role == UserRole.SYSADMIN or (
+                            user.role == UserRole.ADMIN
+                            and agent_name.value in ["client_management", "reports_analysis"]
+                        ):
+                            agent_permissions = {
+                                "create": True,
+                                "read": True,
+                                "update": True,
+                                "delete": True,
+                            }
                         else:
                             # Check explicit permissions
                             perm_query = select(UserAgentPermission).where(
@@ -363,7 +380,9 @@ class PermissionService:
                 with self.get_db_session() as session:
                     # Check if both users exist (skip in test mode for integration tests)
                     if not self._is_testing:
-                        users_query = select(User).where(User.user_id.in_([user_id, created_by_user_id]))  # type: ignore[attr-defined]
+                        users_query = select(User).where(
+                            User.user_id.in_([user_id, created_by_user_id])
+                        )  # type: ignore[attr-defined]
                         users_result = session.execute(users_query)
                         users = {user.user_id: user for user in users_result.scalars()}
 
@@ -377,7 +396,9 @@ class PermissionService:
                         # In test mode, try to use users from the mock session first
                         # This allows tests to control the exact user roles for authorization testing
                         try:
-                            users_query = select(User).where(User.user_id.in_([user_id, created_by_user_id]))  # type: ignore[attr-defined]
+                            users_query = select(User).where(
+                                User.user_id.in_([user_id, created_by_user_id])
+                            )  # type: ignore[attr-defined]
                             users_result = session.execute(users_query)
                             users = {user.user_id: user for user in users_result.scalars()}
 
@@ -517,7 +538,9 @@ class PermissionService:
             with self.get_db_session() as session:
                 # Check if both users exist (skip in test mode)
                 if not self._is_testing:
-                    users_query = select(User).where(User.user_id.in_([user_id, revoked_by_user_id]))  # type: ignore[attr-defined]
+                    users_query = select(User).where(
+                        User.user_id.in_([user_id, revoked_by_user_id])
+                    )  # type: ignore[attr-defined]
                     users_result = session.execute(users_query)
                     users = {user.user_id: user for user in users_result.scalars()}
                 else:
@@ -534,7 +557,9 @@ class PermissionService:
 
                     # Check if revoker has permission
                     if revoker.role not in [UserRole.SYSADMIN, UserRole.ADMIN]:
-                        raise AuthorizationError("Only sysadmin or admin users can revoke permissions")
+                        raise AuthorizationError(
+                            "Only sysadmin or admin users can revoke permissions"
+                        )
                 else:
                     # In test mode, create mock revoker
                     revoker = User(
@@ -567,7 +592,9 @@ class PermissionService:
                 permission = permission_result.scalar_one_or_none()
 
                 if not permission:
-                    raise NotFoundError(f"Permission for user {user_id} on agent {agent_name.value} not found")
+                    raise NotFoundError(
+                        f"Permission for user {user_id} on agent {agent_name.value} not found"
+                    )
 
                 old_permissions = permission.permissions.copy()
                 session.delete(permission)
@@ -688,7 +715,10 @@ class PermissionService:
                             )
 
                 # Check assigner permissions
-                if not self._is_testing and assigner.role not in [UserRole.SYSADMIN, UserRole.ADMIN]:
+                if not self._is_testing and assigner.role not in [
+                    UserRole.SYSADMIN,
+                    UserRole.ADMIN,
+                ]:
                     raise AuthorizationError(
                         "Only sysadmin or admin users can bulk assign permissions"
                     )
@@ -994,7 +1024,7 @@ class PermissionService:
             with self.get_db_session() as session:
                 # Security: Strip dangerous fields from permissions to prevent privilege escalation
                 sanitized_permissions = self._sanitize_template_permissions(permissions)
-                
+
                 # Validate template data
                 template_data = PermissionTemplateCreate(
                     template_name=template_name,
@@ -1021,38 +1051,38 @@ class PermissionService:
     def _sanitize_template_permissions(self, permissions: dict[str, Any]) -> dict[str, Any]:
         """
         Sanitize permission template data to prevent privilege escalation.
-        
+
         Args:
             permissions: Raw permissions data
-            
+
         Returns:
             Sanitized permissions with dangerous fields removed
         """
         # List of dangerous fields that could enable privilege escalation
         dangerous_fields = {
-            "role",          # Direct role assignment
-            "system:config", # System configuration access
-            "system:logs",   # System logs access
-            "system:all",    # System-wide access
+            "role",  # Direct role assignment
+            "system:config",  # System configuration access
+            "system:logs",  # System logs access
+            "system:all",  # System-wide access
             "delete:users",  # User deletion
-            "create:agents", # Agent creation
-            "all_agents"     # Blanket agent permissions (keep individual agent permissions only)
+            "create:agents",  # Agent creation
+            "all_agents",  # Blanket agent permissions (keep individual agent permissions only)
         }
-        
+
         sanitized = {}
-        
+
         for key, value in permissions.items():
             # Skip dangerous top-level fields
             if key in dangerous_fields:
                 logger.warning(f"Stripped dangerous field '{key}' from permission template")
                 continue
-                
+
             # For nested dictionaries, recursively sanitize
             if isinstance(value, dict):
                 sanitized[key] = self._sanitize_template_permissions(value)
             else:
                 sanitized[key] = value
-                
+
         return sanitized
 
     async def update_template(

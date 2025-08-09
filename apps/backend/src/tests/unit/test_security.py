@@ -468,9 +468,7 @@ class TestSecureAuthService:
     """Test SecureAuthService enhanced functionality."""
 
     @pytest.fixture
-    def secure_auth_service(
-        self, mock_redis_client: MagicMock
-    ) -> SecureAuthService:
+    def secure_auth_service(self, mock_redis_client: MagicMock) -> SecureAuthService:
         """Create SecureAuthService instance for testing."""
         # Create SecureAuthService with mocked Redis client
         service = SecureAuthService()

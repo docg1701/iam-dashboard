@@ -5,18 +5,11 @@ Performance tests should use real implementations to measure actual performance
 but may use mocked external services to ensure consistent test conditions.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 # Import the main fixtures from parent conftest
-from src.tests.conftest import (
-    test_engine,
-    test_session,
-    test_user,
-    test_sysadmin,
-    test_regular_user,
-    client,
-)
 
 
 @pytest.fixture(name="performance_session")
@@ -47,7 +40,7 @@ def performance_markers():
 def mock_redis() -> MagicMock:
     """Create a fast mock Redis client for performance testing."""
     from unittest.mock import AsyncMock
-    
+
     redis_mock = MagicMock()
     redis_mock.get = AsyncMock(return_value=None)  # Default to cache miss
     redis_mock.setex = AsyncMock()
@@ -61,7 +54,7 @@ def mock_redis() -> MagicMock:
 def fast_permission_service(test_session, mock_redis):
     """Create PermissionService optimized for performance testing."""
     from src.services.permission_service import PermissionService
-    
+
     service = PermissionService(session=test_session)
     service.redis_client = mock_redis
     service._is_testing = False  # Enable Redis operations for performance testing
@@ -71,13 +64,11 @@ def fast_permission_service(test_session, mock_redis):
 @pytest.fixture
 async def authenticated_user(test_session):
     """Create an authenticated test user."""
-    from src.tests.factories import create_test_user
     from src.models.user import UserRole
-    
+    from src.tests.factories import create_test_user
+
     user = create_test_user(
-        email="performance.authenticated@example.com",
-        role=UserRole.ADMIN,
-        is_active=True
+        email="performance.authenticated@example.com", role=UserRole.ADMIN, is_active=True
     )
     test_session.add(user)
     test_session.commit()
@@ -89,53 +80,59 @@ def authenticated_headers(authenticated_user):
     """Create authentication headers for API testing."""
     # Mock JWT token for performance testing
     mock_token = "mock.jwt.token.for.performance.testing"
-    return {
-        "Authorization": f"Bearer {mock_token}",
-        "Content-Type": "application/json"
-    }
+    return {"Authorization": f"Bearer {mock_token}", "Content-Type": "application/json"}
 
 
 @pytest.fixture
 def performance_metrics_collector():
     """Performance metrics collection fixture."""
     import time
-    from typing import Dict, Any
-    
+    from typing import Any
+
     class PerformanceMetricsCollector:
         def __init__(self):
             self.metrics = {}
             self.test_results = []
-            
+
         def record_metric(self, test_name: str, metric_name: str, value: float, unit: str):
             """Record a performance metric."""
             if test_name not in self.metrics:
                 self.metrics[test_name] = {}
             self.metrics[test_name][metric_name] = {"value": value, "unit": unit}
-            
-        def record_test_result(self, test_name: str, passed: bool, duration_s: float, details: Dict[str, Any]):
+
+        def record_test_result(
+            self, test_name: str, passed: bool, duration_s: float, details: dict[str, Any]
+        ):
             """Record a test result."""
-            self.test_results.append({
-                "test_name": test_name,
-                "passed": passed,
-                "duration_s": duration_s,
-                "details": details,
-                "timestamp": time.time()
-            })
-            
-        def get_summary_report(self) -> Dict[str, Any]:
+            self.test_results.append(
+                {
+                    "test_name": test_name,
+                    "passed": passed,
+                    "duration_s": duration_s,
+                    "details": details,
+                    "timestamp": time.time(),
+                }
+            )
+
+        def get_summary_report(self) -> dict[str, Any]:
             """Generate summary performance report."""
             passed_tests = [r for r in self.test_results if r["passed"]]
             failed_tests = [r for r in self.test_results if not r["passed"]]
-            
+
             return {
                 "total_tests": len(self.test_results),
                 "passed_tests": len(passed_tests),
                 "failed_tests": len(failed_tests),
-                "success_rate": len(passed_tests) / len(self.test_results) if self.test_results else 0,
+                "success_rate": len(passed_tests) / len(self.test_results)
+                if self.test_results
+                else 0,
                 "total_duration_s": sum(r["duration_s"] for r in self.test_results),
-                "avg_test_duration_s": sum(r["duration_s"] for r in self.test_results) / len(self.test_results) if self.test_results else 0,
+                "avg_test_duration_s": sum(r["duration_s"] for r in self.test_results)
+                / len(self.test_results)
+                if self.test_results
+                else 0,
                 "metrics": self.metrics,
-                "failed_test_details": [r for r in failed_tests]
+                "failed_test_details": list(failed_tests),
             }
-    
+
     return PerformanceMetricsCollector()

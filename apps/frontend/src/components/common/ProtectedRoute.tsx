@@ -1,76 +1,76 @@
-"use client"
+"use client";
 
-import { useEffect, ReactNode } from "react"
-import { useRouter } from "next/navigation"
-import useAuthStore from "@/store/authStore"
-import { Loader2 } from "lucide-react"
+import { useEffect, ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import useAuthStore from "@/store/authStore";
+import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
-  children: ReactNode
-  requiredRole?: 'sysadmin' | 'admin' | 'user'
-  fallback?: ReactNode
-  redirectTo?: string
+  children: ReactNode;
+  requiredRole?: "sysadmin" | "admin" | "user";
+  fallback?: ReactNode;
+  redirectTo?: string;
 }
 
-export function ProtectedRoute({ 
-  children, 
-  requiredRole = 'user',
+export function ProtectedRoute({
+  children,
+  requiredRole = "user",
   fallback,
-  redirectTo = '/login'
+  redirectTo = "/login",
 }: ProtectedRouteProps) {
-  const router = useRouter()
-  const { 
-    isAuthenticated, 
-    isLoading, 
-    user, 
+  const router = useRouter();
+  const {
+    isAuthenticated,
+    isLoading,
+    user,
     hasPermission,
     isTokenExpired,
     refreshToken,
-    logout 
-  } = useAuthStore()
+    logout,
+  } = useAuthStore();
 
   useEffect(() => {
     // Skip auth check during hydration
-    if (typeof window === 'undefined') return
+    if (typeof window === "undefined") return;
 
     const checkAuth = async () => {
       // If not authenticated, redirect to login
       if (!isAuthenticated || !user) {
-        router.push(redirectTo)
-        return
+        router.push(redirectTo);
+        return;
       }
 
       // Check if token is expired
       if (isTokenExpired()) {
         try {
-          await refreshToken()
+          await refreshToken();
         } catch (error) {
-          console.error('Token refresh failed:', error)
-          logout()
-          router.push(redirectTo)
-          return
+          console.error("Token refresh failed:", error);
+          logout();
+          router.push(redirectTo);
+          return;
         }
       }
 
       // Check role-based permissions
       if (!hasPermission(requiredRole)) {
-        router.push('/unauthorized')
-        return
+        router.push("/unauthorized");
+        return;
       }
-    }
+    };
 
-    checkAuth()
+    checkAuth();
   }, [
-    isAuthenticated, 
-    user, 
-    requiredRole, 
-    router, 
-    redirectTo, 
-    hasPermission, 
-    isTokenExpired, 
-    refreshToken, 
-    logout
-  ])
+    isAuthenticated,
+    user,
+    requiredRole,
+    router,
+    redirectTo,
+    hasPermission,
+    isTokenExpired,
+    refreshToken,
+    logout,
+  ]);
 
   // Show loading during auth check
   if (isLoading) {
@@ -83,7 +83,7 @@ export function ProtectedRoute({
           </div>
         </div>
       )
-    )
+    );
   }
 
   // Don't render children until auth is verified
@@ -97,33 +97,33 @@ export function ProtectedRoute({
           </div>
         </div>
       )
-    )
+    );
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }
 
 // Higher-order component for protecting pages
 export function withAuth<T extends object>(
   Component: React.ComponentType<T>,
-  options?: Omit<ProtectedRouteProps, 'children'>
+  options?: Omit<ProtectedRouteProps, "children">,
 ) {
   return function AuthenticatedComponent(props: T) {
     return (
       <ProtectedRoute {...options}>
         <Component {...props} />
       </ProtectedRoute>
-    )
-  }
+    );
+  };
 }
 
 // Hook for checking authentication status
 export function useAuth() {
-  const store = useAuthStore()
-  
+  const store = useAuthStore();
+
   return {
     ...store,
-    isAdmin: store.hasPermission('admin'),
-    isSysAdmin: store.hasPermission('sysadmin'),
-  }
+    isAdmin: store.hasPermission("admin"),
+    isSysAdmin: store.hasPermission("sysadmin"),
+  };
 }

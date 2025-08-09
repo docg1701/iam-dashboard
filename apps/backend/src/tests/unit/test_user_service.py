@@ -12,7 +12,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import Request
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, select
 
 from src.core.exceptions import ConflictError, DatabaseError, NotFoundError, ValidationError
@@ -78,7 +78,7 @@ class TestUserService:
         # Add sysadmin to database first
         test_session.add(sysadmin_user)
         test_session.commit()
-        
+
         # Use real password hashing - no mocking of internal business logic
         # Real audit logging will execute and create audit records
         result = await user_service.create_user(
@@ -92,8 +92,8 @@ class TestUserService:
         assert result.role == user_create_request.role
         assert result.is_active == user_create_request.is_active
         assert result.password_hash is not None  # Real password hash was created
-            
-            # Real audit logging will execute and create audit records
+
+        # Real audit logging will execute and create audit records
 
     async def test_create_user_duplicate_email(
         self,
@@ -218,7 +218,7 @@ class TestUserService:
         # Add user to database
         test_session.add(regular_user)
         test_session.commit()
-        
+
         update_data = UserUpdateRequest(email="updated@example.com", password="NewSecurePass456!")
 
         # Use real password hashing - no mocking of internal business logic
@@ -246,7 +246,7 @@ class TestUserService:
         # Add user to database
         test_session.add(regular_user)
         test_session.commit()
-        
+
         update_data = UserUpdateRequest(role=UserRole.ADMIN)
 
         with pytest.raises(ValidationError) as excinfo:
@@ -273,7 +273,7 @@ class TestUserService:
         # Add both users to database
         test_session.add_all([sysadmin_user, regular_user])
         test_session.commit()
-        
+
         # Do NOT mock audit logging - it's internal business logic
         result = await user_service.deactivate_user(
             user_id=regular_user.user_id,
@@ -368,9 +368,14 @@ class TestUserService:
     ) -> None:
         """Test listing users with search filters using real database operations."""
         # Create admin user with specific email and regular user
-        admin_user = cast("User", UserFactory.build(role=UserRole.ADMIN, email="admin@example.com", is_active=True))
-        regular_user = cast("User", UserFactory.build(role=UserRole.USER, email="user@example.com", is_active=True))
-        
+        admin_user = cast(
+            "User",
+            UserFactory.build(role=UserRole.ADMIN, email="admin@example.com", is_active=True),
+        )
+        regular_user = cast(
+            "User", UserFactory.build(role=UserRole.USER, email="user@example.com", is_active=True)
+        )
+
         test_session.add_all([sysadmin_user, admin_user, regular_user])
         test_session.commit()
 
@@ -386,7 +391,7 @@ class TestUserService:
         assert len(result_items) == 1
         assert total_count == 1
         assert result_items[0].role == UserRole.ADMIN
-        
+
         # Test email query filter
         search_params = UserSearchParams(query="admin")
         result_items, total_count = await user_service.list_users(
@@ -522,7 +527,6 @@ class TestUserServiceIntegration:
     async def test_get_user_by_id_integration(self, test_session: Session) -> None:
         """Test get user by ID with real database."""
 
-
         # Create test user directly instead of using factory
         test_user = User(
             user_id=uuid4(),
@@ -576,7 +580,6 @@ class TestUserServiceIntegration:
     async def test_update_user_integration_success(self, test_session: Session) -> None:
         """Test user update with real database."""
         # Create test user directly to avoid factory issues
-
 
         test_user = User(
             user_id=uuid4(),
@@ -836,7 +839,6 @@ class TestUserServicePrivateMethods:
     async def test_get_user_by_id_internal_success(self, test_session: Session) -> None:
         """Test internal get user by ID method."""
         # Create test user directly to avoid factory issues
-
 
         test_user = User(
             user_id=uuid4(),

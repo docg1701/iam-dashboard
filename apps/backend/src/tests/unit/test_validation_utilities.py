@@ -22,7 +22,7 @@ class TestValidationUtilities:
         valid_cpfs = [
             "123.456.789-09",  # Valid CPF with correct check digits
             "987.654.321-00",  # Valid CPF with correct check digits
-            "12345678909",     # Valid without formatting
+            "12345678909",  # Valid without formatting
         ]
 
         for cpf in valid_cpfs:

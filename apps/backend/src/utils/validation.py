@@ -15,16 +15,17 @@ def validate_cpf(cpf: str | None) -> bool:
     """
     if not cpf:
         return False
-    
+
     # First check format - must be exactly XXX.XXX.XXX-XX or 11 digits
-    formatted_pattern = re.match(r'^\d{3}\.\d{3}\.\d{3}-\d{2}$', cpf)
-    unformatted_pattern = re.match(r'^\d{11}$', cpf)
-    
+    formatted_pattern = re.match(r"^\d{3}\.\d{3}\.\d{3}-\d{2}$", cpf)
+    unformatted_pattern = re.match(r"^\d{11}$", cpf)
+
     if not (formatted_pattern or unformatted_pattern):
         return False
-    
+
     try:
         from cnpj_cpf_validator import CPF
+
         return CPF.is_valid(cpf)
     except ImportError:
         # Fallback validation if library is not available
@@ -33,40 +34,38 @@ def validate_cpf(cpf: str | None) -> bool:
 
 def _validate_cpf_fallback(cpf: str) -> bool:
     """Fallback CPF validation implementation.
-    
+
     Args:
         cpf: CPF string to validate
-        
+
     Returns:
         True if CPF is valid, False otherwise
     """
     # Remove formatting
-    cpf_digits = re.sub(r'\D', '', cpf)
-    
+    cpf_digits = re.sub(r"\D", "", cpf)
+
     # Must have exactly 11 digits
     if len(cpf_digits) != 11:
         return False
-    
+
     # Check for repeated digits (111.111.111-11, etc.)
     if cpf_digits == cpf_digits[0] * 11:
         return False
-    
+
     # Calculate first check digit
     sum1 = sum(int(cpf_digits[i]) * (10 - i) for i in range(9))
     remainder1 = sum1 % 11
     check_digit1 = 0 if remainder1 < 2 else 11 - remainder1
-    
+
     if int(cpf_digits[9]) != check_digit1:
         return False
-    
+
     # Calculate second check digit
     sum2 = sum(int(cpf_digits[i]) * (11 - i) for i in range(10))
     remainder2 = sum2 % 11
     check_digit2 = 0 if remainder2 < 2 else 11 - remainder2
-    
+
     return int(cpf_digits[10]) == check_digit2
-
-
 
 
 def validate_email(email: str | None) -> bool:
@@ -249,7 +248,9 @@ def sanitize_filename(filename: str | None) -> str:
     filename = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", filename)
 
     # Replace spaces and path separators with underscores, remove other dangerous characters
-    filename = re.sub(r"[\s/\\]", "_", filename)  # Replace spaces, forward/back slashes with underscores
+    filename = re.sub(
+        r"[\s/\\]", "_", filename
+    )  # Replace spaces, forward/back slashes with underscores
     filename = re.sub(r'[<>:"|?*]', "", filename)  # Remove other dangerous characters entirely
 
     # Clean up multiple consecutive underscores

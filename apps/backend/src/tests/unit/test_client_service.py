@@ -6,16 +6,14 @@ for client operations including validation, audit logging, and error handling.
 """
 
 from datetime import date, datetime
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
 from fastapi import Request
-from pydantic import ValidationError as PydanticValidationError
-from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, select
 
-from src.core.exceptions import ConflictError, DatabaseError, NotFoundError, ValidationError
+from src.core.exceptions import ConflictError, NotFoundError
 from src.models.client import Client, ClientRead, ClientStatus
 from src.models.user import User, UserRole
 from src.schemas.clients import ClientCreate as ClientCreateSchema
@@ -169,9 +167,7 @@ class TestClientServiceCreate:
         assert result.status == "active"
 
     @pytest.mark.asyncio
-    async def test_create_client_audit_logging(
-        self, test_session: Session
-    ) -> None:
+    async def test_create_client_audit_logging(self, test_session: Session) -> None:
         """Test that audit logging is called during client creation."""
         # Create test user
         user = User(
@@ -241,7 +237,7 @@ class TestClientServiceCreate:
 
         with pytest.raises(ConflictError) as exc_info:
             await service.create_client(duplicate_client_data, user.user_id, mock_request)
-        
+
         assert "already exists" in str(exc_info.value).lower()
         assert exc_info.value.error_code == "CPF_DUPLICATE"
 
@@ -330,9 +326,7 @@ class TestClientServiceGetById:
         assert "not found" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_get_client_by_id_audit_logging(
-        self, test_session: Session
-    ) -> None:
+    async def test_get_client_by_id_audit_logging(self, test_session: Session) -> None:
         """Test that audit logging is called during client retrieval."""
         # Create test user
         user = User(
@@ -458,10 +452,10 @@ class TestClientServiceErrorHandling:
         duplicate_client_data = ClientCreateSchema(
             full_name="Duplicate CPF Client", cpf="123.456.789-09", birth_date=date(1985, 6, 15)
         )
-        
+
         with pytest.raises(ConflictError) as exc_info:
             await service.create_client(duplicate_client_data, user.user_id, mock_request)
-        
+
         assert exc_info.value.error_code == "CPF_DUPLICATE"
 
     @pytest.mark.asyncio
@@ -495,7 +489,7 @@ class TestClientServiceErrorHandling:
             full_name="First Client", cpf="123.456.789-09", birth_date=date(1990, 1, 1)
         )
         await service.create_client(first_client_data, user.user_id, mock_request)
-        
+
         # Count after first client
         after_first_count = test_session.query(Client).count()
         assert after_first_count == initial_count + 1
@@ -717,9 +711,7 @@ class TestClientServiceUpdate:
         assert result.birth_date == date(1985, 6, 15)  # Changed
 
     @pytest.mark.asyncio
-    async def test_update_client_audit_logging(
-        self, test_session: Session
-    ) -> None:
+    async def test_update_client_audit_logging(self, test_session: Session) -> None:
         """Test that audit logging is called during client update."""
         # Create test user
         user = User(
@@ -853,9 +845,7 @@ class TestClientServiceDelete:
         assert "not found" in str(exc_info.value).lower()
 
     @pytest.mark.asyncio
-    async def test_delete_client_audit_logging(
-        self, test_session: Session
-    ) -> None:
+    async def test_delete_client_audit_logging(self, test_session: Session) -> None:
         """Test that audit logging is called during client deletion."""
         # Create test user
         user = User(
@@ -1138,9 +1128,7 @@ class TestClientServiceList:
         assert pagination_info["has_prev"] is False
 
     @pytest.mark.asyncio
-    async def test_list_clients_audit_logging(
-        self, test_session: Session
-    ) -> None:
+    async def test_list_clients_audit_logging(self, test_session: Session) -> None:
         """Test that audit logging is called during client listing."""
         # Create test user
         user = User(
@@ -1309,7 +1297,7 @@ class TestClientServiceErrorHandlingExtended:
             updated_by=user.user_id,
             created_at=datetime.utcnow(),
         )
-        
+
         # Create second client
         client2_id = uuid4()
         test_client2 = Client(
@@ -1322,7 +1310,7 @@ class TestClientServiceErrorHandlingExtended:
             updated_by=user.user_id,
             created_at=datetime.utcnow(),
         )
-        
+
         test_session.add_all([test_client1, test_client2])
         test_session.commit()
 
@@ -1340,7 +1328,7 @@ class TestClientServiceErrorHandlingExtended:
         # Should raise ConflictError due to duplicate CPF
         with pytest.raises(ConflictError) as exc_info:
             await service.update_client(client2_id, update_data, user.user_id, mock_request)
-        
+
         assert "already exists" in str(exc_info.value).lower()
         assert exc_info.value.error_code == "CPF_DUPLICATE"
 
@@ -1386,16 +1374,16 @@ class TestClientServiceErrorHandlingExtended:
 
         # Delete client (should be soft delete)
         result = await service.delete_client(client_id, user.user_id, mock_request)
-        
+
         # Verify soft delete behavior
         assert result is True
-        
+
         # Refresh and verify client is archived, not actually deleted
         test_session.refresh(test_client)
         assert test_client.status == ClientStatus.ARCHIVED
         assert test_client.updated_by == user.user_id
         assert test_client.updated_at != initial_updated_at
-        
+
         # Verify client still exists in database
         db_client = test_session.exec(select(Client).where(Client.client_id == client_id)).first()
         assert db_client is not None
@@ -1430,7 +1418,7 @@ class TestClientServiceErrorHandlingExtended:
             )
             clients.append(client)
             test_session.add(client)
-        
+
         test_session.commit()
 
         # Create client service
@@ -1455,22 +1443,22 @@ class TestClientServiceErrorHandlingExtended:
         assert pagination_info["total_pages"] == 3  # 7 clients / 3 per page = 3 pages
         assert pagination_info["has_next"] is True
         assert pagination_info["has_prev"] is False
-        
+
         # Test page 2
         result_clients_p2, pagination_info_p2 = await service.list_clients(
             search_params, page=2, per_page=3, user_id=user.user_id, request=mock_request
         )
-        
+
         assert len(result_clients_p2) == 3
         assert pagination_info_p2["page"] == 2
         assert pagination_info_p2["has_next"] is True
         assert pagination_info_p2["has_prev"] is True
-        
+
         # Test last page
         result_clients_p3, pagination_info_p3 = await service.list_clients(
             search_params, page=3, per_page=3, user_id=user.user_id, request=mock_request
         )
-        
+
         assert len(result_clients_p3) == 1  # Only 1 client on last page
         assert pagination_info_p3["page"] == 3
         assert pagination_info_p3["has_next"] is False
@@ -1489,7 +1477,7 @@ class TestClientServiceErrorHandlingExtended:
             totp_enabled=False,
         )
         test_session.add(user)
-        
+
         # Create a test client
         client_id = uuid4()
         test_client = Client(
@@ -1516,7 +1504,7 @@ class TestClientServiceErrorHandlingExtended:
 
         # Test successful retrieval
         result = await service.get_client_by_id(client_id, user.user_id, mock_request)
-        
+
         # Verify business logic correctly maps Client to ClientRead
         assert isinstance(result, ClientRead)
         assert result.client_id == client_id
@@ -1525,12 +1513,12 @@ class TestClientServiceErrorHandlingExtended:
         assert result.birth_date == date(1985, 12, 25)
         assert result.notes == "Test client for business logic validation"
         assert result.status == "active"
-        
+
         # Test NotFoundError for non-existent client
         non_existent_id = uuid4()
         with pytest.raises(NotFoundError) as exc_info:
             await service.get_client_by_id(non_existent_id, user.user_id, mock_request)
-        
+
         assert "not found" in str(exc_info.value).lower()
         assert exc_info.value.error_code == "CLIENT_NOT_FOUND"
         assert str(non_existent_id) in str(exc_info.value.details["client_id"])

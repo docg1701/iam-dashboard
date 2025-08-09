@@ -1,13 +1,21 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Plus, Users, Search, MoreHorizontal, UserCheck, UserX, Key } from "lucide-react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react";
+import {
+  Plus,
+  Users,
+  Search,
+  MoreHorizontal,
+  UserCheck,
+  UserX,
+  Key,
+} from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -15,7 +23,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,7 +31,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -31,118 +39,127 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 
-import { usersAPI, type UserListFilters } from "@/lib/api/users"
-import { useToast } from "@/hooks/use-toast"
-import { UserCreateForm } from "@/components/forms/UserCreateForm"
-import { UserEditForm } from "@/components/forms/UserEditForm"
-import type { User, UserRole } from "@iam-dashboard/shared"
+import { usersAPI, type UserListFilters } from "@/lib/api/users";
+import { useToast } from "@/hooks/use-toast";
+import { UserCreateForm } from "@/components/forms/UserCreateForm";
+import { UserEditForm } from "@/components/forms/UserEditForm";
+import type { User, UserRole } from "@iam-dashboard/shared";
 
 interface ConfirmDialogState {
-  isOpen: boolean
-  title: string
-  description: string
-  action: () => void
+  isOpen: boolean;
+  title: string;
+  description: string;
+  action: () => void;
 }
 
 export default function UsersPage() {
   // const router = useRouter() // Not used yet
-  const { toast } = useToast()
-  const queryClient = useQueryClient()
-  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   // Search and filter state
-  const [searchTerm, setSearchTerm] = useState("")
-  const [roleFilter, setRoleFilter] = useState<UserRole | "">("")
-  const [statusFilter, setStatusFilter] = useState<string>("")
-  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState<UserRole | "">("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+
   // Dialog state
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
     isOpen: false,
     title: "",
     description: "",
-    action: () => {}
-  })
+    action: () => {},
+  });
 
   // Prepare filters for API call
   const filters: UserListFilters = {
     query: searchTerm || undefined,
     role: roleFilter || undefined,
-    is_active: statusFilter === "active" ? true : statusFilter === "inactive" ? false : undefined,
+    is_active:
+      statusFilter === "active"
+        ? true
+        : statusFilter === "inactive"
+          ? false
+          : undefined,
     page: 1,
-    limit: 50
-  }
+    limit: 50,
+  };
 
   // Fetch users
-  const { data: usersData, isLoading, error } = useQuery({
-    queryKey: ['users', filters],
+  const {
+    data: usersData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["users", filters],
     queryFn: () => usersAPI.getUsers(filters),
-    refetchOnWindowFocus: false
-  })
+    refetchOnWindowFocus: false,
+  });
 
   // Mutations
   const deactivateUserMutation = useMutation({
     mutationFn: (userId: string) => usersAPI.deactivateUser(userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({
         title: "Usuário desativado",
         description: "O usuário foi desativado com sucesso.",
-      })
+      });
     },
     onError: () => {
       toast({
         title: "Erro",
         description: "Não foi possível desativar o usuário.",
         variant: "error",
-      })
-    }
-  })
+      });
+    },
+  });
 
   const activateUserMutation = useMutation({
     mutationFn: (userId: string) => usersAPI.activateUser(userId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       toast({
         title: "Usuário ativado",
         description: "O usuário foi ativado com sucesso.",
-      })
+      });
     },
     onError: () => {
       toast({
-        title: "Erro", 
+        title: "Erro",
         description: "Não foi possível ativar o usuário.",
         variant: "error",
-      })
-    }
-  })
+      });
+    },
+  });
 
   const resetPasswordMutation = useMutation({
-    mutationFn: ({ userId, password }: { userId: string; password: string }) => 
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
       usersAPI.resetPassword(userId, password),
     onSuccess: () => {
       toast({
         title: "Senha redefinida",
         description: "A senha do usuário foi redefinida com sucesso.",
-      })
+      });
     },
     onError: () => {
       toast({
         title: "Erro",
         description: "Não foi possível redefinir a senha do usuário.",
         variant: "error",
-      })
-    }
-  })
+      });
+    },
+  });
 
   // Action handlers
   const handleDeactivateUser = (user: User) => {
@@ -151,11 +168,11 @@ export default function UsersPage() {
       title: "Desativar usuário",
       description: `Tem certeza que deseja desativar o usuário ${user.full_name}? Esta ação pode ser revertida posteriormente.`,
       action: () => {
-        deactivateUserMutation.mutate(user.user_id)
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }))
-      }
-    })
-  }
+        deactivateUserMutation.mutate(user.user_id);
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
+  };
 
   const handleActivateUser = (user: User) => {
     setConfirmDialog({
@@ -163,44 +180,47 @@ export default function UsersPage() {
       title: "Ativar usuário",
       description: `Tem certeza que deseja ativar o usuário ${user.full_name}?`,
       action: () => {
-        activateUserMutation.mutate(user.user_id)
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }))
-      }
-    })
-  }
+        activateUserMutation.mutate(user.user_id);
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
+  };
 
   const handleResetPassword = (user: User) => {
     // For now, generate a temporary password - in production this should be more secure
-    const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`
-    
+    const tempPassword = `Temp${Math.random().toString(36).slice(-8)}!`;
+
     setConfirmDialog({
       isOpen: true,
       title: "Redefinir senha",
       description: `Tem certeza que deseja redefinir a senha do usuário ${user.full_name}? Uma nova senha temporária será gerada.`,
       action: () => {
-        resetPasswordMutation.mutate({ userId: user.user_id, password: tempPassword })
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }))
-      }
-    })
-  }
+        resetPasswordMutation.mutate({
+          userId: user.user_id,
+          password: tempPassword,
+        });
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
+  };
 
   const getRoleDisplayName = (role: UserRole) => {
     const roleNames = {
-      sysadmin: 'Administrador do Sistema',
-      admin: 'Administrador',
-      user: 'Usuário'
-    }
-    return roleNames[role] || role
-  }
+      sysadmin: "Administrador do Sistema",
+      admin: "Administrador",
+      user: "Usuário",
+    };
+    return roleNames[role] || role;
+  };
 
   const getRoleBadgeVariant = (role: UserRole) => {
     const variants = {
-      sysadmin: 'destructive',
-      admin: 'default',
-      user: 'secondary'
-    } as const
-    return variants[role] || 'secondary'
-  }
+      sysadmin: "destructive",
+      admin: "default",
+      user: "secondary",
+    } as const;
+    return variants[role] || "secondary";
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -218,8 +238,11 @@ export default function UsersPage() {
               </p>
             </div>
           </div>
-          
-          <Button onClick={() => setShowCreateDialog(true)} className="flex items-center gap-2">
+
+          <Button
+            onClick={() => setShowCreateDialog(true)}
+            className="flex items-center gap-2"
+          >
             <Plus className="h-4 w-4" />
             Novo Usuário
           </Button>
@@ -236,8 +259,11 @@ export default function UsersPage() {
               className="pl-10"
             />
           </div>
-          
-          <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as UserRole | "")}>
+
+          <Select
+            value={roleFilter}
+            onValueChange={(value) => setRoleFilter(value as UserRole | "")}
+          >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filtrar por role" />
             </SelectTrigger>
@@ -285,7 +311,10 @@ export default function UsersPage() {
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-destructive">
+                  <TableCell
+                    colSpan={6}
+                    className="h-24 text-center text-destructive"
+                  >
                     Erro ao carregar usuários
                   </TableCell>
                 </TableRow>
@@ -298,7 +327,9 @@ export default function UsersPage() {
               ) : (
                 usersData.users.map((user) => (
                   <TableRow key={user.user_id}>
-                    <TableCell className="font-medium">{user.full_name}</TableCell>
+                    <TableCell className="font-medium">
+                      {user.full_name}
+                    </TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
                       <Badge variant={getRoleBadgeVariant(user.role)}>
@@ -306,12 +337,16 @@ export default function UsersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                        {user.status === 'active' ? 'Ativo' : 'Inativo'}
+                      <Badge
+                        variant={
+                          user.status === "active" ? "default" : "secondary"
+                        }
+                      >
+                        {user.status === "active" ? "Ativo" : "Inativo"}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                      {new Date(user.created_at).toLocaleDateString("pt-BR")}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -323,12 +358,14 @@ export default function UsersPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => setEditingUser(user)}>
+                          <DropdownMenuItem
+                            onClick={() => setEditingUser(user)}
+                          >
                             Editar usuário
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          {user.status === 'active' ? (
-                            <DropdownMenuItem 
+                          {user.status === "active" ? (
+                            <DropdownMenuItem
                               onClick={() => handleDeactivateUser(user)}
                               className="text-destructive"
                             >
@@ -336,12 +373,16 @@ export default function UsersPage() {
                               Desativar
                             </DropdownMenuItem>
                           ) : (
-                            <DropdownMenuItem onClick={() => handleActivateUser(user)}>
+                            <DropdownMenuItem
+                              onClick={() => handleActivateUser(user)}
+                            >
                               <UserCheck className="mr-2 h-4 w-4" />
                               Ativar
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onClick={() => handleResetPassword(user)}>
+                          <DropdownMenuItem
+                            onClick={() => handleResetPassword(user)}
+                          >
                             <Key className="mr-2 h-4 w-4" />
                             Redefinir senha
                           </DropdownMenuItem>
@@ -372,10 +413,10 @@ export default function UsersPage() {
               Preencha os dados para criar um novo usuário no sistema.
             </DialogDescription>
           </DialogHeader>
-          <UserCreateForm 
+          <UserCreateForm
             onSuccess={() => {
-              setShowCreateDialog(false)
-              queryClient.invalidateQueries({ queryKey: ['users'] })
+              setShowCreateDialog(false);
+              queryClient.invalidateQueries({ queryKey: ["users"] });
             }}
             onCancel={() => setShowCreateDialog(false)}
           />
@@ -383,7 +424,10 @@ export default function UsersPage() {
       </Dialog>
 
       {/* Edit User Dialog */}
-      <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
+      <Dialog
+        open={!!editingUser}
+        onOpenChange={(open) => !open && setEditingUser(null)}
+      >
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
@@ -392,11 +436,11 @@ export default function UsersPage() {
             </DialogDescription>
           </DialogHeader>
           {editingUser && (
-            <UserEditForm 
+            <UserEditForm
               user={editingUser}
               onSuccess={() => {
-                setEditingUser(null)
-                queryClient.invalidateQueries({ queryKey: ['users'] })
+                setEditingUser(null);
+                queryClient.invalidateQueries({ queryKey: ["users"] });
               }}
               onCancel={() => setEditingUser(null)}
             />
@@ -405,28 +449,30 @@ export default function UsersPage() {
       </Dialog>
 
       {/* Confirmation Dialog */}
-      <Dialog open={confirmDialog.isOpen} onOpenChange={(open) => 
-        setConfirmDialog(prev => ({ ...prev, isOpen: open }))
-      }>
+      <Dialog
+        open={confirmDialog.isOpen}
+        onOpenChange={(open) =>
+          setConfirmDialog((prev) => ({ ...prev, isOpen: open }))
+        }
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{confirmDialog.title}</DialogTitle>
-            <DialogDescription>
-              {confirmDialog.description}
-            </DialogDescription>
+            <DialogDescription>{confirmDialog.description}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => 
-              setConfirmDialog(prev => ({ ...prev, isOpen: false }))
-            }>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setConfirmDialog((prev) => ({ ...prev, isOpen: false }))
+              }
+            >
               Cancelar
             </Button>
-            <Button onClick={confirmDialog.action}>
-              Confirmar
-            </Button>
+            <Button onClick={confirmDialog.action}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

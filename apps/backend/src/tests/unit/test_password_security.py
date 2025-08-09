@@ -277,7 +277,7 @@ class TestPasswordSecurityService:
         """Test password reuse detection when password is reused."""
         user_id = uuid4()
         password = "test_password"
-        
+
         # Create a real password hash using the auth service
         password_hash = auth_service.get_password_hash(password)
 
@@ -297,7 +297,7 @@ class TestPasswordSecurityService:
         user_id = uuid4()
         old_password = "old_password"
         new_password = "new_different_password"
-        
+
         # Create a real password hash for the old password
         old_password_hash = auth_service.get_password_hash(old_password)
 

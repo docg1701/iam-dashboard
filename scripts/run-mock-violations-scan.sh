@@ -274,31 +274,41 @@ VIOLATIONS_REPORT="${RESULTS_DIR}/mock-violations-report_${TIMESTAMP}.log"
     echo "🚨 CRITICAL VIOLATIONS DETECTED:"
     echo ""
     
+# Function to count actual violations (excluding headers and empty lines)
+count_violations() {
+    local file="$1"
+    if [[ -f "$file" ]]; then
+        grep -v -E "(Mock Violations Scan|Pattern:|Timestamp:|========|^$|No violations found)" "$file" 2>/dev/null | wc -l
+    else
+        echo "0"
+    fi
+}
+
     echo "📋 Backend Violations:"
-    echo "   Internal Service Mocking: $(grep -c . "${RESULTS_DIR}/backend-internal-service-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
-    echo "   Database Session Mocking: $(grep -c . "${RESULTS_DIR}/backend-database-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
-    echo "   Authentication Flow Mocking: $(grep -c . "${RESULTS_DIR}/backend-auth-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
-    echo "   Business Logic Mocking: $(grep -c . "${RESULTS_DIR}/backend-business-logic-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
-    echo "   Model/Schema Mocking: $(grep -c . "${RESULTS_DIR}/backend-models-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
+    echo "   Internal Service Mocking: $(count_violations "${RESULTS_DIR}/backend-internal-service-mocks_${TIMESTAMP}.log") instances"
+    echo "   Database Session Mocking: $(count_violations "${RESULTS_DIR}/backend-database-mocks_${TIMESTAMP}.log") instances"
+    echo "   Authentication Flow Mocking: $(count_violations "${RESULTS_DIR}/backend-auth-mocks_${TIMESTAMP}.log") instances"
+    echo "   Business Logic Mocking: $(count_violations "${RESULTS_DIR}/backend-business-logic-mocks_${TIMESTAMP}.log") instances"
+    echo "   Model/Schema Mocking: $(count_violations "${RESULTS_DIR}/backend-models-mocks_${TIMESTAMP}.log") instances"
     echo ""
     
     echo "🎨 Frontend Violations:"
-    echo "   Internal Component Mocking: $(grep -c . "${RESULTS_DIR}/frontend-internal-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
-    echo "   Hook Mocking: $(grep -c . "${RESULTS_DIR}/frontend-hook-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
-    echo "   Service Mocking: $(grep -c . "${RESULTS_DIR}/frontend-service-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
-    echo "   Store/Context Mocking: $(grep -c . "${RESULTS_DIR}/frontend-store-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
-    echo "   Component Import Mocking: $(grep -c . "${RESULTS_DIR}/frontend-component-import-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
+    echo "   Internal Component Mocking: $(count_violations "${RESULTS_DIR}/frontend-internal-mocks_${TIMESTAMP}.log") instances"
+    echo "   Hook Mocking: $(count_violations "${RESULTS_DIR}/frontend-hook-mocks_${TIMESTAMP}.log") instances"
+    echo "   Service Mocking: $(count_violations "${RESULTS_DIR}/frontend-service-mocks_${TIMESTAMP}.log") instances"
+    echo "   Store/Context Mocking: $(count_violations "${RESULTS_DIR}/frontend-store-mocks_${TIMESTAMP}.log") instances"
+    echo "   Component Import Mocking: $(count_violations "${RESULTS_DIR}/frontend-component-import-mocks_${TIMESTAMP}.log") instances"
     echo ""
     
     echo "⚡ Pattern Violations:"
-    echo "   Mock Implementations: $(grep -c . "${RESULTS_DIR}/mock-implementation-violations_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
-    echo "   Import-Level Mocks: $(grep -c . "${RESULTS_DIR}/import-level-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances"
+    echo "   Mock Implementations: $(count_violations "${RESULTS_DIR}/mock-implementation-violations_${TIMESTAMP}.log") instances"
+    echo "   Import-Level Mocks: $(count_violations "${RESULTS_DIR}/import-level-mocks_${TIMESTAMP}.log") instances"
     echo ""
     
     echo "✅ APPROVED Patterns Detected:"
-    echo "   External API Mocks: $(grep -c . "${RESULTS_DIR}/approved-external-api-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances (✅ Good)"
-    echo "   Time/Random Mocks: $(grep -c . "${RESULTS_DIR}/approved-time-random-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances (✅ Good)" 
-    echo "   External Service Mocks: $(grep -c . "${RESULTS_DIR}/approved-external-service-mocks_${TIMESTAMP}.log" 2>/dev/null || echo "0") instances (✅ Good)"
+    echo "   External API Mocks: $(count_violations "${RESULTS_DIR}/approved-external-api-mocks_${TIMESTAMP}.log") instances (✅ Good)"
+    echo "   Time/Random Mocks: $(count_violations "${RESULTS_DIR}/approved-time-random-mocks_${TIMESTAMP}.log") instances (✅ Good)" 
+    echo "   External Service Mocks: $(count_violations "${RESULTS_DIR}/approved-external-service-mocks_${TIMESTAMP}.log") instances (✅ Good)"
     echo ""
     
     echo "📁 Detailed Result Files:"
@@ -367,11 +377,11 @@ echo "All violation results saved to: ${RESULTS_DIR}"
 echo "Primary Report: mock-violations-report_${TIMESTAMP}.log"
 echo ""
 
-# Count total violations
+# Count total violations using accurate counting function
 total_violations=0
 for log_file in "${RESULTS_DIR}"/*mocks_${TIMESTAMP}.log "${RESULTS_DIR}"/*violations_${TIMESTAMP}.log; do
     if [[ -f "$log_file" && ! "$log_file" =~ approved ]]; then
-        count=$(grep -c . "$log_file" 2>/dev/null || echo "0")
+        count=$(count_violations "$log_file")
         if [[ "$count" =~ ^[0-9]+$ ]]; then
             total_violations=$((total_violations + count))
         fi

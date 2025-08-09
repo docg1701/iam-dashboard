@@ -44,7 +44,7 @@ run_check "Frontend Linting" \
 
 cd "${PROJECT_ROOT}"
 run_check "Frontend Formatting Check" \
-    "npx prettier --check apps/frontend --ignore-unknown" \
+    "npx prettier --check apps/frontend --ignore-unknown --ignore-path apps/frontend/.prettierignore" \
     "${RESULTS_DIR}/frontend-formatting_${TIMESTAMP}.log"
 
 run_check "TypeScript Validation" \

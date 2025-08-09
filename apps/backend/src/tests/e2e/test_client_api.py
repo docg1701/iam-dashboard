@@ -61,7 +61,11 @@ class TestCreateClientAPI:
         self, client: TestClient, auth_headers: dict[str, str]
     ) -> None:
         """Test client creation with minimal required data."""
-        client_data = {"full_name": "Ana Costa", "cpf": "987.654.321-00", "birth_date": "1985-12-10"}
+        client_data = {
+            "full_name": "Ana Costa",
+            "cpf": "987.654.321-00",
+            "birth_date": "1985-12-10",
+        }
 
         response = client.post("/api/v1/clients", json=client_data, headers=auth_headers)
 
@@ -172,7 +176,11 @@ class TestCreateClientAPI:
         self, client: TestClient, auth_headers: dict[str, str]
     ) -> None:
         """Test client creation with birth date before 1900."""
-        client_data = {"full_name": "Old Client", "cpf": "888.990.000-85", "birth_date": "1899-12-31"}
+        client_data = {
+            "full_name": "Old Client",
+            "cpf": "888.990.000-85",
+            "birth_date": "1899-12-31",
+        }
 
         response = client.post("/api/v1/clients", json=client_data, headers=auth_headers)
 
@@ -259,7 +267,11 @@ class TestCreateClientAPI:
 
     def test_create_client_unauthorized(self, client: TestClient) -> None:
         """Test client creation without authentication."""
-        client_data = {"full_name": "Test Client", "cpf": "123.456.789-09", "birth_date": "1990-01-01"}
+        client_data = {
+            "full_name": "Test Client",
+            "cpf": "123.456.789-09",
+            "birth_date": "1990-01-01",
+        }
 
         response = client.post("/api/v1/clients", json=client_data)
 

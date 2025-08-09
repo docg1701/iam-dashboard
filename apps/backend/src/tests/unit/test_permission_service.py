@@ -10,7 +10,6 @@ import json
 import time
 from typing import cast
 from unittest.mock import AsyncMock, MagicMock, patch
-from src.models.permissions import UserAgentPermission, PermissionTemplate
 from uuid import uuid4
 
 import pytest
@@ -23,7 +22,7 @@ from src.core.exceptions import (
     NotFoundError,
     ValidationError,
 )
-from src.models.permissions import AgentName
+from src.models.permissions import AgentName, PermissionTemplate, UserAgentPermission
 from src.models.user import User, UserRole
 from src.services.permission_service import PermissionService
 from src.tests.factories import (
@@ -51,11 +50,8 @@ class TestPermissionService:
         redis_mock.close = AsyncMock()
         return redis_mock
 
-
     @pytest.fixture
-    def permission_service(
-        self, test_session: Session, mock_redis: MagicMock
-    ) -> PermissionService:
+    def permission_service(self, test_session: Session, mock_redis: MagicMock) -> PermissionService:
         """Create PermissionService with real database session and mocked Redis."""
         service = PermissionService(session=test_session)
         service.redis_client = mock_redis
@@ -245,7 +241,7 @@ class TestPermissionService:
         # Verify the permission was actually created in the database
         stmt = select(UserAgentPermission).where(
             UserAgentPermission.user_id == regular_user.user_id,
-            UserAgentPermission.agent_name == AgentName.CLIENT_MANAGEMENT
+            UserAgentPermission.agent_name == AgentName.CLIENT_MANAGEMENT,
         )
         permission = test_session.exec(stmt).first()
         assert permission is not None
@@ -262,7 +258,7 @@ class TestPermissionService:
         """Test updating existing permission."""
         old_permissions = {"create": False, "read": True, "update": False, "delete": False}
         new_permissions = {"create": True, "read": True, "update": True, "delete": False}
-        
+
         # Create existing permission in database
         existing_permission = create_test_permission(
             user_id=regular_user.user_id,
@@ -297,7 +293,7 @@ class TestPermissionService:
         # Temporarily use real business logic for this test to test authorization
         original_is_testing = permission_service._is_testing
         permission_service._is_testing = False
-        
+
         try:
             with pytest.raises(AuthorizationError) as excinfo:
                 await permission_service.assign_permission(
@@ -362,7 +358,7 @@ class TestPermissionService:
         # Verify permission was actually deleted from database
         stmt = select(UserAgentPermission).where(
             UserAgentPermission.user_id == regular_user.user_id,
-            UserAgentPermission.agent_name == AgentName.CLIENT_MANAGEMENT
+            UserAgentPermission.agent_name == AgentName.CLIENT_MANAGEMENT,
         )
         deleted_permission = test_session.exec(stmt).first()
         assert deleted_permission is None
@@ -376,7 +372,9 @@ class TestPermissionService:
     ) -> None:
         """Test revoking non-existent permission."""
         # Don't create any permission in database - test real scenario
-        with pytest.raises(NotFoundError, match="Permission for user .* on agent client_management not found"):
+        with pytest.raises(
+            NotFoundError, match="Permission for user .* on agent client_management not found"
+        ):
             await permission_service.revoke_permission(
                 user_id=regular_user.user_id,
                 agent_name=AgentName.CLIENT_MANAGEMENT,
@@ -399,7 +397,7 @@ class TestPermissionService:
         test_session.commit()
         test_session.refresh(user1)
         test_session.refresh(user2)
-        
+
         user_ids = [user1.user_id, user2.user_id]
 
         agent_permissions = {
@@ -431,7 +429,7 @@ class TestPermissionService:
         # Verify permissions were created in database
         stmt = select(UserAgentPermission).where(
             UserAgentPermission.user_id == user1.user_id,
-            UserAgentPermission.agent_name == AgentName.CLIENT_MANAGEMENT
+            UserAgentPermission.agent_name == AgentName.CLIENT_MANAGEMENT,
         )
         user1_client_perm = test_session.exec(stmt).first()
         assert user1_client_perm is not None
@@ -477,14 +475,14 @@ class TestPermissionService:
             },
         )
         user1 = create_test_user(role=UserRole.USER)
-        
+
         # Add template and user to database
         test_session.add(template)
         test_session.add(user1)
         test_session.commit()
         test_session.refresh(template)
         test_session.refresh(user1)
-        
+
         user_ids = [user1.user_id]
 
         # Use real cache invalidation - no mocking of internal business logic
@@ -524,7 +522,7 @@ class TestPermissionService:
     ) -> None:
         """Test successful template listing."""
         templates = [create_test_template() for _ in range(3)]
-        
+
         # Add templates to database
         for template in templates:
             test_session.add(template)
@@ -547,7 +545,7 @@ class TestPermissionService:
         input_permissions = {
             "client_management": {"create": True, "read": True, "update": False, "delete": False}
         }
-        
+
         # The service will expand permissions to include all agents
         expected_permissions = {
             "client_management": {"create": True, "read": True, "update": False, "delete": False},
@@ -567,7 +565,7 @@ class TestPermissionService:
         assert template.template_name == template_name
         assert template.description == description
         assert template.permissions == expected_permissions
-        
+
         # Verify it exists in database
         stmt = select(PermissionTemplate).where(
             PermissionTemplate.template_id == template.template_id
@@ -587,7 +585,7 @@ class TestPermissionService:
         test_session.add(template)
         test_session.commit()
         test_session.refresh(template)
-        
+
         new_name = "Updated Template"
 
         result = await permission_service.update_template(
@@ -600,7 +598,7 @@ class TestPermissionService:
 
         assert result is not None
         assert result.template_name == new_name
-        
+
         # Verify update in database
         test_session.refresh(template)
         assert template.template_name == new_name
@@ -618,7 +616,7 @@ class TestPermissionService:
         result = await permission_service.delete_template(template.template_id)
 
         assert result is True
-        
+
         # Verify deletion from database
         stmt = select(PermissionTemplate).where(
             PermissionTemplate.template_id == template.template_id
@@ -649,7 +647,7 @@ class TestPermissionService:
             create_test_permission_audit_log(user_id=regular_user.user_id, action="CREATE"),
             create_test_permission_audit_log(user_id=regular_user.user_id, action="UPDATE"),
         ]
-        
+
         # Add audit logs to database
         for audit_log in audit_logs:
             test_session.add(audit_log)
@@ -683,7 +681,7 @@ class TestPermissionService:
             agent_name=AgentName.PDF_PROCESSING,
         )
         template = create_test_template()
-        
+
         test_session.add(permission1)
         test_session.add(permission2)
         test_session.add(template)

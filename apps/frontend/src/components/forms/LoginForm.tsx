@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react"
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Eye, EyeOff, Loader2, Mail, Lock } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -15,9 +15,9 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { cn } from "@/lib/utils"
-import type { LoginFormData, LoginResponse } from "@/types/auth"
+} from "@/components/ui/form";
+import { cn } from "@/lib/utils";
+import type { LoginFormData, LoginResponse } from "@/types/auth";
 
 // Login form validation schema
 const loginSchema = z.object({
@@ -29,24 +29,24 @@ const loginSchema = z.object({
     .string()
     .min(1, "Senha é obrigatória")
     .min(8, "Senha deve ter pelo menos 8 caracteres"),
-})
+});
 
 interface LoginFormProps {
-  onSubmit: (data: LoginFormData) => Promise<LoginResponse>
-  onSuccess?: (response: LoginResponse) => void
-  onError?: (error: string) => void
-  className?: string
+  onSubmit: (data: LoginFormData) => Promise<LoginResponse>;
+  onSuccess?: (response: LoginResponse) => void;
+  onError?: (error: string) => void;
+  className?: string;
 }
 
-export function LoginForm({ 
-  onSubmit, 
-  onSuccess, 
-  onError, 
-  className 
+export function LoginForm({
+  onSubmit,
+  onSuccess,
+  onError,
+  className,
 }: LoginFormProps) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -54,32 +54,31 @@ export function LoginForm({
       email: "",
       password: "",
     },
-  })
+  });
 
   const handleSubmit = async (data: LoginFormData) => {
     try {
-      setIsLoading(true)
-      setError(null)
-      
-      const response = await onSubmit(data)
-      
+      setIsLoading(true);
+      setError(null);
+
+      const response = await onSubmit(data);
+
       if (onSuccess) {
-        onSuccess(response)
+        onSuccess(response);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : "Ocorreu um erro durante o login"
-      
-      setError(errorMessage)
-      
+      const errorMessage =
+        err instanceof Error ? err.message : "Ocorreu um erro durante o login";
+
+      setError(errorMessage);
+
       if (onError) {
-        onError(errorMessage)
+        onError(errorMessage);
       }
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className={cn("w-full max-w-md mx-auto", className)}>
@@ -91,9 +90,7 @@ export function LoginForm({
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium">
-                  Email
-                </FormLabel>
+                <FormLabel className="text-sm font-medium">Email</FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -118,9 +115,7 @@ export function LoginForm({
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-sm font-medium">
-                  Senha
-                </FormLabel>
+                <FormLabel className="text-sm font-medium">Senha</FormLabel>
                 <FormControl>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -165,9 +160,9 @@ export function LoginForm({
           )}
 
           {/* Submit Button */}
-          <Button 
-            type="submit" 
-            className="w-full" 
+          <Button
+            type="submit"
+            className="w-full"
             disabled={isLoading}
             size="lg"
           >
@@ -177,5 +172,5 @@ export function LoginForm({
         </form>
       </Form>
     </div>
-  )
+  );
 }

@@ -42,7 +42,9 @@ async def debug_test_env():
                 )
                 print(f"   {agent_name.value} {operation}: {has_permission}")
                 if not has_permission:
-                    print(f"   ❌ FAILED: Sysadmin should have {operation} access to {agent_name.value}")
+                    print(
+                        f"   ❌ FAILED: Sysadmin should have {operation} access to {agent_name.value}"
+                    )
                     return
 
         print("✅ All permission checks passed!")
@@ -50,6 +52,7 @@ async def debug_test_env():
     finally:
         with contextlib.suppress(builtins.BaseException):
             session.close()
+
 
 if __name__ == "__main__":
     asyncio.run(debug_test_env())

@@ -7,7 +7,6 @@ from uuid import UUID, uuid4
 from src.models.audit import AuditAction, AuditLog
 from src.models.client import Client, ClientStatus
 from src.models.user import User, UserRole
-
 from src.tests.factories import (
     AdminUserFactory,
     AuditLogFactory,
@@ -80,7 +79,8 @@ class TestClientFactory:
         assert isinstance(client.client_id, UUID)
         assert len(client.full_name) >= 2
         assert len(client.cpf) == 14  # XXX.XXX.XXX-XX format
-        assert "." in client.cpf and "-" in client.cpf
+        assert "." in client.cpf
+        assert "-" in client.cpf
         assert isinstance(client.birth_date, date)
         assert client.status in [ClientStatus.ACTIVE, ClientStatus.INACTIVE, ClientStatus.ARCHIVED]
         assert isinstance(client.created_by, UUID)
@@ -95,12 +95,12 @@ class TestClientFactory:
             assert client.cpf[3] == "."
             assert client.cpf[7] == "."
             assert client.cpf[11] == "-"
-            
+
             # Extract parts for validation
             digits = client.cpf.replace(".", "").replace("-", "")
             assert len(digits) == 11
             assert digits.isdigit()
-            
+
             # Should not be all same digits (basic invalid CPF check)
             assert not all(d == digits[0] for d in digits)
 
@@ -180,18 +180,18 @@ class TestUtilityFunctions:
         """Test CPF generation utility."""
         for _ in range(20):
             cpf = generate_valid_cpf()
-            
+
             # Check CPF format XXX.XXX.XXX-XX
             assert len(cpf) == 14
             assert cpf[3] == "."
             assert cpf[7] == "."
             assert cpf[11] == "-"
-            
+
             # Extract digits and validate
             digits = cpf.replace(".", "").replace("-", "")
             assert len(digits) == 11
             assert digits.isdigit()
-            
+
             # Should not be all same digits
             assert not all(d == digits[0] for d in digits)
 
@@ -355,7 +355,7 @@ class TestFactoryDataValidation:
             assert client.cpf[3] == "."
             assert client.cpf[7] == "."
             assert client.cpf[11] == "-"
-            
+
             # Extract digits
             digits = client.cpf.replace(".", "").replace("-", "")
             assert len(digits) == 11

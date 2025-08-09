@@ -31,6 +31,7 @@ class TestPermissionAPI:
     @pytest.fixture(autouse=True)
     def setup_service_override(self, test_session: Session) -> None:
         """Setup service override - use real service by default."""
+
         def get_real_permission_service() -> PermissionService:
             # Use real PermissionService with test database session
             return PermissionService(session=test_session)
@@ -38,13 +39,12 @@ class TestPermissionAPI:
         # Only override the permission service, NOT authentication
         # Individual tests can override this fixture if they need mock behavior
         app.dependency_overrides[get_permission_service] = get_real_permission_service
-        
+
         yield
-        
+
         # Clean up after test
         if get_permission_service in app.dependency_overrides:
             del app.dependency_overrides[get_permission_service]
-
 
     def test_check_permission_success(
         self,
@@ -54,7 +54,7 @@ class TestPermissionAPI:
     ) -> None:
         """Test successful permission check - E2E test with real database."""
         user_id = uuid4()
-        
+
         # E2E setup: Create real user in database
         user = User(
             user_id=user_id,
@@ -65,7 +65,7 @@ class TestPermissionAPI:
             full_name="Permission Check Test User",
         )
         test_session.add(user)
-        
+
         # Create real permission in database
         permission = create_test_permission(
             user_id=user_id,
@@ -113,7 +113,7 @@ class TestPermissionAPI:
     ) -> None:
         """Test permission check with invalid operation - E2E test with real validation."""
         user_id = uuid4()
-        
+
         # E2E setup: Create real user in database
         user = User(
             user_id=user_id,
@@ -144,7 +144,7 @@ class TestPermissionAPI:
     ) -> None:
         """Test successful user permissions retrieval."""
         user_id = uuid4()
-        
+
         # Create real user in database with unique email
         user = User(
             user_id=user_id,
@@ -155,7 +155,7 @@ class TestPermissionAPI:
             full_name="Permissions Test User",
         )
         test_session.add(user)
-        
+
         # Create real permissions in database
         permission1 = create_test_permission(
             user_id=user_id,
@@ -195,7 +195,7 @@ class TestPermissionAPI:
         # Use real JWT token for regular user (not admin) - should get 403
         response = client.get(
             f"/api/v1/permissions/user/{user_id}",
-            headers=user_auth_headers  # Real JWT token for regular user
+            headers=user_auth_headers,  # Real JWT token for regular user
         )
 
         # Should get 403 due to role-based access control from require_admin_or_sysadmin
@@ -209,7 +209,7 @@ class TestPermissionAPI:
     ) -> None:
         """Test successful permission assignment using real permission service."""
         user_id = uuid4()
-        
+
         # Create real user in database for permission assignment
         target_user = User(
             user_id=user_id,
@@ -217,11 +217,11 @@ class TestPermissionAPI:
             role=UserRole.USER,
             is_active=True,
             password_hash="hash",
-            full_name="Target User"
+            full_name="Target User",
         )
         test_session.add(target_user)
         test_session.commit()
-        
+
         permission_data = {
             "user_id": str(user_id),
             "agent_name": "client_management",
@@ -241,7 +241,7 @@ class TestPermissionAPI:
         assert data["user_id"] == str(user_id)
         assert data["agent_name"] == "client_management"
         assert data["permissions"] == permission_data["permissions"]
-        
+
         # Real audit logging will execute and create audit records
 
     def test_assign_permission_validation_error(
@@ -290,7 +290,7 @@ class TestPermissionAPI:
             full_name="Revoke Test User",
         )
         test_session.add(user)
-        
+
         # Create real permission to revoke
         permission = create_test_permission(
             user_id=user_id,
@@ -371,7 +371,7 @@ class TestPermissionAPI:
                 role=UserRole.USER,
                 is_active=True,
                 password_hash="mock_hash",
-                full_name=f"Bulk Test User {i+1}",
+                full_name=f"Bulk Test User {i + 1}",
             )
             test_session.add(user)
         test_session.commit()
@@ -436,11 +436,16 @@ class TestPermissionAPI:
             template_id=template_id,
             template_name="E2E Test Template",
             permissions={
-                "client_management": {"create": True, "read": True, "update": False, "delete": False}
-            }
+                "client_management": {
+                    "create": True,
+                    "read": True,
+                    "update": False,
+                    "delete": False,
+                }
+            },
         )
         test_session.add(template)
-        
+
         for i, user_id in enumerate(user_ids):
             user = User(
                 user_id=user_id,
@@ -448,7 +453,7 @@ class TestPermissionAPI:
                 role=UserRole.USER,
                 is_active=True,
                 password_hash="mock_hash",
-                full_name=f"Template Test User {i+1}",
+                full_name=f"Template Test User {i + 1}",
             )
             test_session.add(user)
         test_session.commit()
@@ -474,7 +479,7 @@ class TestPermissionAPI:
     ) -> None:
         """Test successful template listing - E2E test with real database."""
         # E2E setup: Create real templates in database
-        templates = [create_test_template(template_name=f"E2E Template {i+1}") for i in range(3)]
+        templates = [create_test_template(template_name=f"E2E Template {i + 1}") for i in range(3)]
         for template in templates:
             test_session.add(template)
         test_session.commit()
@@ -500,7 +505,10 @@ class TestPermissionAPI:
     ) -> None:
         """Test listing system templates only - E2E test with real database."""
         # E2E setup: Create real system templates in database
-        system_templates = [create_test_template(template_name=f"System Template {i+1}", is_system=True) for i in range(2)]
+        system_templates = [
+            create_test_template(template_name=f"System Template {i + 1}", is_system=True)
+            for i in range(2)
+        ]
         for template in system_templates:
             test_session.add(template)
         test_session.commit()
@@ -560,8 +568,14 @@ class TestPermissionAPI:
         assert "client_management" in data["permissions"]
         assert "reports_analysis" in data["permissions"]
         # Verify the specified permissions are correct
-        assert data["permissions"]["client_management"] == template_data["permissions"]["client_management"]
-        assert data["permissions"]["reports_analysis"] == template_data["permissions"]["reports_analysis"]
+        assert (
+            data["permissions"]["client_management"]
+            == template_data["permissions"]["client_management"]
+        )
+        assert (
+            data["permissions"]["reports_analysis"]
+            == template_data["permissions"]["reports_analysis"]
+        )
 
     def test_create_template_validation_error(
         self,
@@ -602,7 +616,7 @@ class TestPermissionAPI:
         original_template = create_test_template(
             template_id=template_id,
             template_name="Original E2E Template",
-            description="Original description"
+            description="Original description",
         )
         test_session.add(original_template)
         test_session.commit()
@@ -650,9 +664,7 @@ class TestPermissionAPI:
 
         # E2E setup: Create real template in database to delete
         template = create_test_template(
-            template_id=template_id,
-            template_name="Template to Delete",
-            is_system=False
+            template_id=template_id, template_name="Template to Delete", is_system=False
         )
         test_session.add(template)
         test_session.commit()
@@ -722,12 +734,10 @@ class TestPermissionAPI:
     ) -> None:
         """Test audit log retrieval with filters - E2E test with real database."""
         user_id = uuid4()
-        
+
         # E2E setup: Create real audit log entry with specific user_id
         audit_log = create_test_permission_audit_log(
-            user_id=user_id,
-            agent_name=AgentName.CLIENT_MANAGEMENT,
-            action="UPDATE"
+            user_id=user_id, agent_name=AgentName.CLIENT_MANAGEMENT, action="UPDATE"
         )
         test_session.add(audit_log)
         test_session.commit()
@@ -768,7 +778,7 @@ class TestPermissionAPI:
             full_name="Stats Test User",
         )
         test_session.add(test_user)
-        
+
         # Add some permissions to generate stats
         permission = create_test_permission(
             user_id=test_user.user_id,
@@ -875,7 +885,7 @@ class TestPermissionAPI:
     ) -> None:
         """Test that error responses follow consistent format - E2E test with real service."""
         user_id = uuid4()  # Non-existent user ID
-        
+
         # E2E test: Real service will return 404 for non-existent user
         response = client.get(
             f"/api/v1/permissions/user/{user_id}",
@@ -895,12 +905,7 @@ class TestPermissionAPI:
         auth_headers: dict[str, str],
     ) -> None:
         """Test permission validation with valid permissions structure."""
-        permissions = {
-            "create": True,
-            "read": True,
-            "update": True,
-            "delete": False
-        }
+        permissions = {"create": True, "read": True, "update": True, "delete": False}
 
         response = client.post(
             "/api/v1/permissions/validate",
@@ -950,7 +955,7 @@ class TestPermissionAPI:
             "create": True,
             "read": False,  # This will cause warnings
             "update": True,  # Update without read
-            "delete": True   # Delete without read
+            "delete": True,  # Delete without read
         }
 
         response = client.post(
@@ -964,8 +969,12 @@ class TestPermissionAPI:
         assert data["valid"] is True  # No errors, just warnings
         assert data["errors"] == []
         assert len(data["warnings"]) == 2
-        assert any("Delete permission typically requires read" in warning for warning in data["warnings"])
-        assert any("Update permission typically requires read" in warning for warning in data["warnings"])
+        assert any(
+            "Delete permission typically requires read" in warning for warning in data["warnings"]
+        )
+        assert any(
+            "Update permission typically requires read" in warning for warning in data["warnings"]
+        )
 
     def test_bulk_assign_permissions_partial_failure(
         self,
@@ -975,12 +984,12 @@ class TestPermissionAPI:
     ) -> None:
         """Test bulk permission assignment with some invalid users."""
         from uuid import uuid4
-        
+
         # Create one valid user
         valid_user = create_test_user(email="bulk_test_valid@example.com")
         test_session.add(valid_user)
         test_session.commit()
-        
+
         # Mix of valid and invalid user IDs
         request_data = {
             "user_ids": [str(valid_user.user_id), str(uuid4())],  # Second ID doesn't exist
@@ -989,9 +998,9 @@ class TestPermissionAPI:
                     "create": True,
                     "read": True,
                     "update": False,
-                    "delete": False
+                    "delete": False,
                 }
-            }
+            },
         }
 
         response = client.post(
@@ -1026,7 +1035,7 @@ class TestPermissionAPI:
         permission = create_test_permission(
             user_id=user.user_id,
             agent_name=AgentName.CLIENT_MANAGEMENT,
-            permissions={"create": True, "read": True, "update": False, "delete": False}
+            permissions={"create": True, "read": True, "update": False, "delete": False},
         )
         test_session.add(user)
         test_session.add(permission)
@@ -1040,8 +1049,8 @@ class TestPermissionAPI:
                 "create": True,
                 "read": True,
                 "update": True,  # Different from original
-                "delete": True   # Different from original
-            }
+                "delete": True,  # Different from original
+            },
         }
 
         response = client.post(
@@ -1069,9 +1078,9 @@ class TestPermissionAPI:
                     "create": True,
                     "read": True,
                     "update": True,
-                    "delete": True
+                    "delete": True,
                 }
-            }
+            },
         }
 
         response = client.post(
@@ -1092,7 +1101,7 @@ class TestPermissionAPI:
             assert "invalid_agent" in data["permissions"]
         else:
             # Any other response should be documented
-            assert False, f"Unexpected status code: {response.status_code}"
+            raise AssertionError(f"Unexpected status code: {response.status_code}")
 
     def test_pagination_parameters(
         self,
@@ -1101,7 +1110,7 @@ class TestPermissionAPI:
     ) -> None:
         """Test pagination parameter validation - E2E test with real validation."""
         # E2E test: Real API validation will reject invalid pagination parameters
-        
+
         # Test invalid page number
         response = client.get(
             "/api/v1/permissions/templates",

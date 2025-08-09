@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlmodel import Session
 
 from src.core.database import get_session
-from src.core.exceptions import ValidationError, NotFoundError, ConflictError
+from src.core.exceptions import ConflictError, NotFoundError, ValidationError
 from src.core.security import TokenData, require_role_with_fallback
 from src.schemas.common import PaginatedResponse, PaginationInfo, SuccessResponse
 from src.schemas.users import (
@@ -139,17 +139,11 @@ async def get_user(
         )
 
         return UserResponse.model_validate(user)
-        
+
     except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e)) from e
     except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
 
 
 @router.put("/{user_id}", response_model=UserResponse)
@@ -187,22 +181,13 @@ async def update_user(
         )
 
         return UserResponse.model_validate(updated_user)
-        
+
     except ValidationError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)) from e
     except NotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
     except ConflictError as e:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e)) from e
 
 
 @router.delete("/{user_id}", response_model=SuccessResponse)

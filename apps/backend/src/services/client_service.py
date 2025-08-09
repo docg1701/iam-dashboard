@@ -138,7 +138,7 @@ class ClientService:
             # Query for client with ownership validation
             statement = select(Client).where(
                 Client.client_id == client_id,
-                Client.created_by_user_id == user_id  # Ownership check
+                Client.created_by_user_id == user_id,  # Ownership check
             )
             result = self.session.exec(statement)
             client = result.first()
@@ -197,7 +197,7 @@ class ClientService:
             # Get existing client with ownership validation
             statement = select(Client).where(
                 Client.client_id == client_id,
-                Client.created_by_user_id == user_id  # Ownership check
+                Client.created_by_user_id == user_id,  # Ownership check
             )
             result = self.session.exec(statement)
             client = result.first()
@@ -299,7 +299,7 @@ class ClientService:
             # Get existing client with ownership validation
             statement = select(Client).where(
                 Client.client_id == client_id,
-                Client.created_by_user_id == user_id  # Ownership check
+                Client.created_by_user_id == user_id,  # Ownership check
             )
             result = self.session.exec(statement)
             client = result.first()

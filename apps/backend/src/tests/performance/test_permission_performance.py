@@ -37,7 +37,9 @@ class TestPermissionPerformance:
         return redis_mock
 
     @pytest.fixture
-    def fast_permission_service(self, test_session: Session, mock_redis: MagicMock) -> PermissionService:
+    def fast_permission_service(
+        self, test_session: Session, mock_redis: MagicMock
+    ) -> PermissionService:
         """Create PermissionService optimized for performance testing."""
         service = PermissionService(session=test_session)
         service.redis_client = mock_redis
@@ -54,17 +56,18 @@ class TestPermissionPerformance:
     ) -> None:
         """Test that a single permission check completes within 50ms."""
         user_id = uuid4()
-        
+
         # Create test user and permission in database
-        from src.tests.factories import create_test_user, create_test_permission
+        from src.tests.factories import create_test_permission, create_test_user
+
         user = create_test_user()
         user.user_id = user_id
         test_session.add(user)
-        
+
         permission = create_test_permission(
             user_id=user_id,
             agent_name=AgentName.CLIENT_MANAGEMENT,
-            permissions={"read": True, "create": False, "update": False, "delete": False}
+            permissions={"read": True, "create": False, "update": False, "delete": False},
         )
         test_session.add(permission)
         test_session.commit()
@@ -157,16 +160,16 @@ class TestPermissionPerformance:
         user = create_test_user()
         user.user_id = user_id
         test_session.add(user)
-        
+
         # Create permissions for all agents
         for agent in AgentName:
             permission = create_test_permission(
                 user_id=user_id,
                 agent_name=agent,
-                permissions={"create": True, "read": True, "update": False, "delete": False}
+                permissions={"create": True, "read": True, "update": False, "delete": False},
             )
             test_session.add(permission)
-        
+
         test_session.commit()
 
         start_time = time.time()
@@ -196,7 +199,7 @@ class TestPermissionPerformance:
         user.user_id = user_id
         admin = create_test_user(role=UserRole.SYSADMIN)
         admin.user_id = admin_id
-        
+
         test_session.add(user)
         test_session.add(admin)
         test_session.commit()
@@ -258,7 +261,7 @@ class TestPermissionPerformance:
         test_session.commit()
 
         # Use real cache invalidation to test actual performance
-        # Only mock external Redis operations that aren't part of business logic  
+        # Only mock external Redis operations that aren't part of business logic
         with patch.object(fast_permission_service.redis_client, "delete") as mock_redis_delete:
             mock_redis_delete.return_value = True  # Mock external Redis response
             start_time = time.time()
@@ -274,9 +277,7 @@ class TestPermissionPerformance:
 
             assert len(result) == 50
             # Bulk operations should be efficient
-            assert duration_ms < 2000, (
-                f"Bulk assignment took {duration_ms}ms, should be <2000ms"
-            )
+            assert duration_ms < 2000, f"Bulk assignment took {duration_ms}ms, should be <2000ms"
 
             # Check per-user performance
             avg_per_user_ms = duration_ms / len(user_ids)
@@ -349,7 +350,7 @@ class TestPermissionPerformance:
         user = create_test_user()
         user.user_id = user_id
         test_session.add(user)
-        
+
         permission = create_test_permission(
             user_id=user_id,
             agent_name=AgentName.CLIENT_MANAGEMENT,

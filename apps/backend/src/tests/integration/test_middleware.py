@@ -84,7 +84,7 @@ class TestAuthenticationMiddleware:
             "root_path": "",
         }
         real_request = Request(scope)
-        
+
         # Set request_id in state (would normally be set by another middleware)
         real_request.state.request_id = "test-request-id"
 
@@ -114,16 +114,14 @@ class TestAuthenticationMiddleware:
             "method": "GET",
             "path": "/api/v1/users",
             "query_string": b"",
-            "headers": [
-                (b"authorization", f"Bearer {token_data.access_token}".encode())
-            ],
+            "headers": [(b"authorization", f"Bearer {token_data.access_token}".encode())],
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
             "client": ("127.0.0.1", 12345),
             "root_path": "",
         }
         real_request = Request(scope)
-        
+
         # Set request_id in state (would normally be set by another middleware)
         real_request.state.request_id = "test-request-id"
 
@@ -149,16 +147,14 @@ class TestAuthenticationMiddleware:
             "method": "GET",
             "path": "/api/v1/users",
             "query_string": b"",
-            "headers": [
-                (b"authorization", b"Bearer invalid_token")
-            ],
+            "headers": [(b"authorization", b"Bearer invalid_token")],
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
             "client": ("127.0.0.1", 12345),
             "root_path": "",
         }
         real_request = Request(scope)
-        
+
         # Set request_id in state (would normally be set by another middleware)
         real_request.state.request_id = "test-request-id"
 
@@ -180,9 +176,7 @@ class TestAuthenticationMiddleware:
             "method": "GET",
             "path": "/test",
             "query_string": b"",
-            "headers": [
-                (b"x-forwarded-for", b"192.168.1.1, 10.0.0.1")
-            ],
+            "headers": [(b"x-forwarded-for", b"192.168.1.1, 10.0.0.1")],
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
             "root_path": "",
@@ -198,9 +192,7 @@ class TestAuthenticationMiddleware:
             "method": "GET",
             "path": "/test",
             "query_string": b"",
-            "headers": [
-                (b"x-real-ip", b"192.168.1.2")
-            ],
+            "headers": [(b"x-real-ip", b"192.168.1.2")],
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
             "root_path": "",
@@ -239,16 +231,14 @@ class TestAuthenticationMiddleware:
             "method": "GET",
             "path": "/api/v1/users",
             "query_string": b"",
-            "headers": [
-                (b"user-agent", b"Mozilla/5.0")
-            ],
+            "headers": [(b"user-agent", b"Mozilla/5.0")],
             "scheme": "http",
             "server": ("127.0.0.1", 8000),
             "client": ("127.0.0.1", 12345),
             "root_path": "",
         }
         real_request = Request(scope)
-        
+
         # Set request_id in state (would normally be set by another middleware)
         real_request.state.request_id = "test-request-id"
 

@@ -4,7 +4,6 @@ Integration tests for client functionality.
 These tests focus on the implemented functionality without complex authentication mocking.
 """
 
-import unittest.mock
 from datetime import date, datetime, timedelta
 from uuid import uuid4
 
@@ -310,7 +309,10 @@ class TestClientServiceIntegration:
 
         for notes in valid_notes:
             client = ClientCreate(
-                full_name="Test Client", cpf="123.456.789-09", birth_date=date(1990, 1, 1), notes=notes
+                full_name="Test Client",
+                cpf="123.456.789-09",
+                birth_date=date(1990, 1, 1),
+                notes=notes,
             )
             assert client.notes == notes
 

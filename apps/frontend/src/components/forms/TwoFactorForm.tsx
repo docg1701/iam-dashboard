@@ -1,14 +1,14 @@
-"use client"
+"use client";
 
-import { useState, useRef, KeyboardEvent } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { Loader2, Shield, AlertCircle } from "lucide-react"
-import Image from "next/image"
+import { useState, useRef, KeyboardEvent } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Loader2, Shield, AlertCircle } from "lucide-react";
+import Image from "next/image";
 
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -17,10 +17,20 @@ import {
   FormLabel,
   FormMessage,
   FormDescription,
-} from "@/components/ui/form"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
-import type { TwoFactorFormData, TwoFactorResponse, TwoFactorSetupResponse } from "@/types/auth"
+} from "@/components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import type {
+  TwoFactorFormData,
+  TwoFactorResponse,
+  TwoFactorSetupResponse,
+} from "@/types/auth";
 
 // 2FA validation schema
 const twoFactorSchema = z.object({
@@ -29,135 +39,137 @@ const twoFactorSchema = z.object({
     .min(6, "Código deve ter 6 dígitos")
     .max(6, "Código deve ter 6 dígitos")
     .regex(/^\d{6}$/, "Código deve conter apenas números"),
-})
+});
 
 interface TwoFactorFormProps {
-  onSubmit: (data: TwoFactorFormData) => Promise<TwoFactorResponse>
-  onSuccess?: (response: TwoFactorResponse) => void
-  onError?: (error: string) => void
-  onBack?: () => void
-  setupData?: TwoFactorSetupResponse // For QR code setup flow
-  isSetup?: boolean // Whether this is setup or login
-  className?: string
+  onSubmit: (data: TwoFactorFormData) => Promise<TwoFactorResponse>;
+  onSuccess?: (response: TwoFactorResponse) => void;
+  onError?: (error: string) => void;
+  onBack?: () => void;
+  setupData?: TwoFactorSetupResponse; // For QR code setup flow
+  isSetup?: boolean; // Whether this is setup or login
+  className?: string;
 }
 
-export function TwoFactorForm({ 
-  onSubmit, 
-  onSuccess, 
+export function TwoFactorForm({
+  onSubmit,
+  onSuccess,
   onError,
   onBack,
   setupData,
   isSetup = false,
-  className 
+  className,
 }: TwoFactorFormProps) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [currentDigit, setCurrentDigit] = useState(0)
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentDigit, setCurrentDigit] = useState(0);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const form = useForm<TwoFactorFormData>({
     resolver: zodResolver(twoFactorSchema),
     defaultValues: {
       totp_code: "",
     },
-  })
+  });
 
   const handleSubmit = async (data: TwoFactorFormData) => {
     try {
-      setIsLoading(true)
-      setError(null)
-      
-      const response = await onSubmit(data)
-      
+      setIsLoading(true);
+      setError(null);
+
+      const response = await onSubmit(data);
+
       if (onSuccess) {
-        onSuccess(response)
+        onSuccess(response);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : "Código de verificação inválido"
-      
-      setError(errorMessage)
-      
+      const errorMessage =
+        err instanceof Error ? err.message : "Código de verificação inválido";
+
+      setError(errorMessage);
+
       if (onError) {
-        onError(errorMessage)
+        onError(errorMessage);
       }
-      
+
       // Clear the form on error
-      form.reset()
-      setCurrentDigit(0)
-      inputRefs.current[0]?.focus()
+      form.reset();
+      setCurrentDigit(0);
+      inputRefs.current[0]?.focus();
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleDigitChange = (index: number, value: string) => {
     // Only allow single digits
-    const digit = value.replace(/\D/g, '').slice(-1)
-    
-    const currentCode = form.getValues('totp_code')
-    const newCode = currentCode.split('')
-    newCode[index] = digit
-    
-    const finalCode = newCode.join('').slice(0, 6)
-    form.setValue('totp_code', finalCode)
-    
+    const digit = value.replace(/\D/g, "").slice(-1);
+
+    const currentCode = form.getValues("totp_code");
+    const newCode = currentCode.split("");
+    newCode[index] = digit;
+
+    const finalCode = newCode.join("").slice(0, 6);
+    form.setValue("totp_code", finalCode);
+
     // Move to next input if digit was entered
     if (digit && index < 5) {
-      setCurrentDigit(index + 1)
-      inputRefs.current[index + 1]?.focus()
+      setCurrentDigit(index + 1);
+      inputRefs.current[index + 1]?.focus();
     }
-    
+
     // Auto-submit when all 6 digits are entered
     if (finalCode.length === 6) {
-      form.handleSubmit(handleSubmit)()
+      form.handleSubmit(handleSubmit)();
     }
-  }
+  };
 
   const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace') {
-      const currentCode = form.getValues('totp_code')
-      const newCode = currentCode.split('')
-      
+    if (e.key === "Backspace") {
+      const currentCode = form.getValues("totp_code");
+      const newCode = currentCode.split("");
+
       if (newCode[index]) {
         // Clear current digit
-        newCode[index] = ''
+        newCode[index] = "";
       } else if (index > 0) {
         // Move to previous digit and clear it
-        newCode[index - 1] = ''
-        setCurrentDigit(index - 1)
-        inputRefs.current[index - 1]?.focus()
+        newCode[index - 1] = "";
+        setCurrentDigit(index - 1);
+        inputRefs.current[index - 1]?.focus();
       }
-      
-      form.setValue('totp_code', newCode.join(''))
-    } else if (e.key === 'ArrowLeft' && index > 0) {
-      setCurrentDigit(index - 1)
-      inputRefs.current[index - 1]?.focus()
-    } else if (e.key === 'ArrowRight' && index < 5) {
-      setCurrentDigit(index + 1)
-      inputRefs.current[index + 1]?.focus()
+
+      form.setValue("totp_code", newCode.join(""));
+    } else if (e.key === "ArrowLeft" && index > 0) {
+      setCurrentDigit(index - 1);
+      inputRefs.current[index - 1]?.focus();
+    } else if (e.key === "ArrowRight" && index < 5) {
+      setCurrentDigit(index + 1);
+      inputRefs.current[index + 1]?.focus();
     }
-  }
+  };
 
   const handlePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault()
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
-    
+    e.preventDefault();
+    const pastedData = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
+
     if (pastedData.length === 6) {
-      form.setValue('totp_code', pastedData)
-      setCurrentDigit(5)
-      inputRefs.current[5]?.focus()
-      
+      form.setValue("totp_code", pastedData);
+      setCurrentDigit(5);
+      inputRefs.current[5]?.focus();
+
       // Auto-submit pasted code
       setTimeout(() => {
-        form.handleSubmit(handleSubmit)()
-      }, 100)
+        form.handleSubmit(handleSubmit)();
+      }, 100);
     }
-  }
+  };
 
-  const currentCode = form.watch('totp_code')
-  const digits = (currentCode + '      ').slice(0, 6).split('')
+  const currentCode = form.watch("totp_code");
+  const digits = (currentCode + "      ").slice(0, 6).split("");
 
   return (
     <div className={cn("w-full max-w-md mx-auto", className)}>
@@ -167,13 +179,14 @@ export function TwoFactorForm({
             <Shield className="w-6 h-6 text-primary" />
           </div>
           <CardTitle>
-            {isSetup ? "Configurar Autenticação em Duas Etapas" : "Verificação em Duas Etapas"}
+            {isSetup
+              ? "Configurar Autenticação em Duas Etapas"
+              : "Verificação em Duas Etapas"}
           </CardTitle>
           <CardDescription>
-            {isSetup 
+            {isSetup
               ? "Configure seu aplicativo autenticador escaneando o código QR abaixo e digite o código de 6 dígitos"
-              : "Digite o código de 6 dígitos do seu aplicativo autenticador"
-            }
+              : "Digite o código de 6 dígitos do seu aplicativo autenticador"}
           </CardDescription>
         </CardHeader>
 
@@ -192,13 +205,17 @@ export function TwoFactorForm({
                 />
               </div>
               <p className="text-sm text-muted-foreground">
-                Escaneie este código com Google Authenticator, Authy ou outro aplicativo TOTP
+                Escaneie este código com Google Authenticator, Authy ou outro
+                aplicativo TOTP
               </p>
             </div>
           )}
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-6"
+            >
               <FormField
                 control={form.control}
                 name="totp_code"
@@ -208,7 +225,7 @@ export function TwoFactorForm({
                       Código 2FA
                     </FormLabel>
                     <FormControl>
-                      <div 
+                      <div
                         className="flex gap-2 justify-center"
                         onPaste={handlePaste}
                       >
@@ -216,18 +233,20 @@ export function TwoFactorForm({
                           <Input
                             key={index}
                             ref={(el) => {
-                              inputRefs.current[index] = el
+                              inputRefs.current[index] = el;
                             }}
                             type="text"
                             inputMode="numeric"
                             maxLength={1}
                             value={digit.trim()}
-                            onChange={(e) => handleDigitChange(index, e.target.value)}
+                            onChange={(e) =>
+                              handleDigitChange(index, e.target.value)
+                            }
                             onKeyDown={(e) => handleKeyDown(index, e)}
                             onFocus={() => setCurrentDigit(index)}
                             className={cn(
                               "w-12 h-12 text-center text-lg font-mono",
-                              currentDigit === index && "ring-2 ring-primary"
+                              currentDigit === index && "ring-2 ring-primary",
                             )}
                             disabled={isLoading}
                             autoComplete="one-time-code"
@@ -254,27 +273,28 @@ export function TwoFactorForm({
 
               <div className="space-y-3">
                 {/* Submit Button */}
-                <Button 
-                  type="submit" 
-                  className="w-full" 
+                <Button
+                  type="submit"
+                  className="w-full"
                   disabled={isLoading || currentCode.length !== 6}
                   size="lg"
                 >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {isLoading 
-                    ? "Verificando..." 
-                    : isSetup 
-                      ? "Configurar 2FA" 
-                      : "Verificar Código"
-                  }
+                  {isLoading && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {isLoading
+                    ? "Verificando..."
+                    : isSetup
+                      ? "Configurar 2FA"
+                      : "Verificar Código"}
                 </Button>
 
                 {/* Back Button */}
                 {onBack && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="w-full" 
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
                     onClick={onBack}
                     disabled={isLoading}
                   >
@@ -292,11 +312,15 @@ export function TwoFactorForm({
                 Códigos de Backup
               </h4>
               <p className="text-sm text-yellow-700 mb-3">
-                Guarde estes códigos em local seguro. Eles podem ser usados para acessar sua conta se você perder seu dispositivo.
+                Guarde estes códigos em local seguro. Eles podem ser usados para
+                acessar sua conta se você perder seu dispositivo.
               </p>
               <div className="grid grid-cols-2 gap-1 font-mono text-sm">
                 {setupData.backup_codes.map((code, index) => (
-                  <code key={index} className="bg-white px-2 py-1 rounded border">
+                  <code
+                    key={index}
+                    className="bg-white px-2 py-1 rounded border"
+                  >
                     {code}
                   </code>
                 ))}
@@ -306,5 +330,5 @@ export function TwoFactorForm({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

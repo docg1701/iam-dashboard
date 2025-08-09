@@ -36,11 +36,14 @@ async def debug_permission():
         # Test the database function directly
         print("\n2. Testing database function directly...")
         query = text("SELECT check_user_agent_permission(:user_id, :agent_name, :operation)")
-        result = session.execute(query, {
-            "user_id": str(sysadmin.user_id),
-            "agent_name": "client_management",
-            "operation": "create"
-        })
+        result = session.execute(
+            query,
+            {
+                "user_id": str(sysadmin.user_id),
+                "agent_name": "client_management",
+                "operation": "create",
+            },
+        )
         db_result = result.scalar()
         print(f"   Database function result: {db_result}")
 
@@ -70,6 +73,7 @@ async def debug_permission():
 
     finally:
         session.close()
+
 
 if __name__ == "__main__":
     asyncio.run(debug_permission())

@@ -1,6 +1,6 @@
 /**
  * UserPermissionsDialog Component Tests - Simplified Version
- * 
+ *
  * Following CLAUDE.md testing directives:
  * - NEVER mock internal frontend code, components, hooks, or utilities
  * - ONLY mock external APIs (fetch calls, third-party services, etc.)
@@ -9,188 +9,200 @@
  * - When testing components, use real providers and contexts - never mock them
  */
 
-import { 
-  renderWithProviders, 
-  screen, 
-  waitFor, 
+import {
+  renderWithProviders,
+  screen,
+  waitFor,
   userEvent,
-  vi, 
-  describe, 
-  it, 
+  vi,
+  describe,
+  it,
   expect,
   useTestSetup,
-  act
-} from '@/test/test-template'
-import { setupTestAuth, createMockAdmin } from '@/test/auth-helpers'
-import { UserPermissionsDialog } from '../UserPermissionsDialog'
+  act,
+} from "@/test/test-template";
+import { setupTestAuth, createMockAdmin } from "@/test/auth-helpers";
+import { UserPermissionsDialog } from "../UserPermissionsDialog";
 
 // Use standardized test setup - handles all external API mocks
-useTestSetup()
+useTestSetup();
 
-describe('UserPermissionsDialog - Simplified', () => {
+describe("UserPermissionsDialog - Simplified", () => {
   const mockUser = {
-    user_id: 'test-user-123',
-    full_name: 'João Silva',
-    email: 'joao@test.com',
-    role: 'user' as const,
+    user_id: "test-user-123",
+    full_name: "João Silva",
+    email: "joao@test.com",
+    role: "user" as const,
     is_active: true,
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z',
-    totp_enabled: false
-  }
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+    totp_enabled: false,
+  };
 
   const mockProps = {
     open: true,
     user: mockUser,
     onOpenChange: vi.fn(),
-    onPermissionsChanged: vi.fn()
-  }
+    onPermissionsChanged: vi.fn(),
+  };
 
   beforeEach(() => {
     // Set up authenticated admin user - no internal mocks
-    const adminUser = createMockAdmin()
-    setupTestAuth(adminUser, 'mock-jwt-token')
-  })
+    const adminUser = createMockAdmin();
+    setupTestAuth(adminUser, "mock-jwt-token");
+  });
 
-  describe('Basic Dialog Functionality', () => {
-    it('should render dialog when open is true', async () => {
+  describe("Basic Dialog Functionality", () => {
+    it("should render dialog when open is true", async () => {
       await act(async () => {
-        renderWithProviders(<UserPermissionsDialog {...mockProps} />)
-      })
-      
+        renderWithProviders(<UserPermissionsDialog {...mockProps} />);
+      });
+
       // Test actual dialog behavior - the dialog should render
-      await waitFor(async () => {
-        await act(async () => {
-          // Look for any content that indicates the dialog is rendered
-          const dialog = screen.queryByRole('dialog') || 
-                        screen.queryByText(/permiss/i) ||
-                        screen.queryByText(/usu/i)
-          expect(dialog).toBeTruthy()
-        })
-      }, { timeout: 3000 })
-    })
+      await waitFor(
+        async () => {
+          await act(async () => {
+            // Look for any content that indicates the dialog is rendered
+            const dialog =
+              screen.queryByRole("dialog") ||
+              screen.queryByText(/permiss/i) ||
+              screen.queryByText(/usu/i);
+            expect(dialog).toBeTruthy();
+          });
+        },
+        { timeout: 3000 },
+      );
+    });
 
-    it('should not render dialog content when open is false', async () => {
-      const closedProps = { ...mockProps, open: false }
-      
+    it("should not render dialog content when open is false", async () => {
+      const closedProps = { ...mockProps, open: false };
+
       await act(async () => {
-        renderWithProviders(<UserPermissionsDialog {...closedProps} />)
-      })
-      
+        renderWithProviders(<UserPermissionsDialog {...closedProps} />);
+      });
+
       // Should not show dialog content when closed
       await act(async () => {
-        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-      })
-    })
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      });
+    });
 
-    it('should handle permission denied gracefully', async () => {
+    it("should handle permission denied gracefully", async () => {
       // Set up user without admin permissions - testing real permission logic
       await act(async () => {
-        const regularUser = createMockAdmin({ role: 'user' })
-        setupTestAuth(regularUser, 'mock-jwt-token')
-      })
-      
+        const regularUser = createMockAdmin({ role: "user" });
+        setupTestAuth(regularUser, "mock-jwt-token");
+      });
+
       await act(async () => {
-        renderWithProviders(<UserPermissionsDialog {...mockProps} />)
-      })
-      
+        renderWithProviders(<UserPermissionsDialog {...mockProps} />);
+      });
+
       // Should show permission denied or not render unauthorized content
       await waitFor(async () => {
         await act(async () => {
-          const hasPermissionMessage = screen.queryByText(/não tem permissão/i) ||
-                                     screen.queryByText(/acesso negado/i) ||
-                                     !screen.queryByRole('dialog')
-          expect(hasPermissionMessage).toBeTruthy()
-        })
-      })
-    })
-  })
+          const hasPermissionMessage =
+            screen.queryByText(/não tem permissão/i) ||
+            screen.queryByText(/acesso negado/i) ||
+            !screen.queryByRole("dialog");
+          expect(hasPermissionMessage).toBeTruthy();
+        });
+      });
+    });
+  });
 
-  describe('Loading and Error States', () => {
-    it('should handle API loading state', async () => {
+  describe("Loading and Error States", () => {
+    it("should handle API loading state", async () => {
       await act(async () => {
-        renderWithProviders(<UserPermissionsDialog {...mockProps} />)
-      })
-      
-      // Should eventually show either content or error state
-      await waitFor(async () => {
-        await act(async () => {
-          const hasContent = screen.queryByRole('dialog') ||
-                            screen.queryByText(/carregando/i) ||
-                            screen.queryByText(/erro/i) ||
-                            screen.queryByText(/permiss/i)
-          expect(hasContent).toBeTruthy()
-        })
-      }, { timeout: 5000 })
-    })
+        renderWithProviders(<UserPermissionsDialog {...mockProps} />);
+      });
 
-    it('should handle API errors gracefully', async () => {
+      // Should eventually show either content or error state
+      await waitFor(
+        async () => {
+          await act(async () => {
+            const hasContent =
+              screen.queryByRole("dialog") ||
+              screen.queryByText(/carregando/i) ||
+              screen.queryByText(/erro/i) ||
+              screen.queryByText(/permiss/i);
+            expect(hasContent).toBeTruthy();
+          });
+        },
+        { timeout: 5000 },
+      );
+    });
+
+    it("should handle API errors gracefully", async () => {
       // Mock API failure - only external API mock
       await act(async () => {
-        vi.mocked(global.fetch).mockRejectedValueOnce(new Error('API Error'))
-      })
-      
+        vi.mocked(global.fetch).mockRejectedValueOnce(new Error("API Error"));
+      });
+
       await act(async () => {
-        renderWithProviders(<UserPermissionsDialog {...mockProps} />)
-      })
-      
+        renderWithProviders(<UserPermissionsDialog {...mockProps} />);
+      });
+
       // Should handle error gracefully without crashing
       await waitFor(async () => {
         await act(async () => {
           // Component should either show error message or handle gracefully
-          expect(document.body).toBeInTheDocument()
-        })
-      })
-    })
-  })
+          expect(document.body).toBeInTheDocument();
+        });
+      });
+    });
+  });
 
-  describe('User Interaction', () => {
-    it('should call onOpenChange when closed', async () => {
-      const onOpenChange = vi.fn()
-      const user = userEvent.setup()
-      
+  describe("User Interaction", () => {
+    it("should call onOpenChange when closed", async () => {
+      const onOpenChange = vi.fn();
+      const user = userEvent.setup();
+
       await act(async () => {
         renderWithProviders(
-          <UserPermissionsDialog {...mockProps} onOpenChange={onOpenChange} />
-        )
-      })
-      
+          <UserPermissionsDialog {...mockProps} onOpenChange={onOpenChange} />,
+        );
+      });
+
       // Look for close button (X, Cancel, etc.)
       await act(async () => {
-        const closeButton = screen.queryByRole('button', { name: /close/i }) ||
-                           screen.queryByRole('button', { name: /cancel/i }) ||
-                           screen.queryByRole('button', { name: /fechar/i }) ||
-                           screen.queryByRole('button', { name: /cancelar/i }) ||
-                           screen.queryByLabelText(/close/i)
-        
-        if (closeButton) {
-          await user.click(closeButton)
-          expect(onOpenChange).toHaveBeenCalledWith(false)
-        }
-      })
-    })
+        const closeButton =
+          screen.queryByRole("button", { name: /close/i }) ||
+          screen.queryByRole("button", { name: /cancel/i }) ||
+          screen.queryByRole("button", { name: /fechar/i }) ||
+          screen.queryByRole("button", { name: /cancelar/i }) ||
+          screen.queryByLabelText(/close/i);
 
-    it('should handle keyboard interactions', async () => {
-      const onOpenChange = vi.fn()
-      
+        if (closeButton) {
+          await user.click(closeButton);
+          expect(onOpenChange).toHaveBeenCalledWith(false);
+        }
+      });
+    });
+
+    it("should handle keyboard interactions", async () => {
+      const onOpenChange = vi.fn();
+
       await act(async () => {
         renderWithProviders(
-          <UserPermissionsDialog {...mockProps} onOpenChange={onOpenChange} />
-        )
-      })
-      
+          <UserPermissionsDialog {...mockProps} onOpenChange={onOpenChange} />,
+        );
+      });
+
       // Test Escape key to close dialog
       await act(async () => {
-        await userEvent.setup().keyboard('{Escape}')
-      })
-      
+        await userEvent.setup().keyboard("{Escape}");
+      });
+
       // Either onOpenChange called or dialog behaves appropriately
       await waitFor(() => {
         // Check if onOpenChange was called OR dialog is not in document
-        const wasOnOpenChangeCalled = onOpenChange.mock.calls.some(call => call[0] === false)
-        const isDialogGone = !screen.queryByRole('dialog')
-        expect(wasOnOpenChangeCalled || isDialogGone).toBe(true)
-      })
-    })
-  })
-})
+        const wasOnOpenChangeCalled = onOpenChange.mock.calls.some(
+          (call) => call[0] === false,
+        );
+        const isDialogGone = !screen.queryByRole("dialog");
+        expect(wasOnOpenChangeCalled || isDialogGone).toBe(true);
+      });
+    });
+  });
+});

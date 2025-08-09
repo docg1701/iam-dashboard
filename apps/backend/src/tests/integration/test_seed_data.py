@@ -19,6 +19,7 @@ from src.utils.seed_data import (
     print_seed_summary,
     reset_database,
 )
+from src.core.database import engine
 
 
 class TestSeedDatabase:
@@ -27,7 +28,7 @@ class TestSeedDatabase:
     def _seed_database_with_real_session(self, session: Session) -> None:
         """Real implementation of database seeding using provided session."""
         print("🌱 Starting database seeding...")
-        
+
         # Check if database is already seeded
         existing_users = session.exec(select(User)).all()
         if existing_users:
@@ -124,6 +125,7 @@ class TestSeedDatabase:
         """Test seeding when database already has users using real database."""
         # First, create a user in the database
         from src.tests.factories import UserFactory
+
         user = UserFactory()
         test_session.add(user)
         test_session.commit()
@@ -153,11 +155,11 @@ class TestSeedDatabase:
 
         # Mock external function to raise exception by replacing the method temporarily
         original_method = self._seed_database_with_real_session
-        
+
         def failing_seed_method(session):
             print("🌱 Starting database seeding...")
             raise Exception("Database error")
-        
+
         self._seed_database_with_real_session = failing_seed_method
 
         try:
@@ -179,7 +181,7 @@ class TestPrintSeedSummary:
     def test_print_seed_summary(self, mock_print: Mock, test_session: Session) -> None:
         """Test seed summary printing with real database data."""
         # Create real test data in database
-        from src.tests.factories import UserFactory, ClientFactory, AuditLogFactory
+        from src.tests.factories import AuditLogFactory, ClientFactory, UserFactory
 
         # Create users with different roles
         users = [
@@ -243,7 +245,7 @@ class TestClearDatabase:
     def _clear_database_with_real_session(self, session: Session) -> None:
         """Real implementation of database clearing using provided session."""
         print("🧹 Clearing database...")
-        
+
         try:
             # Delete in correct order due to foreign key constraints
             session.connection().execute(delete(AuditLog))
@@ -262,7 +264,7 @@ class TestClearDatabase:
     def test_clear_database_success(self, mock_print: Mock, test_session: Session) -> None:
         """Test successful database clearing with real database."""
         # First, add some data to the database
-        from src.tests.factories import UserFactory, ClientFactory, AuditLogFactory
+        from src.tests.factories import AuditLogFactory, ClientFactory, UserFactory
 
         user = UserFactory()
         client = ClientFactory()
@@ -295,13 +297,14 @@ class TestClearDatabase:
         """Test exception handling during database clearing with real database."""
         # Add some data first
         from src.tests.factories import UserFactory
+
         user = UserFactory()
         test_session.add(user)
         test_session.commit()
 
         # Mock the connection to raise exception
         original_connection = test_session.connection
-        
+
         def mock_connection():
             mock_conn = Mock()
             mock_conn.execute.side_effect = Exception("Database error")
@@ -321,24 +324,47 @@ class TestClearDatabase:
 
 
 class TestResetDatabase:
-    """Test database reset function."""
+    """Integration test database reset function with real database operations."""
 
-    @patch("src.utils.seed_data.clear_database")
-    @patch("src.utils.seed_data.seed_database")
     @pytest.mark.asyncio
-    async def test_reset_database(self, mock_seed: Mock, mock_clear: Mock) -> None:
-        """Test database reset calls clear then seed."""
+    async def test_reset_database(self, test_session: Session) -> None:
+        """Test database reset with real database operations."""
+        # First seed some test data to ensure database has content
+        test_users = create_seed_users()
+        for user in test_users:
+            test_session.add(user)
+        test_session.commit()
+
+        # Verify we have data
+        users_before = test_session.exec(select(User)).all()
+        assert len(users_before) > 0
+
+        # Call real reset_database function
         await reset_database()
 
-        # Should call clear first, then seed
-        mock_clear.assert_called_once()
-        mock_seed.assert_called_once()
+        # Create a new session to verify the reset worked
+        with Session(engine) as fresh_session:
+            # After reset, we should have new seeded data
+            users_after = fresh_session.exec(select(User)).all()
+            clients_after = fresh_session.exec(select(Client)).all()
+            
+            # Reset should have cleared and reseeded
+            assert len(users_after) > 0
+            assert len(clients_after) > 0
+            
+            # Clean up for other tests
+            fresh_session.exec(delete(AuditLog))
+            fresh_session.exec(delete(Client))
+            fresh_session.exec(delete(User))
+            fresh_session.commit()
 
 
 class TestSeedForTesting:
     """Integration test for testing data seeding function with real database operations."""
 
-    def _seed_for_testing_with_real_session(self, session: Session) -> tuple[list[User], list[Client], list[AuditLog]]:
+    def _seed_for_testing_with_real_session(
+        self, session: Session
+    ) -> tuple[list[User], list[Client], list[AuditLog]]:
         """Real implementation of testing data seeding using provided session."""
         # Create minimal test data
         test_users = create_seed_users()
@@ -375,7 +401,7 @@ class TestSeedForTesting:
         users = test_session.exec(select(User)).all()
         clients = test_session.exec(select(Client)).all()
         audit_logs = test_session.exec(select(AuditLog)).all()
-        
+
         assert len(users) == 0
         assert len(clients) == 0
         assert len(audit_logs) == 0
@@ -386,18 +412,18 @@ class TestSeedForTesting:
         # Verify it returns the data
         assert result is not None
         assert len(result) == 3  # users, clients, audit_logs
-        
+
         users_created, clients_created, audit_logs_created = result
-        
+
         # Verify data was created in database
         users_in_db = test_session.exec(select(User)).all()
         clients_in_db = test_session.exec(select(Client)).all()
         audit_logs_in_db = test_session.exec(select(AuditLog)).all()
-        
+
         assert len(users_in_db) > 0
         assert len(clients_in_db) > 0
         assert len(audit_logs_in_db) > 0
-        
+
         # Verify return data matches database (allow for some flexibility in audit logs due to implementation details)
         assert len(users_created) == len(users_in_db)
         assert len(clients_created) == len(clients_in_db)
@@ -407,31 +433,85 @@ class TestSeedForTesting:
 
 
 class TestMain:
-    """Test CLI main function."""
+    """Integration test CLI main function with real database operations."""
 
     @patch("sys.argv", ["script_name", "seed"])
-    @patch("src.utils.seed_data.seed_database")
     @pytest.mark.asyncio
-    async def test_main_seed_command(self, mock_seed: Mock) -> None:
-        """Test main function with seed command."""
+    async def test_main_seed_command(self, test_session: Session) -> None:
+        """Test main function with seed command using real database operations."""
+        # Ensure database is empty before seeding
+        test_session.exec(delete(AuditLog))
+        test_session.exec(delete(Client))
+        test_session.exec(delete(User))
+        test_session.commit()
+
         await main()
-        mock_seed.assert_called_once()
+
+        # Verify seeding actually happened
+        with Session(engine) as fresh_session:
+            users = fresh_session.exec(select(User)).all()
+            clients = fresh_session.exec(select(Client)).all()
+            
+            assert len(users) > 0
+            assert len(clients) > 0
+            
+            # Clean up
+            fresh_session.exec(delete(AuditLog))
+            fresh_session.exec(delete(Client))
+            fresh_session.exec(delete(User))
+            fresh_session.commit()
 
     @patch("sys.argv", ["script_name", "clear"])
-    @patch("src.utils.seed_data.clear_database")
     @pytest.mark.asyncio
-    async def test_main_clear_command(self, mock_clear: Mock) -> None:
-        """Test main function with clear command."""
+    async def test_main_clear_command(self, test_session: Session) -> None:
+        """Test main function with clear command using real database operations."""
+        # First add some test data
+        test_users = create_seed_users()
+        for user in test_users:
+            test_session.add(user)
+        test_session.commit()
+
+        # Verify we have data
+        users_before = test_session.exec(select(User)).all()
+        assert len(users_before) > 0
+
         await main()
-        mock_clear.assert_called_once()
+
+        # Verify clearing actually happened
+        with Session(engine) as fresh_session:
+            users_after = fresh_session.exec(select(User)).all()
+            clients_after = fresh_session.exec(select(Client)).all()
+            audit_logs_after = fresh_session.exec(select(AuditLog)).all()
+            
+            assert len(users_after) == 0
+            assert len(clients_after) == 0
+            assert len(audit_logs_after) == 0
 
     @patch("sys.argv", ["script_name", "reset"])
-    @patch("src.utils.seed_data.reset_database")
     @pytest.mark.asyncio
-    async def test_main_reset_command(self, mock_reset: Mock) -> None:
-        """Test main function with reset command."""
+    async def test_main_reset_command(self, test_session: Session) -> None:
+        """Test main function with reset command using real database operations."""
+        # First add some test data
+        test_users = create_seed_users()
+        for user in test_users:
+            test_session.add(user)
+        test_session.commit()
+
         await main()
-        mock_reset.assert_called_once()
+
+        # Verify reset worked (should have new seeded data)
+        with Session(engine) as fresh_session:
+            users = fresh_session.exec(select(User)).all()
+            clients = fresh_session.exec(select(Client)).all()
+            
+            assert len(users) > 0
+            assert len(clients) > 0
+            
+            # Clean up
+            fresh_session.exec(delete(AuditLog))
+            fresh_session.exec(delete(Client))
+            fresh_session.exec(delete(User))
+            fresh_session.commit()
 
     @patch("sys.argv", ["script_name"])
     @pytest.mark.asyncio

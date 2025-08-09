@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from src.models.client import Client, ClientStatus
-from src.models.user import User, UserRole
+from src.models.user import User
 
 
 class TestClientAPICreate:
@@ -74,7 +74,11 @@ class TestClientAPICreate:
         assert response_data["notes"] is None
 
     def test_create_client_duplicate_cpf(
-        self, client: TestClient, test_session: Session, auth_headers: dict[str, str], test_user: User
+        self,
+        client: TestClient,
+        test_session: Session,
+        auth_headers: dict[str, str],
+        test_user: User,
     ) -> None:
         """Test client creation with duplicate CPF returns conflict error."""
         # Create existing client using the test_user fixture
@@ -148,7 +152,11 @@ class TestClientAPIGet:
     """Test GET /clients/{client_id} endpoint."""
 
     def test_get_client_success(
-        self, client: TestClient, test_session: Session, auth_headers: dict[str, str], test_user: User
+        self,
+        client: TestClient,
+        test_session: Session,
+        auth_headers: dict[str, str],
+        test_user: User,
     ) -> None:
         """Test successful client retrieval via API."""
         # Create test client using the test_user fixture
@@ -219,7 +227,11 @@ class TestClientAPIUpdate:
     """Test PUT /clients/{client_id} endpoint."""
 
     def test_update_client_success(
-        self, client: TestClient, test_session: Session, auth_headers: dict[str, str], test_user: User
+        self,
+        client: TestClient,
+        test_session: Session,
+        auth_headers: dict[str, str],
+        test_user: User,
     ) -> None:
         """Test successful client update via API."""
         # Create test client using the test_user fixture
@@ -294,7 +306,11 @@ class TestClientAPIDelete:
     """Test DELETE /clients/{client_id} endpoint."""
 
     def test_delete_client_success(
-        self, client: TestClient, test_session: Session, auth_headers: dict[str, str], test_user: User
+        self,
+        client: TestClient,
+        test_session: Session,
+        auth_headers: dict[str, str],
+        test_user: User,
     ) -> None:
         """Test successful client deletion via API."""
         # Create test client using the test_user fixture

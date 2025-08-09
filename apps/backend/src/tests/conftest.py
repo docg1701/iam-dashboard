@@ -5,9 +5,8 @@ This module provides shared fixtures and configuration for all tests.
 """
 
 import os
-from collections.abc import Callable, Generator
+from collections.abc import Generator
 from datetime import datetime, timedelta
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
@@ -22,8 +21,7 @@ from src.core.database import get_session
 os.environ["ENVIRONMENT"] = "testing"
 
 # Now import the app after mocking Redis
-from src.core import security  # noqa: E402
-from src.core.security import TokenData, auth_service, get_current_user  # noqa: E402
+from src.core.security import TokenData, auth_service  # noqa: E402
 from src.main import app  # noqa: E402
 from src.models import audit, permissions  # noqa: F401, E402
 from src.models import client as client_models  # noqa: F401, E402
@@ -193,7 +191,7 @@ def mock_redis_client() -> MagicMock:
 
     def mock_ltrim_sync(key: str, start: int, stop: int) -> bool:
         if key in mock.lists:
-            mock.lists[key] = mock.lists[key][start:stop+1]
+            mock.lists[key] = mock.lists[key][start : stop + 1]
         return True
 
     def mock_lrange_sync(key: str, start: int, stop: int) -> list[str]:
@@ -201,7 +199,7 @@ def mock_redis_client() -> MagicMock:
             return []
         if stop == -1:
             return mock.lists[key][start:]
-        return mock.lists[key][start:stop+1]
+        return mock.lists[key][start : stop + 1]
 
     def mock_llen_sync(key: str) -> int:
         return len(mock.lists.get(key, []))
@@ -328,6 +326,7 @@ def user_auth_token(test_regular_user: User) -> str:
 @pytest.fixture(name="client")
 def client(test_session: Session) -> Generator[TestClient]:
     """Create test client with test database session only."""
+
     def get_test_session() -> Session:
         return test_session
 
@@ -354,7 +353,7 @@ def mock_audit_logger() -> MagicMock:
     return mock_logger
 
 
-@pytest.fixture(name="mock_email_service") 
+@pytest.fixture(name="mock_email_service")
 def mock_email_service() -> MagicMock:
     """Mock email service to avoid external SMTP calls."""
     mock_service = MagicMock()
@@ -364,7 +363,7 @@ def mock_email_service() -> MagicMock:
     return mock_service
 
 
-@pytest.fixture(name="mock_time") 
+@pytest.fixture(name="mock_time")
 def mock_time() -> MagicMock:
     """Mock time functions for deterministic testing."""
     mock = MagicMock()
@@ -380,8 +379,6 @@ def mock_uuid() -> MagicMock:
     """Mock UUID generation for deterministic testing."""
     mock = MagicMock()
     # Return predictable UUIDs for testing
-    test_uuid = UUID('12345678-1234-5678-9abc-123456789abc')
+    test_uuid = UUID("12345678-1234-5678-9abc-123456789abc")
     mock.uuid4.return_value = test_uuid
     return mock
-
-

@@ -20,7 +20,7 @@ class TestValidateCPF:
         valid_cpfs = [
             "123.456.789-09",  # Valid CPF with correct check digits
             "987.654.321-00",  # Valid CPF with correct check digits
-            "12345678909",     # Valid without formatting
+            "12345678909",  # Valid without formatting
         ]
         for cpf in valid_cpfs:
             assert validate_cpf(cpf) is True
@@ -316,14 +316,14 @@ class TestSanitizeFilename:
         """Test removal of dangerous characters."""
         dangerous_cases = [
             ("file<name>.txt", "filename.txt"),  # < and > removed entirely
-            ("file>name.txt", "filename.txt"),   # < and > removed entirely
-            ('file"name.txt', "filename.txt"),   # " removed entirely
+            ("file>name.txt", "filename.txt"),  # < and > removed entirely
+            ('file"name.txt', "filename.txt"),  # " removed entirely
             ("file/name.txt", "file_name.txt"),  # / replaced with _
-            ("file\\name.txt", "file_name.txt"), # \ replaced with _
-            ("file|name.txt", "filename.txt"),   # | removed entirely
-            ("file?name.txt", "filename.txt"),   # ? removed entirely
-            ("file*name.txt", "filename.txt"),   # * removed entirely
-            ("file:name.txt", "filename.txt"),   # : removed entirely
+            ("file\\name.txt", "file_name.txt"),  # \ replaced with _
+            ("file|name.txt", "filename.txt"),  # | removed entirely
+            ("file?name.txt", "filename.txt"),  # ? removed entirely
+            ("file*name.txt", "filename.txt"),  # * removed entirely
+            ("file:name.txt", "filename.txt"),  # : removed entirely
         ]
 
         for original, expected in dangerous_cases:
