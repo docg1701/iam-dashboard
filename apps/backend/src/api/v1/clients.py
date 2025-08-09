@@ -432,7 +432,7 @@ async def batch_update_clients(
         for client_id in client_ids:
             try:
                 # Check if user owns this client by trying to get it
-                client = await client_service.get_client_by_id(
+                await client_service.get_client_by_id(
                     client_id=UUID(client_id),
                     user_id=token_data.user_id,
                     request=request,
@@ -441,7 +441,7 @@ async def batch_update_clients(
                 # If we get here, user owns the client
                 if operation == "update":
                     # Perform update operation
-                    updated_client = await client_service.update_client(
+                    await client_service.update_client(
                         client_id=UUID(client_id),
                         client_data=ClientUpdate(**operation_data),
                         user_id=token_data.user_id,

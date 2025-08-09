@@ -512,7 +512,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
                         status_code=status.HTTP_400_BAD_REQUEST,
                         content={"detail": "Invalid request content"},
                     )
-        except UnicodeDecodeError as e:
+        except UnicodeDecodeError:
             self._log_security_event(request, "INVALID_ENCODING", "Non-UTF-8 request body")
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,

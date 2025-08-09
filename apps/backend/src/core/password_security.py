@@ -284,8 +284,7 @@ class PasswordSecurityService:
     def is_rate_limited(self, email: str, ip_address: str) -> bool:
         """Check if login attempts are being rate limited."""
         try:
-            # Check rate limiting by email
-            email_key = f"rate_limit_email:{email}"
+            # Check rate limiting by IP
             ip_key = f"rate_limit_ip:{ip_address}"
 
             current_time = datetime.utcnow()

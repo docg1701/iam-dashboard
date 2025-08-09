@@ -5,7 +5,9 @@ This module provides JWT token creation, validation, and security utilities.
 All authentication logic is centralized here for consistency.
 """
 
+import base64
 import contextlib
+import json
 import logging
 import secrets
 import sys
@@ -119,7 +121,6 @@ class SecureAuthService:
         user_role: str,
         user_email: str,
         session_id: str | None = None,
-        request=None,
     ) -> TokenResponse:
         """Create secure JWT token with session tracking."""
         if session_id is None:
@@ -212,9 +213,6 @@ class SecureAuthService:
 
             # Verify header contains proper algorithm (prevent algorithm confusion)
             try:
-                import base64
-                import json
-
                 header_b64 = token_parts[0]
                 # Add padding if needed
                 header_b64 += "=" * (4 - len(header_b64) % 4)
@@ -292,17 +290,9 @@ class SecureAuthService:
 
                 # Additional session security validation with fingerprinting
                 if request and session_id and not self._is_testing:
-                    try:
-                        # Import here to avoid circular imports
-                        from src.services.session_security import (
-                            session_security_service,  # noqa: PLC0415
-                        )
-
-                        # This would be an async operation in a real implementation
-                        # For now, we'll add a note that this should be called async
-                        pass
-                    except ImportError:
-                        # Session security service not available
+                    with contextlib.suppress(ImportError):
+                        # TODO: Implement async session tracking
+                        # This would require session security service integration
                         pass
 
             return TokenData(
