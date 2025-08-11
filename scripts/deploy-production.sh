@@ -34,7 +34,7 @@ validate_numeric_param() {
     fi
 }
 
-DEPLOYMENT_TIMEOUT="${DEPLOYMENT_TIMEOUT:-300}"
+DEPLOYMENT_TIMEOUT="${DEPLOYMENT_TIMEOUT:-600}"
 validate_numeric_param "DEPLOYMENT_TIMEOUT" "$DEPLOYMENT_TIMEOUT" 60 1800
 
 HEALTH_CHECK_RETRIES="${HEALTH_CHECK_RETRIES:-30}"
@@ -131,6 +131,30 @@ check_docker_compose() {
 }
 
 # Function to validate required files
+validate_compose_services() {
+    log "🔍 Validating required services in docker-compose.yml..."
+    
+    local required_services=("postgres" "redis" "api" "web")
+    local available_services=$(docker compose config --services 2>/dev/null)
+    
+    if [ $? -ne 0 ]; then
+        log "❌ Cannot read docker-compose.yml services"
+        return 1
+    fi
+    
+    for service in "${required_services[@]}"; do
+        if ! echo "$available_services" | grep -q "^${service}$"; then
+            log "❌ Required service '$service' not found in docker-compose.yml"
+            log "📋 Available services: $(echo $available_services | tr '\n' ' ')"
+            return 1
+        fi
+    done
+    
+    log "✅ All required services found in docker-compose.yml"
+    return 0
+}
+
+# Function to validate required files
 validate_deployment_files() {
     log "📋 Validating deployment requirements..."
     
@@ -181,13 +205,13 @@ backup_current_state() {
         local safe_working_path="$(pwd)"
         
         # Backup volumes (if they exist)
-        if docker volume ls | grep -q "iam-dashboard_postgres_data"; then
+        if docker volume ls | grep -q "iam-dashboard-postgres-data"; then
             log "📦 Backing up postgres data..."
             
             # Use array for safe command construction
             local docker_cmd=(
                 docker run --rm
-                -v iam-dashboard_postgres_data:/data
+                -v iam-dashboard-postgres-data:/data
                 -v "$safe_backup_path:/backup"
                 alpine tar czf 
                 "/backup/postgres_backup_${backup_timestamp}.tar.gz"
@@ -235,8 +259,8 @@ rollback_deployment() {
     # If backup was created, suggest restore
     if [ "$BACKUP_VOLUMES" = "true" ] && [ -d "backups" ]; then
         log "💡 To restore from backup:"
-        log "   docker volume rm iam-dashboard_postgres_data"
-        log "   docker run --rm -v iam-dashboard_postgres_data:/data -v \$PWD/backups:/backup alpine tar xzf /backup/postgres_backup_*.tar.gz -C /"
+        log "   docker volume rm iam-dashboard-postgres-data"
+        log "   docker run --rm -v iam-dashboard-postgres-data:/data -v \$PWD/backups:/backup alpine tar xzf /backup/postgres_backup_*.tar.gz -C /"
     fi
     
     log "❌ Deployment failed and rolled back"
@@ -253,6 +277,7 @@ cd "$PROJECT_ROOT" || {
 main_deployment() {
     # Pre-deployment checks
     check_docker_compose || exit 1
+    validate_compose_services || exit 1
     validate_deployment_files || exit 1
     backup_current_state
     
@@ -303,11 +328,11 @@ main_deployment() {
         rollback_deployment
     fi
     
-    # Start frontend if configured
-    if docker compose config --services | grep -q "frontend"; then
-        log "🌐 Starting frontend service..."
-        if ! docker compose up -d frontend; then
-            log "⚠️ Failed to start frontend service - continuing with backend only"
+    # Start web frontend service
+    if docker compose config --services | grep -q "web"; then
+        log "🌐 Starting web frontend service..."
+        if ! docker compose up -d web; then
+            log "⚠️ Failed to start web frontend service - continuing with backend only"
         else
             # Optional frontend health check
             if ! check_service_health "Frontend" "http://localhost:3000" 10 5; then
@@ -315,7 +340,7 @@ main_deployment() {
             fi
         fi
     else
-        log "ℹ️ No frontend service configured"
+        log "ℹ️ No web frontend service configured"
     fi
     
     # Final verification
@@ -338,7 +363,7 @@ main_deployment() {
     echo "   Health Check: http://localhost:8000/health" 
     echo "   API Documentation: http://localhost:8000/docs"
     
-    if docker compose config --services | grep -q "frontend"; then
+    if docker compose config --services | grep -q "web"; then
         echo "   Frontend: http://localhost:3000"
     fi
     

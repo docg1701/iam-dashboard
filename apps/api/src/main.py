@@ -86,4 +86,5 @@ def create_app() -> FastAPI:
     
     return app
 
+# Create FastAPI app instance (for uvicorn)
 app = create_app()

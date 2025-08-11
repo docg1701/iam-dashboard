@@ -6,7 +6,7 @@ import os
 from logging.config import fileConfig
 from typing import Optional
 
-from sqlalchemy import pool
+from sqlalchemy import pool, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
@@ -71,6 +71,10 @@ def do_run_migrations(connection: Connection) -> None:
     )
 
     with context.begin_transaction():
+        # Create PostgreSQL extensions as specified in Story 1.2 Task 5
+        connection.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
+        connection.execute(text('CREATE EXTENSION IF NOT EXISTS "pgcrypto"'))
+        
         context.run_migrations()
 
 

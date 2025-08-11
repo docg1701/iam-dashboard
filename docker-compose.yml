@@ -2,9 +2,9 @@
 # version attribute is deprecated in Docker Compose v2
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database with pgvector extension
   postgres:
-    image: postgres:17.5-alpine
+    image: pgvector/pgvector:pg17
     container_name: iam-dashboard-postgres
     restart: unless-stopped
     environment:
@@ -65,6 +65,7 @@ services:
       target: development
     container_name: iam-dashboard-api
     restart: unless-stopped
+    user: "1000:1000"
     environment:
       # Database
       DB_HOST: postgres
@@ -92,7 +93,6 @@ services:
       - "8000:8000"
     volumes:
       - ./apps/api:/app
-      - api_cache:/app/.cache
     depends_on:
       postgres:
         condition: service_healthy
@@ -102,10 +102,10 @@ services:
       - iam-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      interval: 45s
+      timeout: 15s
+      retries: 5
+      start_period: 60s
     logging:
       driver: "json-file"
       options:
@@ -120,6 +120,7 @@ services:
       target: development
     container_name: iam-dashboard-web
     restart: unless-stopped
+    user: "1000:1000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
       NODE_ENV: development
@@ -203,8 +204,6 @@ volumes:
     name: iam-dashboard-postgres-data
   redis_data:
     name: iam-dashboard-redis-data
-  api_cache:
-    name: iam-dashboard-api-cache
   web_node_modules:
     name: iam-dashboard-web-node-modules
   web_cache:

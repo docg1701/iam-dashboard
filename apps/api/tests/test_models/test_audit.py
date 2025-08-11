@@ -31,7 +31,7 @@ class TestAuditLogModel:
         assert audit_log.ip_address is not None
         assert audit_log.user_agent is not None
         assert audit_log.session_id is not None
-        assert isinstance(audit_log.created_at, datetime)
+        assert isinstance(audit_log.timestamp, datetime)
         assert audit_log.old_values is None  # Default
         assert audit_log.new_values is None  # Default
         assert audit_log.description is None  # Default
@@ -306,16 +306,16 @@ class TestAuditLogModel:
         # All IDs should be unique
         assert len(set(log_ids)) == len(log_ids)
     
-    def test_audit_log_created_at_is_set(self):
-        """Test that created_at is automatically set."""
+    def test_audit_log_timestamp_is_set(self):
+        """Test that timestamp is automatically set."""
         audit_log = AuditLogFactory.create_audit_log()
         
-        assert audit_log.created_at is not None
-        assert isinstance(audit_log.created_at, datetime)
+        assert audit_log.timestamp is not None
+        assert isinstance(audit_log.timestamp, datetime)
         
         # Should be recent timestamp
         now = datetime.now(timezone.utc)
-        assert (now - audit_log.created_at).total_seconds() < 60
+        assert (now - audit_log.timestamp).total_seconds() < 60
 
 
 class TestAuditLogFactoryMethod:

@@ -30,7 +30,7 @@ class AuditLogFactory(BaseFactory):
         session_id: Optional[str] = None,
         description: Optional[str] = None,
         additional_data: Optional[Dict[str, Any]] = None,
-        created_at: Optional[datetime] = None,
+        timestamp: Optional[datetime] = None,
         **kwargs
     ) -> AuditLog:
         """
@@ -48,7 +48,7 @@ class AuditLogFactory(BaseFactory):
             session_id: Session identifier
             description: Human-readable description
             additional_data: Additional context data
-            created_at: Timestamp of the action
+            timestamp: Timestamp of the action
             **kwargs: Additional fields to override
             
         Returns:
@@ -78,9 +78,9 @@ class AuditLogFactory(BaseFactory):
         if session_id is None:
             session_id = self.generate_session_id()
         
-        # Generate created_at if not provided
-        if created_at is None:
-            created_at = self.generate_datetime(past_days=7)
+        # Generate timestamp if not provided
+        if timestamp is None:
+            timestamp = self.generate_datetime(past_days=7)
         
         # Create audit log data
         audit_data = {
@@ -95,7 +95,7 @@ class AuditLogFactory(BaseFactory):
             "session_id": session_id,
             "description": description,
             "additional_data": additional_data,
-            "created_at": created_at,
+            "timestamp": timestamp,
             **kwargs
         }
         
@@ -297,7 +297,7 @@ class AuditLogFactory(BaseFactory):
                 ip_address=ip_address,
                 user_agent=user_agent,
                 session_id=session_id,
-                created_at=login_time
+                timestamp=login_time
             )
         )
         
@@ -324,7 +324,7 @@ class AuditLogFactory(BaseFactory):
                     ip_address=ip_address,
                     user_agent=user_agent,
                     session_id=session_id,
-                    created_at=action_time
+                    timestamp=action_time
                 )
             )
         
@@ -333,7 +333,7 @@ class AuditLogFactory(BaseFactory):
             self.create_logout_audit(
                 user_id=user_id,
                 session_id=session_id,
-                created_at=logout_time
+                timestamp=logout_time
             )
         )
         

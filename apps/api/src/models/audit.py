@@ -90,7 +90,7 @@ class AuditLog(SQLModel, table=True):
         max_length=500,
         description="Human-readable description of the action"
     )
-    created_at: datetime = Field(
+    timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), 
         index=True,
         description="Timestamp when the action occurred"

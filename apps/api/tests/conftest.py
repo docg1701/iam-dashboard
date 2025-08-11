@@ -15,7 +15,7 @@ from sqlmodel import SQLModel
 
 from src.main import create_app
 from src.core.database import get_async_session
-from src.core.config import get_settings
+from src.core.config import get_settings, Settings
 
 
 # Test database URL (use in-memory SQLite for tests)
@@ -34,6 +34,16 @@ TestAsyncSessionLocal = async_sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False,
 )
+
+
+@pytest.fixture(scope="session")
+def test_settings() -> Settings:
+    """Override settings for testing."""
+    return Settings(
+        SECRET_KEY="test-secret-key-change-in-production",
+        DB_PASSWORD="test-password",
+        DEBUG=True,
+    )
 
 
 @pytest.fixture(scope="session")
@@ -71,10 +81,16 @@ def override_get_async_session(async_session: AsyncSession):
 
 
 @pytest.fixture
-def app(override_get_async_session):
+def app(override_get_async_session, test_settings: Settings):
     """Create FastAPI test application."""
     app = create_app()
     app.dependency_overrides[get_async_session] = override_get_async_session
+    
+    # Override settings
+    def get_test_settings() -> Settings:
+        return test_settings
+    app.dependency_overrides[get_settings] = get_test_settings
+    
     return app
 
 
@@ -139,14 +155,19 @@ def sample_client_data():
 
 
 # Configuration fixtures
-@pytest.fixture
+@pytest.fixture(scope="session")
 def test_settings():
     """Override application settings for tests."""
-    settings = get_settings()
-    settings.DEBUG = True
-    settings.SECRET_KEY = "test-secret-key"
-    settings.DATABASE_URL = TEST_DATABASE_URL
-    return settings
+    import os
+    # Set environment variables for testing
+    os.environ.update({
+        "SECRET_KEY": "test-secret-key-change-in-production",
+        "DB_PASSWORD": "test-password", 
+        "DEBUG": "true",
+        "DB_HOST": "localhost",
+        "DB_NAME": "iam_dashboard_test"
+    })
+    return Settings()
 
 
 # Markers for different test types

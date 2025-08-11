@@ -5,6 +5,9 @@ FROM node:18-alpine AS base
 # Set working directory
 WORKDIR /app
 
+# Install curl for health checks
+RUN apk add --no-cache curl
+
 # Install dependencies only when needed
 FROM base AS deps
 
@@ -13,7 +16,7 @@ COPY package.json package-lock.json* ./
 COPY ../../packages ./packages
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm install --only=production && npm cache clean --force
 
 # Development stage
 FROM base AS development
@@ -24,10 +27,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Install all dependencies (including devDependencies)
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
+
+# Create .next directory and set proper permissions
+RUN mkdir -p /app/.next && chown -R node:node /app
 
 # Expose port
 EXPOSE 3000
@@ -46,7 +52,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copy package files and install all dependencies
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .

@@ -7,6 +7,7 @@ from typing import Optional
 import uuid
 
 from sqlmodel import SQLModel, Field
+from sqlalchemy import UniqueConstraint, Index
 
 
 class AgentName(str, Enum):
@@ -25,6 +26,12 @@ class UserAgentPermission(SQLModel, table=True):
     and constraints for the permission system.
     """
     __tablename__ = "user_agent_permissions"
+    
+    # Database constraints and indexes as specified in architecture
+    __table_args__ = (
+        UniqueConstraint('user_id', 'agent_name', name='uq_user_agent_permissions_user_agent'),
+        Index('ix_user_agent_permissions_user_agent', 'user_id', 'agent_name'),
+    )
     
     # Primary key with UUID
     id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True)
