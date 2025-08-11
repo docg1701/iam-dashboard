@@ -8,8 +8,7 @@ from sqlmodel import SQLModel
 import structlog
 
 from .config import get_settings
-# Import all models to ensure they are registered with SQLModel
-from ..models import *  # noqa: F403, F401
+# Note: Models will be imported explicitly where needed to avoid circular imports
 
 logger = structlog.get_logger(__name__)
 

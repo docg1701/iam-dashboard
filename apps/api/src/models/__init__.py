@@ -1,12 +1,24 @@
 """
 Data models for the IAM Dashboard.
 
-This module contains all SQLModel data models used throughout the application.
-Models are imported here to ensure they are registered with SQLModel metadata.
+All SQLModel data models with proper UUID primary keys and comprehensive validation.
 """
 
-# TODO: Import models as they are created
-# from .user import User, UserRole
-# from .client import Client, ClientMetadata
-# from .permission import Permission, UserPermission
-# from .audit import AuditLog
+from .user import User, UserRole
+from .client import Client
+from .permission import UserAgentPermission, AgentName
+from .audit import AuditLog, AuditAction
+
+__all__ = [
+    # User models
+    "User",
+    "UserRole",
+    # Client models
+    "Client", 
+    # Permission models
+    "UserAgentPermission",
+    "AgentName",
+    # Audit models
+    "AuditLog",
+    "AuditAction",
+]

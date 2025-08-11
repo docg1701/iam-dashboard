@@ -28,6 +28,7 @@ dependencies = [
     "httpx>=0.24.0",
     "cnpj-cpf-validator>=0.1.2",
     "asyncpg>=0.30.0",
+    "email-validator>=2.2.0",
 ]
 
 [project.optional-dependencies]
