@@ -1,0 +1,29 @@
+{
+  "name": "@iam-dashboard/api",
+  "version": "1.0.0",
+  "description": "FastAPI backend for Multi-agent IAM Dashboard",
+  "private": true,
+  "scripts": {
+    "dev": "uv run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
+    "start": "uv run gunicorn src.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000",
+    "test": "uv run pytest",
+    "test:coverage": "uv run pytest --cov=src --cov-report=html --cov-report=term-missing",
+    "lint": "uv run ruff check src tests",
+    "lint:fix": "uv run ruff check --fix src tests",
+    "format": "uv run ruff format src tests",
+    "type-check": "uv run mypy src",
+    "db:migrate": "uv run alembic upgrade head",
+    "db:migration": "uv run alembic revision --autogenerate -m",
+    "db:downgrade": "uv run alembic downgrade -1",
+    "clean": "rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov dist build *.egg-info"
+  },
+  "keywords": [
+    "fastapi",
+    "api",
+    "iam",
+    "dashboard",
+    "backend"
+  ],
+  "author": "IAM Dashboard Team",
+  "license": "MIT"
+}

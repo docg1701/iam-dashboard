@@ -1,0 +1,39 @@
+# Hadolint configuration for Dockerfile linting
+failure-threshold: warning
+
+ignored:
+  # Allow using latest tag in development
+  - DL3007
+  # Allow using sudo in dockerfile
+  - DL3004
+  
+trusted-registries:
+  - docker.io
+  - registry-1.docker.io
+  - gcr.io
+  - public.ecr.aws
+
+override:
+  error:
+    # Always pin versions in production
+    - DL3008
+    - DL3009
+    - DL3015
+    - DL3018
+    - DL3019
+  warning:
+    # Consider these as warnings
+    - DL3003
+    - DL3020
+    - DL3025
+  info:
+    # Informational only
+    - DL3032
+    - DL3033
+
+# Label validation rules
+label-schema: |
+  maintainer
+  version
+  description
+  org.opencontainers.image.*

@@ -1,0 +1,223 @@
+# Docker Compose configuration for IAM Dashboard
+# version attribute is deprecated in Docker Compose v2
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17.5-alpine
+    container_name: iam-dashboard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: iam_dashboard
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deployment/configs/postgresql/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./deployment/configs/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - iam-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d iam_dashboard"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis Cache
+  redis:
+    image: redis:8.0.3-alpine
+    container_name: iam-dashboard-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redispassword
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./deployment/configs/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - iam-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # FastAPI Backend
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+      target: development
+    container_name: iam-dashboard-api
+    restart: unless-stopped
+    environment:
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: password
+      DB_NAME: iam_dashboard
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/iam_dashboard
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redispassword
+      REDIS_URL: redis://:redispassword@redis:6379/0
+      
+      # Application
+      DEBUG: "true"
+      SECRET_KEY: "development-secret-key-change-in-production"
+      ALLOWED_ORIGINS: '["http://localhost:3000", "http://127.0.0.1:3000"]'
+      
+      # Development
+      PYTHONPATH: /app/src
+      PYTHONUNBUFFERED: 1
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./apps/api:/app
+      - api_cache:/app/.cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - iam-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Next.js Frontend
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      target: development
+    container_name: iam-dashboard-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web:/app
+      - web_node_modules:/app/node_modules
+      - web_cache:/app/.next
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - iam-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Development tools and utilities
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: iam-dashboard-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_LISTEN_PORT: 80
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./deployment/configs/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      - postgres
+    networks:
+      - iam-network
+    profiles:
+      - tools
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # Redis Commander for Redis management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: iam-dashboard-redis-commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: "redis:redis:6379:0:redispassword"
+      HTTP_USER: admin
+      HTTP_PASSWORD: admin123
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - iam-network
+    profiles:
+      - tools
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    name: iam-dashboard-postgres-data
+  redis_data:
+    name: iam-dashboard-redis-data
+  api_cache:
+    name: iam-dashboard-api-cache
+  web_node_modules:
+    name: iam-dashboard-web-node-modules
+  web_cache:
+    name: iam-dashboard-web-cache
+  pgadmin_data:
+    name: iam-dashboard-pgadmin-data
+
+# Networks
+networks:
+  iam-network:
+    name: iam-dashboard-network
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16

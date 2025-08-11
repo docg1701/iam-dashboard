@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# Generated files
+*.generated.*
+*.config.js
+*.config.ts
+
+# Documentation
+*.md
+
+# Package files
+package.json
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Cache
+.eslintcache
+.turbo/
+
+# OS
+.DS_Store
+Thumbs.db

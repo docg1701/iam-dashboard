@@ -23,10 +23,10 @@ echo "Results will be saved to: ${RESULTS_DIR}"
 
 # Backend Security and Performance Tests
 echo "🛡️ Running Security Tests..."
-cd "${PROJECT_ROOT}/apps/backend"
+cd "${PROJECT_ROOT}/apps/api"
 
 echo "  → Security Vulnerability Tests"
-if timeout ${TEST_TIMEOUT}s uv run pytest src/tests/security/ --tb=short -q --no-cov > "${RESULTS_DIR}/security-tests_${TIMESTAMP}.log" 2>&1; then
+if timeout ${TEST_TIMEOUT}s uv run pytest tests/security/ --tb=short -q --no-cov > "${RESULTS_DIR}/security-tests_${TIMESTAMP}.log" 2>&1; then
     echo "    ✅ Security tests completed successfully"
 else
     echo "    ⚠️ Security tests completed with failures (check log: security-tests_${TIMESTAMP}.log)"
@@ -34,7 +34,7 @@ fi
 
 echo "⚡ Running Performance Tests..."
 echo "  → Performance/Load Tests"
-if timeout ${TEST_TIMEOUT}s uv run pytest src/tests/performance/ --tb=short -q --no-cov > "${RESULTS_DIR}/performance-tests_${TIMESTAMP}.log" 2>&1; then
+if timeout ${TEST_TIMEOUT}s uv run pytest tests/performance/ --tb=short -q --no-cov > "${RESULTS_DIR}/performance-tests_${TIMESTAMP}.log" 2>&1; then
     echo "    ✅ Performance tests completed successfully"
 else
     echo "    ⚠️ Performance tests completed with failures (check log: performance-tests_${TIMESTAMP}.log)"
@@ -67,7 +67,7 @@ run_security_audit "frontend-audit" "Frontend Dependency Security Audit" \
     "${RESULTS_DIR}/frontend-security-audit_${TIMESTAMP}.log"
 
 echo "  → Backend Dependency Security Audit"
-cd "${PROJECT_ROOT}/apps/backend"
+cd "${PROJECT_ROOT}/apps/api"
 if uv run pip-audit --version &> /dev/null; then
     run_security_audit "backend-audit" "Backend Dependency Security Audit" \
         "uv run pip-audit" \

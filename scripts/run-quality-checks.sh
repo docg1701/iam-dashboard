@@ -36,7 +36,7 @@ run_check() {
 
 # Frontend Quality Checks
 echo "📱 Running Frontend Quality Checks..."
-cd "${PROJECT_ROOT}/apps/frontend"
+cd "${PROJECT_ROOT}/apps/web"
 
 run_check "Frontend Linting" \
     "npx next lint" \
@@ -44,7 +44,7 @@ run_check "Frontend Linting" \
 
 cd "${PROJECT_ROOT}"
 run_check "Frontend Formatting Check" \
-    "npx prettier --check apps/frontend --ignore-unknown --ignore-path apps/frontend/.prettierignore" \
+    "npx prettier --check apps/web --ignore-unknown --ignore-path apps/web/.prettierignore" \
     "${RESULTS_DIR}/frontend-formatting_${TIMESTAMP}.log"
 
 run_check "TypeScript Validation" \
@@ -53,7 +53,7 @@ run_check "TypeScript Validation" \
 
 # Backend Quality Checks
 echo "🔧 Running Backend Quality Checks..."
-cd "${PROJECT_ROOT}/apps/backend"
+cd "${PROJECT_ROOT}/apps/api"
 
 run_check "Backend Linting (Ruff)" \
     "uv run ruff check" \

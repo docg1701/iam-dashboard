@@ -19,7 +19,7 @@ echo "🎭 Starting End-to-End Tests - ${TIMESTAMP}"
 echo "Results will be saved to: ${RESULTS_DIR}"
 
 # Navigate to frontend directory
-cd "${PROJECT_ROOT}/apps/frontend"
+cd "${PROJECT_ROOT}/apps/web"
 
 echo "🔧 Setting up E2E test environment..."
 
@@ -63,8 +63,8 @@ SERVICE_STATUS="${RESULTS_DIR}/e2e-service-status_${TIMESTAMP}.log"
         echo "❌ Services not ready for E2E testing"
         echo ""
         echo "Start services with:"
-        echo "Backend: cd apps/backend && uv run uvicorn src.main:app --reload --port 8000"
-        echo "Frontend: cd apps/frontend && npm run dev"
+        echo "Backend: cd apps/api && uv run uvicorn src.main:app --reload --port 8000"
+        echo "Frontend: cd apps/web && npm run dev"
     fi
 } > "${SERVICE_STATUS}"
 
@@ -153,8 +153,8 @@ E2E_REPORT="${RESULTS_DIR}/e2e-test-report_${TIMESTAMP}.log"
     # Check if HTML report was generated
     if [ -f "playwright-report/index.html" ]; then
         echo "📊 Visual Reports Available:"
-        echo "   HTML Report: ${PROJECT_ROOT}/apps/frontend/playwright-report/index.html"
-        echo "   Test Results: ${PROJECT_ROOT}/apps/frontend/test-results/"
+        echo "   HTML Report: ${PROJECT_ROOT}/apps/web/playwright-report/index.html"
+        echo "   Test Results: ${PROJECT_ROOT}/apps/web/test-results/"
     fi
     
     echo ""
@@ -197,8 +197,8 @@ echo "Consolidated Report: e2e-test-report_${TIMESTAMP}.log"
 if [ -f "playwright-report/index.html" ]; then
     echo ""
     echo "🎭 Visual Test Reports:"
-    echo "  HTML Report: ${PROJECT_ROOT}/apps/frontend/playwright-report/index.html"
-    echo "  Screenshots: ${PROJECT_ROOT}/apps/frontend/test-results/"
+    echo "  HTML Report: ${PROJECT_ROOT}/apps/web/playwright-report/index.html"
+    echo "  Screenshots: ${PROJECT_ROOT}/apps/web/test-results/"
 fi
 
 echo ""

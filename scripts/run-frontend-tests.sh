@@ -38,7 +38,7 @@ run_test() {
 }
 
 # Navigate to frontend directory
-cd "${PROJECT_ROOT}/apps/frontend"
+cd "${PROJECT_ROOT}/apps/web"
 
 echo "📱 Running Frontend Unit Tests..."
 
@@ -133,7 +133,7 @@ echo "Unit Tests: frontend-unit-tests_${TIMESTAMP}.log"
 echo "Integration Tests: frontend-integration-tests_${TIMESTAMP}.log" 
 echo "Responsive Tests: frontend-responsive-tests_${TIMESTAMP}.log"
 echo "Test Report: frontend-test-report_${TIMESTAMP}.log"
-echo "HTML Coverage: ${PROJECT_ROOT}/apps/frontend/coverage/index.html"
+echo "HTML Coverage: ${PROJECT_ROOT}/apps/web/coverage/index.html"
 
 echo ""
 echo "✅ Frontend Tests completed at $(date)"

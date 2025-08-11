@@ -1,0 +1,42 @@
+{
+  "name": "multi-agent-iam-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-agent IAM Dashboard - Revolutionary permission management system",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "test:coverage": "turbo run test:coverage",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "format": "turbo run format",
+    "clean": "turbo run clean",
+    "setup": "npm install && npm run build",
+    "db:migrate": "cd apps/api && uv run alembic upgrade head",
+    "db:seed": "cd apps/api && uv run python -m scripts.seed_database"
+  },
+  "devDependencies": {
+    "turbo": "^1.10.16"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "packageManager": "npm@10.2.4",
+  "keywords": [
+    "iam",
+    "permission-management",
+    "multi-agent",
+    "dashboard",
+    "fastapi",
+    "nextjs",
+    "typescript"
+  ],
+  "author": "IAM Dashboard Team",
+  "license": "MIT"
+}

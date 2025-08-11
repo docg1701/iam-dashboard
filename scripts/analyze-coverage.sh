@@ -110,11 +110,11 @@ analyze_coverage() {
 }
 
 # Backend Coverage Analysis
-analyze_coverage "Backend" "${PROJECT_ROOT}/apps/backend" "htmlcov/index.html" ".coverage"
+analyze_coverage "Backend" "${PROJECT_ROOT}/apps/api" "htmlcov/index.html" ".coverage"
 BACKEND_STATUS=$?
 
 # Frontend Coverage Analysis  
-analyze_coverage "Frontend" "${PROJECT_ROOT}/apps/frontend" "coverage/index.html" "coverage/coverage-final.json"
+analyze_coverage "Frontend" "${PROJECT_ROOT}/apps/web" "coverage/index.html" "coverage/coverage-final.json"
 FRONTEND_STATUS=$?
 
 # Generate comprehensive coverage analysis report
@@ -144,8 +144,8 @@ COVERAGE_REPORT="${RESULTS_DIR}/coverage-analysis_${TIMESTAMP}.log"
     
     echo ""
     echo "🎯 Coverage Report Locations:"
-    echo "   Backend HTML: ${PROJECT_ROOT}/apps/backend/htmlcov/index.html"
-    echo "   Frontend HTML: ${PROJECT_ROOT}/apps/frontend/coverage/index.html"
+    echo "   Backend HTML: ${PROJECT_ROOT}/apps/api/htmlcov/index.html"
+    echo "   Frontend HTML: ${PROJECT_ROOT}/apps/web/coverage/index.html"
     echo ""
     
     echo "🔄 To regenerate coverage reports:"

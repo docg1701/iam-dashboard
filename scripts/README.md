@@ -19,7 +19,7 @@
 - `test-results/frontend-integration-tests_TIMESTAMP.log`
 - `test-results/frontend-responsive-tests_TIMESTAMP.log`
 - `test-results/frontend-test-report_TIMESTAMP.log`
-- HTML Coverage: `../apps/frontend/coverage/index.html`
+- HTML Coverage: `../apps/web/coverage/index.html`
 
 ### 🔧 Backend Tests  
 ```bash
@@ -31,7 +31,7 @@
 - `test-results/backend-e2e-tests_TIMESTAMP.log`
 - `test-results/backend-coverage-report_TIMESTAMP.log`
 - `test-results/backend-test-report_TIMESTAMP.log`
-- HTML Coverage: `../apps/backend/htmlcov/index.html`
+- HTML Coverage: `../apps/api/htmlcov/index.html`
 
 ### ✨ Code Quality Checks
 ```bash
@@ -193,8 +193,8 @@ cat scripts/test-results/frontend-unit-tests_*.log  # View specific results
 
 ### **5. View Coverage Reports** (open in browser)
 ```bash
-# Backend coverage: apps/backend/htmlcov/index.html
-# Frontend coverage: apps/frontend/coverage/index.html
+# Backend coverage: apps/api/htmlcov/index.html
+# Frontend coverage: apps/web/coverage/index.html
 ```
 
 ## 📈 Data Analysis
@@ -332,7 +332,7 @@ export SKIP_ALEMBIC_CHECK=true          # Skip Alembic validation for initial se
 ```
 
 ### **Consolidated Database Schema**
-- **Single Migration**: `apps/backend/alembic/versions/001_consolidated_initial_schema.py`
+- **Single Migration**: `apps/api/alembic/versions/001_consolidated_initial_schema.py`
 - **Complete Schema**: Users, clients, permissions, audit logs with JSONB
 - **Security Optimized**: Proper constraints, indexes, and field validation
 - **Production Ready**: Handles fresh deployments and existing databases

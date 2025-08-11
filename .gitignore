@@ -166,3 +166,85 @@ build/
 
 # Docker packages and containers (prevent pushing to registry)
 docker-compose.override.yml
+
+# TypeScript
+*.tsbuildinfo
+.tscache/
+
+# ESLint cache
+.eslintcache
+
+# Tailwind CSS
+.tailwindcss/
+
+# Coverage reports
+coverage/
+*.lcov
+.nyc_output
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# UV Python package manager
+.uv/
+uv.lock
+
+# Turborepo cache
+.turbo
+
+# Test results and logs
+scripts/test-results/
+
+# Secrets and security
+*.pem
+*.key
+.secret-vault/
+
+# Database files
+*.db
+*.sqlite3
+*.sqlite
+
+# Redis dumps
+dump.rdb
+
+# VS Code workspace settings
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# JetBrains IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Package managers
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Local development
+local/
+.local/
+
+# Production logs and monitoring
+logs/
+*.access.log
+*.error.log
+
+# Static assets (production only)
+static/
+media/
+
+# SSL certificates
+*.crt
+*.csr
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar

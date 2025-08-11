@@ -58,21 +58,21 @@ echo "🏗️ Testing Docker Configuration..."
 
 # Check if Dockerfiles exist
 run_docker_test "dockerfile-check" "Docker configuration validation" \
-    "bash -c 'ls -la */Dockerfile infrastructure/docker/*/Dockerfile 2>/dev/null || echo \"No Dockerfiles found - checking docker-compose.yml\" && [ -f docker-compose.yml ] && echo \"docker-compose.yml exists\" || echo \"No Docker configuration found\"'"
+    "bash -c 'ls -la */Dockerfile deployment/docker/*/Dockerfile 2>/dev/null || echo \"No Dockerfiles found - checking docker-compose.yml\" && [ -f docker-compose.yml ] && echo \"docker-compose.yml exists\" || echo \"No Docker configuration found\"'"
 
-# Test docker-compose validation first (faster than building)
+# Test docker compose validation first (faster than building)
 run_docker_test "compose-config" "Docker Compose configuration validation" \
-    "docker-compose config"
+    "docker compose config"
 
 echo "🏗️ Testing Docker Image Builds..."
 
 # Backend Docker build test - simplified
 run_docker_test "backend-build" "Backend Docker build test" \
-    "timeout 600s docker build -f infrastructure/docker/backend/Dockerfile -t iam-backend:test ."
+    "timeout 600s docker build -f deployment/docker/Dockerfile.backend -t iam-backend:test ."
 
 # Frontend Docker build test - simplified  
 run_docker_test "frontend-build" "Frontend Docker build test" \
-    "timeout 600s docker build -f infrastructure/docker/frontend/Dockerfile -t iam-frontend:test ."
+    "timeout 600s docker build -f deployment/docker/Dockerfile.frontend -t iam-frontend:test ."
 
 echo "🚀 Testing Container Quick Start..."
 
@@ -86,19 +86,19 @@ run_docker_test "frontend-container" "Frontend container validation" \
 
 echo "🔗 Testing Docker Compose Integration..."
 
-# Test docker-compose services definition
+# Test docker compose services definition
 run_docker_test "compose-services" "Docker Compose services validation" \
-    "docker-compose ps --services"
+    "docker compose ps --services"
 
 # Quick compose build test (no full startup)
 run_docker_test "compose-build" "Docker Compose build validation" \
-    "timeout 120s docker-compose build --parallel || docker-compose config"
+    "timeout 120s docker compose build --parallel || docker compose config"
 
 echo "🗄️ Testing Database Container..."
 
 # Quick PostgreSQL container test
 run_docker_test "postgres-container" "PostgreSQL container quick test" \
-    "timeout 30s bash -c 'docker-compose up -d postgres && sleep 10 && docker-compose exec -T postgres pg_isready -U postgres -h localhost && docker-compose stop postgres'"
+    "timeout 30s bash -c 'docker compose up -d postgres && sleep 10 && docker compose exec -T postgres pg_isready -U postgres -h localhost && docker compose stop postgres'"
 
 echo "🔒 Testing Container Security..."
 
@@ -119,7 +119,7 @@ echo "🧪 Testing Stack Readiness..."
 
 # Quick stack readiness test (no full startup)
 run_docker_test "stack-readiness" "Stack deployment readiness check" \
-    "bash -c 'docker-compose config --quiet && echo \"Compose file valid\" && docker images | grep -E \"(iam-|postgres)\" && echo \"Required images available\" || echo \"Stack needs setup\"'"
+    "bash -c 'docker compose config --quiet && echo \"Compose file valid\" && docker images | grep -E \"(iam-|postgres)\" && echo \"Required images available\" || echo \"Stack needs setup\"'"
 
 echo "🧹 Cleanup Test Resources..."
 

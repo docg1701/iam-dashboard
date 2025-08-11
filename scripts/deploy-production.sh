@@ -142,7 +142,7 @@ validate_deployment_files() {
     
     # Alembic validation - can be skipped for initial setup
     if [ "$SKIP_ALEMBIC_CHECK" = "false" ]; then
-        if [ ! -d "apps/backend/alembic/versions" ] || [ -z "$(ls -A apps/backend/alembic/versions/*.py 2>/dev/null)" ]; then
+        if [ ! -d "apps/api/alembic/versions" ] || [ -z "$(ls -A apps/api/alembic/versions/*.py 2>/dev/null)" ]; then
             missing_files+=("Alembic migrations")
         fi
     else
@@ -291,15 +291,15 @@ main_deployment() {
     
     # Start backend with proper health checking
     log "🚀 Starting backend service..."
-    if ! docker compose up -d backend; then
+    if ! docker compose up -d api; then
         log "❌ Failed to start backend service"
         rollback_deployment
     fi
     
-    # Health check backend with retries
+    # Health check api service with retries
     if ! check_service_health "Backend" "http://localhost:8000/health" "$HEALTH_CHECK_RETRIES" "$HEALTH_CHECK_INTERVAL"; then
         log "📋 Backend logs:"
-        docker compose logs backend --tail=30
+        docker compose logs api --tail=30
         rollback_deployment
     fi
     

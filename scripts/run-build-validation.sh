@@ -87,7 +87,7 @@ run_build_check "production-build" "Production Build Test" \
 echo "🎭 Checking E2E Test Configuration..."
 
 run_build_check "e2e-files" "E2E Test Files Check" \
-    "if [ -d '${PROJECT_ROOT}/apps/frontend/e2e' ]; then ls -la '${PROJECT_ROOT}/apps/frontend/e2e/'; echo 'E2E directory found'; else echo 'No E2E directory found - this is OK'; fi" \
+    "if [ -d '${PROJECT_ROOT}/apps/web/e2e' ]; then ls -la '${PROJECT_ROOT}/apps/web/e2e/'; echo 'E2E directory found'; else echo 'No E2E directory found - this is OK'; fi" \
     "${RESULTS_DIR}/e2e-files_${TIMESTAMP}.log"
 
 # Build Information Collection

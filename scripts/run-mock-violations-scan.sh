@@ -135,31 +135,31 @@ echo "🔧 Scanning Backend Test Files..."
 
 run_scan "Backend Internal Service Mocking" \
     "(patch|mock|Mock).*(\.|@)(PermissionService|UserService|ClientService|permission_service|user_service|client_service)" \
-    "apps/backend/src/tests/" \
+    "apps/api/tests/" \
     "${RESULTS_DIR}/backend-internal-service-mocks_${TIMESTAMP}.log" \
     "*.py"
 
 run_scan "Backend Database Session Mocking" \
     "(patch|mock|Mock).*(get_db|database|session|Session)" \
-    "apps/backend/src/tests/integration/" \
+    "apps/api/tests/integration/" \
     "${RESULTS_DIR}/backend-database-mocks_${TIMESTAMP}.log" \
     "*.py"
 
 run_scan "Backend Authentication Flow Mocking" \
     "(patch|mock|Mock).*(auth|Auth|login|Login|jwt|JWT|token|Token)" \
-    "apps/backend/src/tests/unit/ apps/backend/src/tests/integration/" \
+    "apps/api/tests/unit/ apps/api/tests/integration/" \
     "${RESULTS_DIR}/backend-auth-mocks_${TIMESTAMP}.log" \
     "*.py"
 
 run_scan "Backend Business Logic Mocking" \
     "(patch|mock|Mock).*(core\.permissions|core\.auth|services\.)" \
-    "apps/backend/src/tests/" \
+    "apps/api/tests/" \
     "${RESULTS_DIR}/backend-business-logic-mocks_${TIMESTAMP}.log" \
     "*.py"
 
 run_scan "Backend Model/Schema Mocking" \
     "(patch|mock|Mock).*(models\.|schemas\.)" \
-    "apps/backend/src/tests/unit/ apps/backend/src/tests/integration/" \
+    "apps/api/tests/unit/ apps/api/tests/integration/" \
     "${RESULTS_DIR}/backend-models-mocks_${TIMESTAMP}.log" \
     "*.py"
 
@@ -168,31 +168,31 @@ echo "🎨 Scanning Frontend Test Files..."
 
 run_scan "Frontend Internal Component Mocking" \
     "vi\.mock.*@/(components|hooks|services|stores|utils)" \
-    "apps/frontend/src/" \
+    "apps/web/tests/" \
     "${RESULTS_DIR}/frontend-internal-mocks_${TIMESTAMP}.log" \
     "*.test.*,*.spec.*"
 
 run_scan "Frontend Hook Mocking" \
     "vi\.mock.*use[A-Z]" \
-    "apps/frontend/src/" \
+    "apps/web/tests/" \
     "${RESULTS_DIR}/frontend-hook-mocks_${TIMESTAMP}.log" \
     "*.test.*,*.spec.*"
 
 run_scan "Frontend Service Mocking" \
     "vi\.mock.*(Service|service)" \
-    "apps/frontend/src/" \
+    "apps/web/tests/" \
     "${RESULTS_DIR}/frontend-service-mocks_${TIMESTAMP}.log" \
     "*.test.*,*.spec.*"
 
 run_scan "Frontend Store/Context Mocking" \
     "vi\.mock.*(Store|Context|Provider)" \
-    "apps/frontend/src/" \
+    "apps/web/tests/" \
     "${RESULTS_DIR}/frontend-store-mocks_${TIMESTAMP}.log" \
     "*.test.*,*.spec.*"
 
 run_scan "Frontend Component Import Mocking" \
     "vi\.mock.*\.(tsx?|jsx?)" \
-    "apps/frontend/src/" \
+    "apps/web/tests/" \
     "${RESULTS_DIR}/frontend-component-import-mocks_${TIMESTAMP}.log" \
     "*.test.*,*.spec.*"
 

@@ -22,7 +22,7 @@ echo "♿ Starting Accessibility Tests - ${TIMESTAMP}"
 echo "Results will be saved to: ${RESULTS_DIR}"
 
 # Navigate to frontend directory
-cd "${PROJECT_ROOT}/apps/frontend"
+cd "${PROJECT_ROOT}/apps/web"
 
 # Function to run accessibility test
 run_a11y_test() {

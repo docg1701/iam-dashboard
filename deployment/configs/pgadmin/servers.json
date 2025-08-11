@@ -1,0 +1,32 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "IAM Dashboard - Development",
+      "Group": "Development",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "iam_dashboard",
+      "Username": "postgres",
+      "SSLMode": "prefer",
+      "SSLCompression": 0,
+      "Timeout": 10,
+      "UseSSHTunnel": 0,
+      "TunnelPort": "22",
+      "TunnelAuthentication": 0
+    },
+    "2": {
+      "Name": "IAM Dashboard - Test DB",
+      "Group": "Development", 
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "iam_dashboard_test",
+      "Username": "postgres",
+      "SSLMode": "prefer",
+      "SSLCompression": 0,
+      "Timeout": 10,
+      "UseSSHTunnel": 0,
+      "TunnelPort": "22",
+      "TunnelAuthentication": 0
+    }
+  }
+}

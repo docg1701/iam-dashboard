@@ -19,7 +19,7 @@ echo "🗄️ Starting Database Migration Tests - ${TIMESTAMP}"
 echo "Results will be saved to: ${RESULTS_DIR}"
 
 # Navigate to backend directory
-cd "${PROJECT_ROOT}/apps/backend"
+cd "${PROJECT_ROOT}/apps/api"
 
 # Function to run database test command
 run_db_test() {
@@ -308,7 +308,7 @@ DB_REPORT="${RESULTS_DIR}/database-test-report_${TIMESTAMP}.log"
     echo "🔍 Database Analysis:"
     
     # Check current migration version
-    CURRENT_MIGRATION=$(cd "${PROJECT_ROOT}/apps/backend" && uv run alembic current 2>/dev/null | head -n 1 || echo "Unknown")
+    CURRENT_MIGRATION=$(cd "${PROJECT_ROOT}/apps/api" && uv run alembic current 2>/dev/null | head -n 1 || echo "Unknown")
     echo "   Current Migration: $CURRENT_MIGRATION"
     
     # Count migration files
@@ -357,7 +357,7 @@ echo "Consolidated Report: database-test-report_${TIMESTAMP}.log"
 
 echo ""
 echo "🗄️ Database Migration Status:"
-cd "${PROJECT_ROOT}/apps/backend" && uv run alembic current || echo "Unable to determine current migration"
+cd "${PROJECT_ROOT}/apps/api" && uv run alembic current || echo "Unable to determine current migration"
 
 echo ""
 echo "✅ Database Migration Tests completed at $(date)"

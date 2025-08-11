@@ -38,24 +38,24 @@ run_test() {
 }
 
 # Navigate to backend directory
-cd "${PROJECT_ROOT}/apps/backend"
+cd "${PROJECT_ROOT}/apps/api"
 
 echo "🔧 Running Backend Unit Tests..."
 
 run_test "Backend Unit Tests" \
-    "timeout ${TEST_TIMEOUT}s uv run pytest src/tests/unit/ --tb=short -v --no-cov" \
+    "timeout ${TEST_TIMEOUT}s uv run pytest tests/unit/ --tb=short -v --no-cov" \
     "${RESULTS_DIR}/backend-unit-tests_${TIMESTAMP}.log"
 
 echo "🔧 Running Backend Integration Tests..."
 
 run_test "Backend Integration Tests" \
-    "timeout ${TEST_TIMEOUT}s uv run pytest src/tests/integration/ --tb=short -v --no-cov" \
+    "timeout ${TEST_TIMEOUT}s uv run pytest tests/integration/ --tb=short -v --no-cov" \
     "${RESULTS_DIR}/backend-integration-tests_${TIMESTAMP}.log"
 
 echo "🔧 Running Backend E2E Tests..."
 
 run_test "Backend E2E Tests" \
-    "timeout ${TEST_TIMEOUT}s uv run pytest src/tests/e2e/ --tb=short -v --no-cov" \
+    "timeout ${TEST_TIMEOUT}s uv run pytest tests/e2e/ --tb=short -v --no-cov" \
     "${RESULTS_DIR}/backend-e2e-tests_${TIMESTAMP}.log"
 
 echo "📊 Generating Backend Coverage Report..."
@@ -93,10 +93,10 @@ BACKEND_REPORT="${RESULTS_DIR}/backend-test-report_${TIMESTAMP}.log"
     echo "🔍 Backend Analysis:"
     
     # Check test files count
-    UNIT_TESTS=$(find src/tests/unit -name "*.py" 2>/dev/null | wc -l)
-    INTEGRATION_TESTS=$(find src/tests/integration -name "*.py" 2>/dev/null | wc -l)
-    E2E_TESTS=$(find src/tests/e2e -name "*.py" 2>/dev/null | wc -l)
-    SECURITY_TESTS=$(find src/tests/security -name "*.py" 2>/dev/null | wc -l)
+    UNIT_TESTS=$(find tests/unit -name "*.py" 2>/dev/null | wc -l)
+    INTEGRATION_TESTS=$(find tests/integration -name "*.py" 2>/dev/null | wc -l)
+    E2E_TESTS=$(find tests/e2e -name "*.py" 2>/dev/null | wc -l)
+    SECURITY_TESTS=$(find tests/security -name "*.py" 2>/dev/null | wc -l)
     
     echo "   Unit Test Files: $UNIT_TESTS"
     echo "   Integration Test Files: $INTEGRATION_TESTS"
@@ -112,13 +112,13 @@ BACKEND_REPORT="${RESULTS_DIR}/backend-test-report_${TIMESTAMP}.log"
     fi
     
     # Check for key test areas
-    if [ -f "src/tests/unit/test_permission_service.py" ]; then
+    if [ -f "tests/unit/test_permission_service.py" ]; then
         echo "   ✅ Permission service tests found"
     else
         echo "   ⚠️ Permission service tests missing"
     fi
     
-    if [ -f "src/tests/unit/test_auth_unit.py" ]; then
+    if [ -f "tests/unit/test_auth_unit.py" ]; then
         echo "   ✅ Authentication tests found"
     else
         echo "   ⚠️ Authentication tests missing"
@@ -155,7 +155,7 @@ echo "Integration Tests: backend-integration-tests_${TIMESTAMP}.log"
 echo "E2E Tests: backend-e2e-tests_${TIMESTAMP}.log"
 echo "Coverage Report: backend-coverage-report_${TIMESTAMP}.log"
 echo "Test Analysis: backend-test-report_${TIMESTAMP}.log"
-echo "HTML Coverage: ${PROJECT_ROOT}/apps/backend/htmlcov/index.html"
+echo "HTML Coverage: ${PROJECT_ROOT}/apps/api/htmlcov/index.html"
 
 echo ""
 echo "✅ Backend Tests completed at $(date)"
