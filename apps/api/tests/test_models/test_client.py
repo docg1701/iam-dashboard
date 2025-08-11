@@ -5,7 +5,7 @@ Tests client creation, CPF validation, birth date validation, and audit fields.
 """
 import pytest
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pydantic import ValidationError
 
 from src.models.client import Client
@@ -181,7 +181,7 @@ class TestClientModel:
         assert isinstance(client.updated_at, datetime)
         
         # Should be recent timestamps
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         assert (now - client.created_at).total_seconds() < 60
         assert (now - client.updated_at).total_seconds() < 60
 

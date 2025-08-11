@@ -1,7 +1,7 @@
 """
 Permission models for agent-based access control.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 import uuid
@@ -41,13 +41,13 @@ class UserAgentPermission(SQLModel, table=True):
     
     # Permission metadata
     granted_by: uuid.UUID = Field(foreign_key="users.id", description="User who granted this permission")
-    granted_at: datetime = Field(default_factory=datetime.utcnow)
+    granted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: Optional[datetime] = Field(default=None, description="Optional permission expiration")
     
     # Status fields
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     @property
     def has_any_permission(self) -> bool:
@@ -64,7 +64,7 @@ class UserAgentPermission(SQLModel, table=True):
         """Check if permission has expired."""
         if self.expires_at is None:
             return False
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(timezone.utc) > self.expires_at
     
     @property
     def is_valid(self) -> bool:

@@ -1,7 +1,7 @@
 """
 Audit log model for compliance tracking.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional, Dict, Any
 import uuid
@@ -91,7 +91,7 @@ class AuditLog(SQLModel, table=True):
         description="Human-readable description of the action"
     )
     created_at: datetime = Field(
-        default_factory=datetime.utcnow, 
+        default_factory=lambda: datetime.now(timezone.utc), 
         index=True,
         description="Timestamp when the action occurred"
     )

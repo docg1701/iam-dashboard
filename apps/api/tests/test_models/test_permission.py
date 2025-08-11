@@ -5,7 +5,7 @@ Tests permission creation, CRUD flags, agent types, and permission logic.
 """
 import pytest
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pydantic import ValidationError
 
 from src.models.permission import UserAgentPermission, AgentName
@@ -40,7 +40,7 @@ class TestUserAgentPermissionModel:
         user_id = uuid.uuid4()
         granted_by = uuid.uuid4()
         agent_name = AgentName.CLIENT_MANAGEMENT
-        expires_at = datetime.utcnow() + timedelta(days=30)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)
         
         permission = UserAgentPermissionFactory.create_permission(
             user_id=user_id,
@@ -97,10 +97,10 @@ class TestUserAgentPermissionModel:
         )
         
         assert permission.expires_at is not None
-        assert permission.expires_at < datetime.utcnow()
+        assert permission.expires_at < datetime.now(timezone.utc)
         
         # Verify it's properly expired
-        expected_expiry = datetime.utcnow() - timedelta(days=days_expired)
+        expected_expiry = datetime.now(timezone.utc) - timedelta(days=days_expired)
         time_diff = abs((permission.expires_at - expected_expiry).total_seconds())
         assert time_diff < 60  # Less than 1 minute difference
     
@@ -112,10 +112,10 @@ class TestUserAgentPermissionModel:
         )
         
         assert permission.expires_at is not None
-        assert permission.expires_at > datetime.utcnow()
+        assert permission.expires_at > datetime.now(timezone.utc)
         
         # Verify expiry date
-        expected_expiry = datetime.utcnow() + timedelta(days=days_until_expiry)
+        expected_expiry = datetime.now(timezone.utc) + timedelta(days=days_until_expiry)
         time_diff = abs((permission.expires_at - expected_expiry).total_seconds())
         assert time_diff < 60  # Less than 1 minute difference
     
@@ -188,7 +188,7 @@ class TestUserAgentPermissionModel:
         # Verify expired permissions
         expired = scenarios["expired_permissions"]
         for permission in expired:
-            assert permission.expires_at < datetime.utcnow()
+            assert permission.expires_at < datetime.now(timezone.utc)
     
     def test_permission_matrix(self):
         """Test creating a permission matrix for multiple users."""
@@ -244,7 +244,7 @@ class TestUserAgentPermissionModel:
         assert isinstance(permission.updated_at, datetime)
         
         # Should be recent timestamps
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         assert (now - permission.granted_at).total_seconds() < 60
         assert (now - permission.created_at).total_seconds() < 60
         assert (now - permission.updated_at).total_seconds() < 60
@@ -319,7 +319,7 @@ class TestUserAgentPermissionProperties:
         
         # Expired just now (edge case)
         just_expired = UserAgentPermissionFactory.create_permission(
-            expires_at=datetime.utcnow() - timedelta(seconds=1)
+            expires_at=datetime.now(timezone.utc) - timedelta(seconds=1)
         )
         assert just_expired.is_expired is True
     

@@ -5,7 +5,7 @@ Tests audit log creation, action tracking, resource tracking, and factory method
 """
 import pytest
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any
 from pydantic import ValidationError
 
@@ -314,7 +314,7 @@ class TestAuditLogModel:
         assert isinstance(audit_log.created_at, datetime)
         
         # Should be recent timestamp
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         assert (now - audit_log.created_at).total_seconds() < 60
 
 

@@ -5,7 +5,7 @@ Tests user creation, validation, authentication fields, and role-based access co
 """
 import pytest
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pydantic import ValidationError
 
 from src.models.user import User, UserRole
@@ -94,7 +94,7 @@ class TestUserModel:
         
         assert locked_user.failed_login_attempts == 5
         assert locked_user.locked_until is not None
-        assert locked_user.locked_until > datetime.utcnow()
+        assert locked_user.locked_until > datetime.now(timezone.utc)
         assert locked_user.is_active is False
     
     def test_inactive_user_creation(self):
@@ -109,7 +109,7 @@ class TestUserModel:
         user = UserFactory.create_user_with_login_history(days_since_login=days_ago)
         
         assert user.last_login_at is not None
-        expected_date = datetime.utcnow() - timedelta(days=days_ago)
+        expected_date = datetime.now(timezone.utc) - timedelta(days=days_ago)
         # Allow some tolerance in timing
         time_diff = abs((user.last_login_at - expected_date).total_seconds())
         assert time_diff < 60  # Less than 1 minute difference
@@ -198,7 +198,7 @@ class TestUserModel:
         assert isinstance(user.updated_at, datetime)
         
         # Should be recent timestamps
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         assert (now - user.created_at).total_seconds() < 60
         assert (now - user.updated_at).total_seconds() < 60
 

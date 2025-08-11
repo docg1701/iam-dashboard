@@ -320,8 +320,6 @@ uv run pytest              # Run tests
    - ✅ **Use native tool flags**: `--quiet`, `--reporter=basic`, `--tb=short`
    - ✅ **Keep commands simple**: One tool per command, avoid chaining
    - ✅ **Have fallback commands**: If npm script fails, try direct tool
-   - ❌ **Never combine stderr redirection with pipes** - causes tokenization issues
-   - ✅ **Use `bash -c` wrapper** for stderr redirection: `bash -c 'command 2>&1 | other'`
 
 ### NEVER DO
 1. **Never access `.secret-vault` directory**
@@ -367,5 +365,3 @@ export ALLOW_ROOT_DEPLOYMENT=false      # Security: block root deployment
 ```
 
 ---
-
-*Essential development guidelines for Claude Code - Keep focused, functional, and secure*
