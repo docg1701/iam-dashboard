@@ -6,6 +6,7 @@ import { ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@/components/theme-provider'
+import { ErrorProvider } from '@/components/errors/ErrorContext'
 
 // Create a custom QueryClient for tests
 const createTestQueryClient = () => 
@@ -21,32 +22,48 @@ const createTestQueryClient = () =>
     },
   })
 
+// Mock localStorage for tests
+const mockLocalStorage = (() => {
+  let store: Record<string, string> = {}
+  
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => {
+      store[key] = value
+    },
+    removeItem: (key: string) => {
+      delete store[key]
+    },
+    clear: () => {
+      store = {}
+    },
+  }
+})()
+
+// Setup mock localStorage globally for tests
+Object.defineProperty(window, 'localStorage', {
+  value: mockLocalStorage,
+})
+
 // Custom render function with providers
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   queryClient?: QueryClient
-  theme?: 'light' | 'dark' | 'system'
 }
 
 function customRender(
   ui: ReactElement,
   {
     queryClient = createTestQueryClient(),
-    theme = 'light',
     ...renderOptions
   }: CustomRenderOptions = {}
 ) {
   const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
     return (
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme={theme}
-          enableSystem={false}
-          disableTransitionOnChange
-        >
+      <ErrorProvider enableConsoleLogging={false} enableGlobalErrorHandler={false}>
+        <QueryClientProvider client={queryClient}>
           {children}
-        </ThemeProvider>
-      </QueryClientProvider>
+        </QueryClientProvider>
+      </ErrorProvider>
     )
   }
 

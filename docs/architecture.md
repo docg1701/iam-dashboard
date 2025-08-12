@@ -147,7 +147,7 @@ This is the DEFINITIVE technology selection for the entire project. This table s
 | Backend Language | Python | >=3.13.5 | Backend API and agent development | Excellent AI/ML ecosystem for future agent capabilities, mature FastAPI integration |
 | Backend Framework | FastAPI | >=0.116.1 | High-performance async API framework | Industry-leading performance, automatic OpenAPI docs, excellent typing integration |
 | Backend Validation | Pydantic | >=2.11.7 | Data validation and settings management | Integrates seamlessly with FastAPI, uses Python type hints for robust validation |
-| CPF/CNPJ Validation | cnpj-cpf-validator | >=0.1.2 | Brazilian document validation | Validates CPF and CNPJ numbers with proper check digit algorithm, supports formatting |
+| CPF/CNPJ Validation | validate-docbr | >=1.10.0 | Brazilian document validation | Validates CPF and CNPJ numbers with proper check digit algorithm, supports formatting |
 | Web Server | Gunicorn + Uvicorn | >=23.0.0 + >=0.35.0 | ASGI server and process manager | Gunicorn manages Uvicorn workers for production-grade performance and reliability |
 | API Style | REST API | OpenAPI >=3.1.1 | RESTful HTTP APIs with OpenAPI specification | Proven, well-understood pattern optimal for multi-agent communication and client integrations |
 | Database | PostgreSQL | >=17.5 | Primary data store with ACID compliance | Required for agent data consistency, excellent performance, pgvector ready for AI features |
@@ -659,77 +659,84 @@ Based on the architectural patterns, tech stack, and data models, here are the m
 
 **Key Interfaces:**
 - `process_client_operation()` - Primary client management interface
-- `validate_cpf()` - Brazilian CPF validation service using cnpj-cpf-validator
+- `validate_cpf()` - Brazilian CPF validation service using validate-docbr
 - `bulk_client_operations()` - Mass client processing
 - `client_search_engine()` - Advanced search and filtering
 
 **Dependencies:** Shared client data service, permission validation, audit logging
-**Technology Stack:** Agno agent framework, shared PostgreSQL access, cnpj-cpf-validator for Brazilian document validation
+**Technology Stack:** Agno agent framework, shared PostgreSQL access, validate-docbr for Brazilian document validation
 
 #### **CPF/CNPJ Validation Implementation**
 
-The system uses the `cnpj-cpf-validator` library for robust Brazilian document validation with support for both current and future alphanumeric formats.
+The system uses the `validate-docbr` library for robust Brazilian document validation with support for both current and future alphanumeric formats.
 
 **Installation:**
 ```bash
-pip install cnpj-cpf-validator
+pip install validate-docbr
 ```
 
 **CPF Validation Examples:**
 ```python
-from cnpj_cpf_validator import CPF
+from validate_docbr import CPF
+
+# Create CPF validator instance
+cpf_validator = CPF()
 
 # Validate CPF with formatting
-CPF.is_valid("529.982.247-25")  # Returns True
-CPF.is_valid("529.982.247-26")  # Returns False (invalid verification digit)
+cpf_validator.validate("529.982.247-25")  # Returns True
+cpf_validator.validate("529.982.247-26")  # Returns False (invalid verification digit)
 
 # Format unformatted CPF
-CPF.format("52998224725")  # Returns "529.982.247-25"
+cpf_validator.mask("52998224725")  # Returns "529.982.247-25"
 
 # Usage in FastAPI endpoint
 async def validate_client_cpf(cpf: str) -> bool:
-    """Validate CPF using cnpj-cpf-validator library."""
+    """Validate CPF using validate-docbr library."""
     # Remove any formatting for consistent validation
     clean_cpf = cpf.replace(".", "").replace("-", "")
-    return CPF.is_valid(clean_cpf)
+    cpf_validator = CPF()
+    return cpf_validator.validate(clean_cpf)
 ```
 
 **CNPJ Validation Examples:**
 ```python
-from cnpj_cpf_validator import CNPJ
+from validate_docbr import CNPJ
+
+# Create CNPJ validator instance
+cnpj_validator = CNPJ()
 
 # Traditional numeric CNPJ validation
-CNPJ.is_valid("11.222.333/0001-81")  # Returns True
-CNPJ.is_valid("11.222.333/0001-80")  # Returns False (invalid verification digit)
-
-# Future alphanumeric CNPJ support (from July 2026)
-CNPJ.is_valid("12.ABC.345/01DE-35")  # Returns True
-CNPJ.is_valid("12ABC34501DE35")      # Returns True (unformatted)
+cnpj_validator.validate("11.222.333/0001-81")  # Returns True
+cnpj_validator.validate("11.222.333/0001-80")  # Returns False (invalid verification digit)
 
 # Format CNPJ
-CNPJ.format("11222333000181")  # Returns "11.222.333/0001-81"
+cnpj_validator.mask("11222333000181")  # Returns "11.222.333/0001-81"
 ```
 
 **Integrated Validation Service:**
 ```python
-from cnpj_cpf_validator import CPF, CNPJ
-from pydantic import BaseModel, validator
+from validate_docbr import CPF, CNPJ
+from pydantic import BaseModel, field_validator
+from datetime import date
 
 class ClientModel(BaseModel):
     name: str
     cpf: str
     birth_date: date
     
-    @validator('cpf')
-    def validate_cpf_format(cls, v):
-        if not CPF.is_valid(v):
+    @field_validator('cpf')
+    @classmethod
+    def validate_cpf_format(cls, v: str) -> str:
+        cpf_validator = CPF()
+        if not cpf_validator.validate(v):
             raise ValueError('Invalid CPF format')
         # Store CPF without formatting for database consistency
         return v.replace(".", "").replace("-", "")
     
     def get_formatted_cpf(self) -> str:
         """Return formatted CPF for display."""
-        return CPF.format(self.cpf)
+        cpf_validator = CPF()
+        return cpf_validator.mask(self.cpf)
 ```
 
 **Key Benefits:**
@@ -1484,7 +1491,7 @@ The security and performance architecture ensures enterprise-grade protection an
 - **Secure Storage:** JWT tokens in httpOnly cookies for production, encrypted localStorage for development, sensitive data never in localStorage
 
 #### Backend Security
-- **Input Validation:** Comprehensive Pydantic schemas with field validation + SQLModel constraints + cnpj-cpf-validator for Brazilian document validation + file type/size validation
+- **Input Validation:** Comprehensive Pydantic schemas with field validation + SQLModel constraints + validate-docbr for Brazilian document validation + file type/size validation
 - **Rate Limiting:** Tiered limits: 100 requests/min (users), 500 requests/min (admins), 1000 requests/min (sysadmins) with Redis-based tracking
 - **CORS Policy:** `https://*.com.br, https://iam-dashboard.com.br` with credentials support, preflight caching for 24 hours
 
@@ -1631,7 +1638,7 @@ Define MINIMAL but CRITICAL standards for AI agents, focusing only on project-sp
 - **Permission Validation:** All protected routes and components must use centralized permission checking - never implement custom permission logic
 - **API Error Handling:** All API routes must use the standard error handler with audit logging - ensures compliance and troubleshooting capability
 - **Environment Variables:** Access only through config objects, never process.env directly - prevents configuration errors across client deployments
-- **CPF Validation:** Always use shared cnpj-cpf-validator utility - prevents inconsistent validation between frontend and backend
+- **CPF Validation:** Always use shared validation utilities - backend uses validate-docbr, frontend uses @brazilian-utils - ensures consistent validation across the stack
 - **Database Transactions:** All multi-table operations must use transactions with proper rollback - critical for data consistency in permission changes
 - **Cache Invalidation:** Permission changes must immediately invalidate related cache keys - ensures <10ms performance without stale permissions
 - **Audit Logging:** All state-changing operations must include audit trail within the same transaction - required for compliance

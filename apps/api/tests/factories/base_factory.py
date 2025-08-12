@@ -6,8 +6,10 @@ Provides common utilities and patterns for all model factories.
 import random
 import string
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
+
+from validate_docbr import CPF
 
 
 class BaseFactory:
@@ -48,26 +50,9 @@ class BaseFactory:
     
     @staticmethod
     def generate_cpf() -> str:
-        """Generate a valid CPF number for testing purposes."""
-        # Generate 9 random digits
-        cpf = [random.randint(0, 9) for _ in range(9)]
-        
-        # Calculate first check digit
-        sum1 = sum(digit * (10 - i) for i, digit in enumerate(cpf))
-        digit1 = 11 - (sum1 % 11)
-        if digit1 >= 10:
-            digit1 = 0
-        cpf.append(digit1)
-        
-        # Calculate second check digit
-        sum2 = sum(digit * (11 - i) for i, digit in enumerate(cpf))
-        digit2 = 11 - (sum2 % 11)
-        if digit2 >= 10:
-            digit2 = 0
-        cpf.append(digit2)
-        
-        # Format as string
-        return ''.join(map(str, cpf))
+        """Generate a valid CPF number for testing purposes using validate_docbr."""
+        cpf_generator = CPF()
+        return cpf_generator.generate()
     
     @staticmethod
     def generate_birth_date(min_age: int = 18, max_age: int = 80) -> datetime:
@@ -88,7 +73,7 @@ class BaseFactory:
         future_days: int = 0
     ) -> datetime:
         """Generate a datetime within specified range."""
-        base = datetime.utcnow()
+        base = datetime.now(timezone.utc)
         start = base - timedelta(days=past_days)
         end = base + timedelta(days=future_days)
         

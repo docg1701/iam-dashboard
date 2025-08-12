@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from pydantic import EmailStr
+from pydantic import EmailStr, ValidationError as PydanticValidationError
 from sqlmodel import SQLModel, Field
 
 
@@ -15,6 +15,14 @@ class UserRole(str, Enum):
     SYSADMIN = "sysadmin"
     ADMIN = "admin" 
     USER = "user"
+    
+    def __str__(self) -> str:
+        """Return the string value for proper test compatibility."""
+        return self.value
+    
+    def __hash__(self) -> int:
+        """Make enum hashable for SQLAlchemy compatibility."""
+        return hash(self.value)
 
 
 class User(SQLModel, table=True):
@@ -25,8 +33,8 @@ class User(SQLModel, table=True):
     id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True)
     
     # Authentication fields
-    email: EmailStr = Field(unique=True, index=True)
-    password_hash: str
+    email: EmailStr = Field(..., unique=True, index=True)
+    password_hash: str = Field(...)
     
     # Role-based access control
     role: UserRole = Field(default=UserRole.USER)
@@ -43,6 +51,21 @@ class User(SQLModel, table=True):
     last_login_at: Optional[datetime] = Field(default=None)
     failed_login_attempts: int = Field(default=0)
     locked_until: Optional[datetime] = Field(default=None)
+    
+    def __init__(self, **data):
+        """Initialize User with validation."""
+        # Validate required fields
+        if 'email' not in data or data['email'] is None:
+            raise PydanticValidationError.from_exception_data(
+                "User",
+                [{"type": "missing", "loc": ("email",), "msg": "Field required"}]
+            )
+        if 'password_hash' not in data or data['password_hash'] is None:
+            raise PydanticValidationError.from_exception_data(
+                "User", 
+                [{"type": "missing", "loc": ("password_hash",), "msg": "Field required"}]
+            )
+        super().__init__(**data)
     
     def __repr__(self) -> str:
         return f"User(id={self.id}, email='{self.email}', role='{self.role}')"

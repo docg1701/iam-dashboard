@@ -6,7 +6,7 @@ different actions, resources, and tracking information.
 """
 import random
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List
 
 from src.models.audit import AuditLog, AuditAction
@@ -56,14 +56,16 @@ class AuditLogFactory(BaseFactory):
         """
         # Generate action if not provided
         if action is None:
-            action = self.pick_random(list(AuditAction))
+            # Exclude LOGIN/LOGOUT for default audit logs to ensure consistent behavior
+            actions = [a for a in AuditAction if a not in [AuditAction.LOGIN, AuditAction.LOGOUT]]
+            action = self.pick_random(actions)
         
         # Generate actor_id if not provided (can be None for system actions)
         if actor_id is None and action not in [AuditAction.LOGIN, AuditAction.LOGOUT]:
             actor_id = self.generate_uuid()
         
-        # Generate resource_id if not provided
-        if resource_id is None:
+        # Generate resource_id if not provided (but only for actions that typically need one)
+        if resource_id is None and action not in [AuditAction.LOGIN, AuditAction.LOGOUT]:
             resource_id = self.generate_uuid()
         
         # Generate IP address if not provided
@@ -80,7 +82,7 @@ class AuditLogFactory(BaseFactory):
         
         # Generate timestamp if not provided
         if timestamp is None:
-            timestamp = self.generate_datetime(past_days=7)
+            timestamp = self.generate_datetime(past_days=0)  # Use current time by default
         
         # Create audit log data
         audit_data = {
@@ -285,7 +287,7 @@ class AuditLogFactory(BaseFactory):
         user_agent = self.generate_user_agent()
         
         # Start time
-        login_time = datetime.utcnow() - timedelta(hours=session_duration_hours + 1)
+        login_time = datetime.now(timezone.utc) - timedelta(hours=session_duration_hours + 1)
         logout_time = login_time + timedelta(hours=session_duration_hours)
         
         audit_logs = []

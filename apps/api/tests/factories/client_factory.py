@@ -239,11 +239,11 @@ class ClientFactory(BaseFactory):
     def get_sample_cpfs(cls) -> list[str]:
         """Get a list of valid sample CPF numbers for testing."""
         return [
-            "11144477735",  # Valid CPF 1
-            "22233366644",  # Valid CPF 2  
-            "33322211100",  # Valid CPF 3
-            "44455566677",  # Valid CPF 4
-            "55566677788",  # Valid CPF 5
+            "11144477735",  # Valid CPF 1 (keep existing valid one)
+            "79842946908",  # Valid CPF 2
+            "62974875297",  # Valid CPF 3
+            "60727800248",  # Valid CPF 4
+            "35100788534",  # Valid CPF 5
         ]
     
     @classmethod

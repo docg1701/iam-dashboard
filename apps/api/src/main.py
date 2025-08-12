@@ -1,14 +1,22 @@
 """
 Main FastAPI application entry point.
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 import structlog
 
 from .core.config import get_settings
 from .core.database import init_database
 from .middleware.logging import LoggingMiddleware
+from .middleware.security import (
+    SecurityHeadersMiddleware,
+    RateLimitMiddleware,
+    CORSSecurityMiddleware,
+    limiter
+)
 from .api.v1.router import api_v1_router
 
 # Configure structured logging
@@ -37,30 +45,73 @@ def create_app() -> FastAPI:
     
     app = FastAPI(
         title="Multi-agent IAM Dashboard API",
-        description="Revolutionary permission management system with multi-agent architecture",
-        version="1.0.0",
+        description="Revolutionary permission management system with multi-agent architecture and 2FA security",
+        version="1.3.0",
         openapi_url="/api/v1/openapi.json" if settings.DEBUG else None,
         docs_url="/api/v1/docs" if settings.DEBUG else None,
         redoc_url="/api/v1/redoc" if settings.DEBUG else None,
     )
     
-    # Configure CORS
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.ALLOWED_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-        allow_headers=["*"],
-    )
+    # Configure rate limiter with Redis storage
+    try:
+        # Update limiter storage to use Redis
+        from slowapi.storage import storage_from_string
+        limiter._storage = storage_from_string(settings.EFFECTIVE_RATE_LIMIT_STORAGE)
+        logger.info("Rate limiter configured with Redis storage", storage_uri=settings.EFFECTIVE_RATE_LIMIT_STORAGE)
+    except Exception as e:
+        logger.warning("Failed to configure Redis storage for rate limiter, using memory storage", error=str(e))
     
-    # Configure trusted hosts
+    # Add rate limiting state
+    app.state.limiter = limiter
+    
+    # Exception handlers
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+        """Handle rate limit exceeded exceptions."""
+        logger.warning(
+            "Rate limit exceeded",
+            path=request.url.path,
+            client_ip=request.client.host if request.client else "unknown"
+        )
+        return JSONResponse(
+            status_code=429,
+            content={
+                "detail": "Rate limit exceeded. Please try again later.",
+                "type": "rate_limit_exceeded"
+            },
+            headers={"Retry-After": "60"}
+        )
+    
+    # Security middleware (applied in reverse order)
+    # 1. Security headers (outermost)
+    app.add_middleware(SecurityHeadersMiddleware)
+    
+    # 2. Rate limiting
+    app.add_middleware(RateLimitMiddleware)
+    
+    # 3. Custom CORS with security validation
+    if not settings.DEBUG:
+        # Production: Use secure CORS middleware
+        app.add_middleware(CORSSecurityMiddleware)
+    else:
+        # Development: Use standard CORS middleware
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.ALLOWED_ORIGINS,
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+            allow_headers=["*"],
+            expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
+        )
+    
+    # 4. Trusted hosts validation
     if settings.ALLOWED_HOSTS:
         app.add_middleware(
             TrustedHostMiddleware,
             allowed_hosts=settings.ALLOWED_HOSTS
         )
     
-    # Add custom logging middleware
+    # 5. Custom logging middleware (innermost, closest to routes)
     app.add_middleware(LoggingMiddleware)
     
     # Include API routers
@@ -82,7 +133,43 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health_check():
         """Health check endpoint."""
-        return {"status": "healthy", "service": "iam-dashboard-api"}
+        return {
+            "status": "healthy", 
+            "service": "iam-dashboard-api",
+            "version": "1.3.0",
+            "features": {
+                "2fa_enabled": True,
+                "rate_limiting": True,
+                "security_headers": settings.ENABLE_SECURITY_HEADERS,
+                "production_mode": not settings.DEBUG
+            }
+        }
+    
+    @app.get("/security-info")
+    async def security_info():
+        """Security configuration information for debugging."""
+        if settings.DEBUG:
+            return {
+                "cors_origins": settings.EFFECTIVE_CORS_ORIGINS,
+                "rate_limits": {
+                    "user": settings.USER_RATE_LIMIT_PER_MINUTE,
+                    "admin": settings.ADMIN_RATE_LIMIT_PER_MINUTE,
+                    "sysadmin": settings.SYSADMIN_RATE_LIMIT_PER_MINUTE
+                },
+                "session_config": {
+                    "max_sessions": settings.MAX_CONCURRENT_SESSIONS,
+                    "timeout_minutes": settings.SESSION_TIMEOUT_MINUTES,
+                    "secure_cookies": settings.SESSION_COOKIE_SECURE,
+                    "httponly_cookies": settings.SESSION_COOKIE_HTTPONLY
+                },
+                "2fa_config": {
+                    "totp_validity": settings.TOTP_TOKEN_VALIDITY,
+                    "backup_codes": settings.BACKUP_CODES_COUNT,
+                    "setup_token_expiry": settings.MFA_SETUP_TOKEN_EXPIRE_MINUTES
+                }
+            }
+        else:
+            return {"message": "Security info only available in debug mode"}
     
     return app
 

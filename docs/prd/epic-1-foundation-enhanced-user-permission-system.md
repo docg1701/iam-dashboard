@@ -55,7 +55,7 @@ so that I have a solid data foundation for client management and user authentica
 3. **Audit Trail Model:** Schema for tracking all data modifications with user, timestamp, and change details
 4. **Database Relationships:** Proper foreign key relationships and constraints between all entities
 5. **Migration Scripts:** Alembic migrations for all initial schemas with proper indexing
-6. **Validation:** Comprehensive field validation including CPF format validation using cnpj-cpf-validator and uniqueness constraints
+6. **Validation:** Comprehensive field validation including CPF format validation using validate-docbr and uniqueness constraints
 7. **Test Data:** Factory patterns and seed data for development and testing environments
 
 ## Story 1.3: Authentication System with 2FA

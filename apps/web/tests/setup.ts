@@ -77,6 +77,34 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// Mock for next-themes
+Object.defineProperty(window, 'localStorage', {
+  value: {
+    getItem: vi.fn(),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+    length: 0,
+    key: vi.fn(),
+  },
+  writable: true,
+})
+
+// Mock theme provider requirements
+Object.defineProperty(document, 'documentElement', {
+  value: {
+    classList: {
+      add: vi.fn(),
+      remove: vi.fn(),
+      contains: vi.fn(() => false),
+    },
+    style: {},
+    getAttribute: vi.fn(() => null),
+    setAttribute: vi.fn(),
+  },
+  writable: true,
+})
+
 // Mock scrollTo
 Object.defineProperty(window, 'scrollTo', {
   writable: true,

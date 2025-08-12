@@ -77,3 +77,8 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
             raise
         finally:
             await session.close()
+
+
+# Export engine for test compatibility
+# Tests expect to import 'engine' directly
+engine = get_engine()

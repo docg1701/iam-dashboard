@@ -5,7 +5,7 @@ Provides realistic test data generation for permission scenarios including
 different agent types and CRUD combinations.
 """
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict
 
 from src.models.permission import UserAgentPermission, AgentName
@@ -141,7 +141,7 @@ class UserAgentPermissionFactory(BaseFactory):
         **kwargs
     ) -> UserAgentPermission:
         """Create an expired permission."""
-        expires_at = datetime.utcnow() - timedelta(days=days_expired)
+        expires_at = datetime.now(timezone.utc) - timedelta(days=days_expired)
         return self.create_permission(
             user_id=user_id,
             agent_name=agent_name,
@@ -161,7 +161,7 @@ class UserAgentPermissionFactory(BaseFactory):
         **kwargs
     ) -> UserAgentPermission:
         """Create a permission that expires in the future."""
-        expires_at = datetime.utcnow() + timedelta(days=days_until_expiry)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=days_until_expiry)
         return self.create_permission(
             user_id=user_id,
             agent_name=agent_name,

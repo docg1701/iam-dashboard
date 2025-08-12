@@ -74,22 +74,32 @@ Based on the architectural patterns, tech stack, and data models, here are the m
 
 **Key Interfaces:**
 - `process_client_operation()` - Primary client management interface
-- `validate_cpf()` - Brazilian CPF validation service using cnpj-cpf-validator
+- `validate_cpf()` - Brazilian CPF validation service using validate-docbr
 - `bulk_client_operations()` - Mass client processing
 - `client_search_engine()` - Advanced search and filtering
 
 **Dependencies:** Shared client data service, permission validation, audit logging
-**Technology Stack:** Agno agent framework, shared PostgreSQL access, cnpj-cpf-validator for Brazilian document validation
+**Technology Stack:** Agno agent framework, shared PostgreSQL access, validate-docbr for Brazilian document validation
 
 ### **CPF/CNPJ Validation Implementation**
 
-The system uses the `cnpj-cpf-validator` library for robust Brazilian document validation with support for both current and future alphanumeric formats.
+The system uses the `validate-docbr` library for robust Brazilian document validation with support for both current and future alphanumeric formats.
 
 **Installation:**
 ```bash
-pip install cnpj-cpf-validator
+pip install validate-docbr
 ```
 
 **CPF Validation Examples:**
 ```python
-from cnpj_cpf_validator import CPF
+from validate_docbr import CPF
+
+# Create CPF validator instance
+cpf_validator = CPF()
+
+# Validate CPF numbers
+cpf_validator.validate("012.345.678-90")  # Returns True
+cpf_validator.validate("012.345.678-91")  # Returns False
+
+# Format CPF for display
+cpf_validator.mask("01234567890")  # Returns "012.345.678-90"

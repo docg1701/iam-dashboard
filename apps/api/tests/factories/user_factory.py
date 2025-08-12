@@ -6,7 +6,7 @@ and authentication scenarios.
 """
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from src.models.user import User, UserRole
@@ -117,7 +117,7 @@ class UserFactory(BaseFactory):
         **kwargs
     ) -> User:
         """Create a locked user account."""
-        locked_until = datetime.utcnow() + timedelta(hours=lock_duration_hours)
+        locked_until = datetime.now(timezone.utc) + timedelta(hours=lock_duration_hours)
         return self.create_user(
             email=email,
             failed_login_attempts=5,
@@ -143,7 +143,7 @@ class UserFactory(BaseFactory):
         **kwargs
     ) -> User:
         """Create a user with recent login history."""
-        last_login = datetime.utcnow() - timedelta(days=days_since_login)
+        last_login = datetime.now(timezone.utc) - timedelta(days=days_since_login)
         return self.create_user(
             email=email,
             last_login_at=last_login,

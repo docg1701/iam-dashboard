@@ -13,7 +13,7 @@ This is the DEFINITIVE technology selection for the entire project. This table s
 | Backend Language | Python | >=3.13.5 | Backend API and agent development | Excellent AI/ML ecosystem for future agent capabilities, mature FastAPI integration |
 | Backend Framework | FastAPI | >=0.116.1 | High-performance async API framework | Industry-leading performance, automatic OpenAPI docs, excellent typing integration |
 | Backend Validation | Pydantic | >=2.11.7 | Data validation and settings management | Integrates seamlessly with FastAPI, uses Python type hints for robust validation |
-| CPF/CNPJ Validation | cnpj-cpf-validator | >=0.1.2 | Brazilian document validation | Validates CPF and CNPJ numbers with proper check digit algorithm, supports formatting |
+| CPF/CNPJ Validation | validate-docbr | >=1.10.0 | Brazilian document validation | Validates CPF and CNPJ numbers with proper check digit algorithm, supports formatting |
 | Web Server | Gunicorn + Uvicorn | >=23.0.0 + >=0.35.0 | ASGI server and process manager | Gunicorn manages Uvicorn workers for production-grade performance and reliability |
 | API Style | REST API | OpenAPI >=3.1.1 | RESTful HTTP APIs with OpenAPI specification | Proven, well-understood pattern optimal for multi-agent communication and client integrations |
 | Database | PostgreSQL | >=17.5 | Primary data store with ACID compliance | Required for agent data consistency, excellent performance, pgvector ready for AI features |

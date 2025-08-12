@@ -48,3 +48,6 @@ Procure novamente por mocks escondidos nos arquivos de testes de BACKEND que vao
 [ULTRATHINK] *review docs/stories/FILENAME. I need you to do a real and honest through assessment of the DEV Agent's work in this story. Do all the checking, testing and step-by-step reading. Don't assume anything, test and prove it. Be very true about it.
 ```
 
+```markdown
+*review docs/stories/[story-file] para corrigir todos os testes que falham no [frontend, backend, quality, database, docker etc] -  ULTRATHINK - use scripts para testes - vença todos os testes - não modifique a documentação - pense e planeje e revise o plano antes de executar correções - lembre-se que o projeto usa DOCKER - para modificar ou escrever testes siga docs/architecture/testing-strategy.md
+```

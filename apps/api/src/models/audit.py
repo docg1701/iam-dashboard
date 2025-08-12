@@ -7,6 +7,7 @@ from typing import Optional, Dict, Any
 import uuid
 
 from sqlmodel import SQLModel, Field, Column, JSON
+from pydantic import field_validator, ValidationError as PydanticValidationError
 
 
 class AuditAction(str, Enum):
@@ -18,6 +19,14 @@ class AuditAction(str, Enum):
     LOGIN = "login"
     LOGOUT = "logout"
     PERMISSION_CHANGE = "permission_change"
+    
+    def __str__(self) -> str:
+        """Return the string value for proper test compatibility."""
+        return self.value
+    
+    def __hash__(self) -> int:
+        """Make enum hashable for SQLAlchemy compatibility."""
+        return hash(self.value)
 
 
 class AuditLog(SQLModel, table=True):
@@ -39,10 +48,11 @@ class AuditLog(SQLModel, table=True):
         index=True,
         description="User who performed the action (null for system actions)"
     )
-    action: AuditAction
+    action: AuditAction = Field(..., description="Action performed in the audit event")
     
     # Resource tracking for polymorphic references
     resource_type: str = Field(
+        ..., 
         max_length=50, 
         index=True,
         description="Type of resource affected (e.g., 'user', 'client', 'permission')"
@@ -102,6 +112,21 @@ class AuditLog(SQLModel, table=True):
         sa_column=Column(JSON),
         description="Additional contextual data for the audit event"
     )
+    
+    def __init__(self, **data):
+        """Initialize AuditLog with validation."""
+        # Validate required fields
+        if 'action' not in data or data['action'] is None:
+            raise PydanticValidationError.from_exception_data(
+                "AuditLog",
+                [{"type": "missing", "loc": ("action",), "msg": "Field required"}]
+            )
+        if 'resource_type' not in data or data['resource_type'] is None:
+            raise PydanticValidationError.from_exception_data(
+                "AuditLog", 
+                [{"type": "missing", "loc": ("resource_type",), "msg": "Field required"}]
+            )
+        super().__init__(**data)
     
     @classmethod
     def create_audit_entry(
