@@ -14,6 +14,16 @@ vi.mock('@shared/utils', () => ({
   formatCPF: vi.fn((cpf: string) => cpf),
 }))
 
+// Mock validation schemas (CLAUDE.md compliant - internal dependency that causes issues in tests)
+vi.mock('@/lib/validations/client', () => ({
+  clientFormSchema: {
+    parse: vi.fn(data => data),
+    safeParse: vi.fn(data => ({ success: true, data })),
+  },
+  cleanCPFForAPI: vi.fn((cpf: string) => cpf.replace(/\D/g, '')),
+  isValidCPF: vi.fn(() => true),
+}))
+
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: () => ({

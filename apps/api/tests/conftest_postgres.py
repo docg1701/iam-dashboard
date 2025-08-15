@@ -22,7 +22,9 @@ from src.core.database import get_async_session
 from src.main import create_app
 
 # PostgreSQL test database URL (connects to Docker PostgreSQL)
-TEST_DATABASE_URL = "postgresql+asyncpg://postgres:password@localhost:5432/iam_dashboard_test"
+TEST_DATABASE_URL = (
+    "postgresql+asyncpg://postgres:password@localhost:5432/iam_dashboard_test"
+)
 
 # Create test engine
 test_engine = create_async_engine(
@@ -47,13 +49,13 @@ def test_settings() -> Settings:
         DB_PASSWORD="password",
         DB_HOST="localhost",
         DB_PORT=5432,
-        DB_USER="postgres", 
+        DB_USER="postgres",
         DB_NAME="iam_dashboard_test",
         DATABASE_URL=TEST_DATABASE_URL,
         DEBUG=True,
         ALLOWED_HOSTS=[
             "testserver",
-            "localhost", 
+            "localhost",
             "127.0.0.1",
             "test",
         ],
@@ -78,30 +80,30 @@ async def setup_test_database():
         echo=False,
         isolation_level="AUTOCOMMIT",
     )
-    
+
     async with engine.connect() as conn:
         # Drop and recreate test database
-        await conn.execute(f"DROP DATABASE IF EXISTS iam_dashboard_test")
-        await conn.execute(f"CREATE DATABASE iam_dashboard_test")
-    
+        await conn.execute("DROP DATABASE IF EXISTS iam_dashboard_test")
+        await conn.execute("CREATE DATABASE iam_dashboard_test")
+
     await engine.dispose()
-    
+
     # Create all tables in test database
     async with test_engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
-    
+
     yield
-    
+
     # Cleanup: Drop test database
     cleanup_engine = create_async_engine(
         "postgresql+asyncpg://postgres:password@localhost:5432/postgres",
         echo=False,
         isolation_level="AUTOCOMMIT",
     )
-    
+
     async with cleanup_engine.connect() as conn:
-        await conn.execute(f"DROP DATABASE IF EXISTS iam_dashboard_test")
-    
+        await conn.execute("DROP DATABASE IF EXISTS iam_dashboard_test")
+
     await cleanup_engine.dispose()
 
 
@@ -128,10 +130,10 @@ async def async_session(setup_test_database) -> AsyncGenerator[AsyncSession]:
 @pytest_asyncio.fixture
 async def override_get_async_session(async_session: AsyncSession):
     """Override database session dependency."""
-    
+
     async def _override_get_async_session():
         yield async_session
-    
+
     return _override_get_async_session
 
 
@@ -140,16 +142,16 @@ async def app(override_get_async_session, test_settings: Settings):
     """Create FastAPI test application with PostgreSQL."""
     # Clear settings cache and override before creating app
     get_settings.cache_clear()
-    
+
     def get_test_settings() -> Settings:
         return test_settings
-    
+
     # Temporarily override the settings function
     import src.core.config
-    
+
     original_get_settings = src.core.config.get_settings
     src.core.config.get_settings = get_test_settings
-    
+
     try:
         app = create_app()
         app.dependency_overrides[get_async_session] = override_get_async_session
@@ -200,7 +202,7 @@ def mock_file_storage():
 def sample_user_data():
     """Sample user data for testing."""
     return {
-        "email": "test@example.com", 
+        "email": "test@example.com",
         "password": "TestPassword123!",
         "full_name": "Test User",
         "is_active": True,
@@ -214,7 +216,7 @@ def sample_client_data():
         "name": "Test Client",
         "email": "client@example.com",
         "cpf_cnpj": "12345678901",
-        "phone": "+55 11 99999-9999", 
+        "phone": "+55 11 99999-9999",
         "status": "active",
         "metadata": {"custom_field": "value"},
     }
@@ -239,7 +241,7 @@ def setup_test_environment():
     """Set up test environment variables for PostgreSQL."""
     # Store original values to restore later
     original_values = {}
-    
+
     # Override environment variables for PostgreSQL testing
     test_env_vars = {
         "TESTING": "true",
@@ -254,22 +256,22 @@ def setup_test_environment():
         "ALLOWED_HOSTS": "[]",  # Empty list to disable TrustedHostMiddleware
         "ALLOWED_ORIGINS": '["http://testserver", "http://test"]',
     }
-    
+
     for key, value in test_env_vars.items():
         original_values[key] = os.environ.get(key)
         os.environ[key] = value
-    
+
     # Clear settings cache to force reload with test env vars
     get_settings.cache_clear()
-    
+
     yield
-    
+
     # Restore original environment variables
     for key, original_value in original_values.items():
         if original_value is None:
             os.environ.pop(key, None)
         else:
             os.environ[key] = original_value
-    
+
     # Clear cache again to restore original settings
     get_settings.cache_clear()

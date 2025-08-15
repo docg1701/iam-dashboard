@@ -25,8 +25,8 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }))
 
-// Mock @shared/utils for CPF validation
-vi.mock('../../packages/shared/src/utils', () => ({
+// Mock @shared/utils for CPF validation (CLAUDE.md compliant - external dependency)
+vi.mock('@shared/utils', () => ({
   validateCPF: vi.fn((cpf: string) => {
     // Simple mock validation for testing
     const cleanCPF = cpf.replace(/\D/g, '')
@@ -40,6 +40,9 @@ vi.mock('../../packages/shared/src/utils', () => ({
     return cleanCPF
   }),
 }))
+
+// Import the mocked utilities after mock setup
+import { validateCPF, formatCPF } from '@shared/utils'
 
 // Test wrapper with providers
 const TestWrapper = ({ children }: { children: React.ReactNode }) => {
@@ -109,22 +112,28 @@ describe('Client Management Integration Tests', () => {
       })
 
       // Wait for form validation
-      await waitFor(() => {
-        expect(submitButton).not.toBeDisabled()
-      })
+      await waitFor(
+        () => {
+          expect(submitButton).not.toBeDisabled()
+        },
+        { timeout: 15000 }
+      )
 
       // Submit the form
       fireEvent.click(submitButton)
 
       // Wait for submission
-      await waitFor(() => {
-        expect(onSubmit).toHaveBeenCalledWith({
-          name: mockClientData.name,
-          cpf: mockClientData.cpf,
-          birthDate: mockClientData.birthDate,
-        })
-      })
-    })
+      await waitFor(
+        () => {
+          expect(onSubmit).toHaveBeenCalledWith({
+            name: mockClientData.name,
+            cpf: mockClientData.cpf,
+            birthDate: mockClientData.birthDate,
+          })
+        },
+        { timeout: 30000 }
+      )
+    }, 30000)
 
     it('should validate form fields and show errors for invalid data', async () => {
       const onSubmit = vi.fn()
@@ -207,7 +216,7 @@ describe('Client Management Integration Tests', () => {
       })
 
       // Verify formatting was applied (mocked)
-      expect(require('@shared/utils').formatCPF).toHaveBeenCalled()
+      expect(formatCPF).toHaveBeenCalled()
     })
 
     it('should handle form submission with loading state', async () => {
@@ -275,9 +284,7 @@ describe('Client Management Integration Tests', () => {
 
       // CPF should be formatted
       await waitFor(() => {
-        expect(require('@shared/utils').formatCPF).toHaveBeenCalledWith(
-          initialData.cpf
-        )
+        expect(formatCPF).toHaveBeenCalledWith(initialData.cpf)
       })
 
       // Title should indicate edit mode

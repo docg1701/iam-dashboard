@@ -34,7 +34,12 @@ vi.mock('@radix-ui/react-toast', () => ({
   Root: React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
     function MockRoot({ className, children, ...props }, ref) {
       return (
-        <div ref={ref} className={className} data-testid="toast-root" {...props}>
+        <div
+          ref={ref}
+          className={className}
+          data-testid="toast-root"
+          {...props}
+        >
           {children}
         </div>
       )
@@ -71,7 +76,12 @@ vi.mock('@radix-ui/react-toast', () => ({
   Title: React.forwardRef<HTMLDivElement, React.ComponentProps<'div'>>(
     function MockTitle({ className, children, ...props }, ref) {
       return (
-        <div ref={ref} className={className} data-testid="toast-title" {...props}>
+        <div
+          ref={ref}
+          className={className}
+          data-testid="toast-title"
+          {...props}
+        >
           {children}
         </div>
       )

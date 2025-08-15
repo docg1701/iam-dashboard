@@ -1,39 +1,16 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { validateCPF, formatCPF } from '@shared/utils'
-import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import * as z from 'zod'
 
 import { Button } from '@/components/ui/button'
+import { CPFInput } from '@/components/ui/cpf-input'
 import { Input } from '@/components/ui/input'
-
-// Esquema de validação usando Zod + @brazilian-utils
-const clientSchema = z.object({
-  name: z
-    .string()
-    .min(2, 'Nome deve ter pelo menos 2 caracteres')
-    .max(100, 'Nome deve ter no máximo 100 caracteres'),
-  cpf: z
-    .string()
-    .min(11, 'CPF deve ter 11 dígitos')
-    .refine(cpf => {
-      const cleanCPF = cpf.replace(/\D/g, '')
-      return validateCPF(cleanCPF)
-    }, 'CPF inválido'),
-  birthDate: z
-    .string()
-    .min(1, 'Data de nascimento é obrigatória')
-    .refine(date => {
-      const birthDate = new Date(date)
-      const today = new Date()
-      const age = today.getFullYear() - birthDate.getFullYear()
-      return age >= 16 && age <= 120
-    }, 'Cliente deve ter entre 16 e 120 anos'),
-})
-
-export type ClientFormData = z.infer<typeof clientSchema>
+import {
+  clientFormSchema,
+  type ClientFormData,
+  cleanCPFForAPI,
+} from '@/lib/validations/client'
 
 interface ClientFormProps {
   onSubmit: (data: ClientFormData) => void
@@ -48,8 +25,6 @@ export function ClientForm({
   isLoading = false,
   initialData,
 }: ClientFormProps) {
-  const [cpfValue, setCpfValue] = useState(initialData?.cpf || '')
-
   const {
     register,
     handleSubmit,
@@ -57,28 +32,24 @@ export function ClientForm({
     setValue,
     watch,
   } = useForm<ClientFormData>({
-    resolver: zodResolver(clientSchema),
+    resolver: zodResolver(clientFormSchema),
     defaultValues: initialData,
     mode: 'onChange',
   })
 
-  // Formatação em tempo real do CPF
-  const handleCPFChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value.replace(/\D/g, '')
-    const formattedCPF = formatCPF(value)
-    setCpfValue(formattedCPF)
-    setValue('cpf', value, { shouldValidate: true })
-  }
+  // Watch CPF value for real-time validation feedback
+  const cpfValue = watch('cpf')
 
-  // Validação em tempo real do CPF
-  const cpfInput = watch('cpf')
-  const isCPFValid = cpfInput ? validateCPF(cpfInput.replace(/\D/g, '')) : false
+  // Handle CPF input changes
+  const handleCPFChange = (cleanValue: string) => {
+    setValue('cpf', cleanValue, { shouldValidate: true })
+  }
 
   const onFormSubmit = (data: ClientFormData) => {
     // Remove formatação do CPF antes do envio
     const cleanData = {
       ...data,
-      cpf: data.cpf.replace(/\D/g, ''),
+      cpf: cleanCPFForAPI(data.cpf),
     }
     onSubmit(cleanData)
   }
@@ -119,28 +90,13 @@ export function ClientForm({
           >
             CPF *
           </label>
-          <div className="relative">
-            <Input
-              type="text"
-              id="cpf"
-              value={cpfValue}
-              onChange={handleCPFChange}
-              placeholder="000.000.000-00"
-              maxLength={14}
-              className={`${errors.cpf ? 'border-red-500' : isCPFValid ? 'border-green-500' : ''}`}
-              disabled={isLoading}
-            />
-            {/* Indicador visual de validação */}
-            {cpfValue && (
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                {isCPFValid ? (
-                  <span className="text-green-600">✓</span>
-                ) : (
-                  <span className="text-red-600">✗</span>
-                )}
-              </div>
-            )}
-          </div>
+          <CPFInput
+            id="cpf"
+            value={cpfValue || ''}
+            onChange={handleCPFChange}
+            disabled={isLoading}
+            className={errors.cpf ? 'border-red-500' : ''}
+          />
           {errors.cpf && (
             <p className="mt-1 text-sm text-red-600">{errors.cpf.message}</p>
           )}
@@ -200,10 +156,14 @@ export function ClientForm({
       {process.env.NODE_ENV === 'development' && (
         <div className="mt-6 rounded bg-gray-100 p-4 text-xs">
           <h4 className="font-semibold">Debug Info:</h4>
-          <p>CPF Input: {cpfInput}</p>
-          <p>CPF Formatado: {cpfValue}</p>
-          <p>CPF Válido: {String(isCPFValid)}</p>
+          <p>CPF Value: {cpfValue || 'empty'}</p>
           <p>Form Válido: {String(isValid)}</p>
+          <p>
+            Has Errors:{' '}
+            {Object.keys(errors).length > 0
+              ? Object.keys(errors).join(', ')
+              : 'none'}
+          </p>
         </div>
       )}
     </div>

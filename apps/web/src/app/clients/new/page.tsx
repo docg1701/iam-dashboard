@@ -1,51 +1,43 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
 
 import { ClientForm } from '@/components/forms/ClientForm'
 import { toast } from '@/hooks/use-toast'
-
-interface ClientData {
-  name: string
-  cpf: string
-  birthDate: string
-}
+import { useCreateClient } from '@/hooks/useClients'
+import { type ClientFormData } from '@/lib/validations/client'
 
 export default function NewClientPage() {
-  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const createClientMutation = useCreateClient()
 
-  const handleSubmit = async (data: ClientData) => {
-    setIsLoading(true)
-
+  const handleSubmit = async (data: ClientFormData) => {
     try {
-      // Aqui seria feita a chamada para a API
-      // Por enquanto, apenas simulamos o sucesso
-      // TODO: Replace with actual API call
+      const result = await createClientMutation.mutateAsync({
+        name: data.name,
+        cpf: data.cpf,
+        birth_date: data.birthDate,
+      })
 
-      // Simular delay da API
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Simular sucesso
       toast({
         title: '✅ Cliente criado com sucesso!',
-        description: `Cliente ${data.name} foi cadastrado com CPF ${data.cpf}`,
+        description: `Cliente ${result.name} foi cadastrado com CPF ${result.cpf}`,
         variant: 'default',
       })
 
-      // Redirecionar para lista de clientes (quando implementada)
+      // Redirecionar para lista de clientes
       router.push('/clients')
     } catch (error) {
-      // TODO: Replace with proper error handling
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Ocorreu um erro inesperado. Tente novamente.'
 
       toast({
         title: '❌ Erro ao criar cliente',
-        description: 'Ocorreu um erro inesperado. Tente novamente.',
+        description: errorMessage,
         variant: 'destructive',
       })
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -72,7 +64,7 @@ export default function NewClientPage() {
             <ClientForm
               onSubmit={handleSubmit}
               onCancel={handleCancel}
-              isLoading={isLoading}
+              isLoading={createClientMutation.isPending}
             />
           </div>
         </div>

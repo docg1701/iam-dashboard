@@ -38,8 +38,12 @@ class Client(SQLModel, table=True):
 
     # Audit and relationship fields
     created_by: uuid.UUID = Field(foreign_key="users.id")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
     is_active: bool = Field(default=True)
 
     # Relationships (will be implemented after User model is stable)

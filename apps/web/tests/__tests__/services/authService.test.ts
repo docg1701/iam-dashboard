@@ -7,6 +7,18 @@ import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest'
 import axios from 'axios'
 import { authService, AuthService } from '@/services/authService'
 
+// Mock the httpClient module (CLAUDE.md compliant - external dependency)
+vi.mock('@/services/httpClient', () => ({
+  httpClient: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    patch: vi.fn(),
+  },
+  HttpClient: vi.fn(),
+}))
+
 // Mock only external API calls (CLAUDE.md compliant)
 vi.mock('axios', () => ({
   default: {
@@ -23,6 +35,9 @@ vi.mock('axios', () => ({
     isAxiosError: vi.fn(),
   },
 }))
+
+// Import httpClient after mocking
+import { httpClient } from '@/services/httpClient'
 
 describe('AuthService', () => {
   beforeEach(() => {

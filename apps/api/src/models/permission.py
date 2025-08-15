@@ -7,7 +7,8 @@ from datetime import UTC, datetime
 from enum import Enum
 
 from pydantic import ValidationError as PydanticValidationError
-from sqlalchemy import Index, UniqueConstraint, Column, Enum as SQLAEnum
+from sqlalchemy import Column, Index, UniqueConstraint
+from sqlalchemy import Enum as SQLAEnum
 from sqlmodel import Field, SQLModel
 
 
@@ -55,8 +56,8 @@ class UserAgentPermission(SQLModel, table=True):
         ...,
         sa_column=Column(
             SQLAEnum(AgentName, values_callable=lambda obj: [e.value for e in obj]),
-            nullable=False
-        )
+            nullable=False,
+        ),
     )
 
     # CRUD permission fields
@@ -77,15 +78,21 @@ class UserAgentPermission(SQLModel, table=True):
     granted_by: uuid.UUID = Field(
         ..., foreign_key="users.id", description="User who granted this permission"
     )
-    granted_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+    granted_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
     expires_at: datetime | None = Field(
         default=None, description="Optional permission expiration"
     )
 
     # Status fields
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
 
     @property
     def has_any_permission(self) -> bool:

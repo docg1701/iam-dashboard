@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -31,9 +33,11 @@ export default function HomePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" className="w-full">
-                Acessar Clientes
-              </Button>
+              <Link href="/clients" className="block">
+                <Button variant="outline" className="w-full">
+                  Acessar Clientes
+                </Button>
+              </Link>
             </CardContent>
           </Card>
 
