@@ -248,3 +248,4 @@ media/
 *.zip
 *.tar.gz
 *.rar
+.heimdall/

@@ -15,8 +15,63 @@ Essential guidance for Claude Code when working on this fullstack IAM Dashboard 
 
 ### ⚠️ CRITICAL COMPATIBILITY RULES
 - **NEVER use deprecated `datetime.utcnow()`** - causes Python 3.12+ warnings
-- **Use timezone-naive datetime in models** for PostgreSQL compatibility
-- **Be careful with enum field modifications** - SQLModel-Alembic can have incompatibilities
+- **MANDATORY: Search memory before modifying**:
+  - Enums: `recall_memories "SQLModel enum Alembic"`
+  - DateTime: `recall_memories "datetime timezone PostgreSQL"`
+  - Migrations: `recall_memories "Alembic migration PostgreSQL"`
+- **MANDATORY: Store solutions after fixing bugs**: Use `store_memory` with full context
+
+## 🧠 Heimdall MCP - Cognitive Memory System
+
+### MANDATORY Memory Checks
+**BEFORE modifying these critical areas, ALWAYS search memory first:**
+- Database models (SQLModel, Alembic, enums)
+- DateTime handling
+- PostgreSQL configurations
+- Authentication/security patterns
+- Docker configurations
+
+### Memory Workflow
+
+#### 1. Starting Any Task
+```bash
+# Search for related past issues FIRST
+recall_memories "SQLModel enum"           # when working with enums
+recall_memories "datetime PostgreSQL"     # when handling timestamps
+recall_memories "Alembic migration"       # before generating migrations
+recall_memories "FastAPI authentication"  # when touching auth code
+recall_memories "Docker deployment"       # when modifying containers
+```
+
+#### 2. After Resolving Complex Issues
+```bash
+# Store solution immediately with rich context
+store_memory "PROBLEM: [description] SOLUTION: [fix] PREVENTION: [checklist]"
+# Tag properly for future discovery
+tags: ["sqlmodel", "critical-bug", "postgresql"]
+```
+
+#### 3. End of Session
+```bash
+# Record session insights
+session_lessons "Discovered pattern: [what you learned]"
+```
+
+### Tool Reference
+| Tool | When to Use | Example Query |
+|------|------------|---------------|
+| `recall_memories` | Before touching critical code areas | "SQLModel Alembic enum compatibility" |
+| `store_memory` | After fixing bugs or discovering patterns | Include problem, solution, test commands |
+| `session_lessons` | End of productive sessions | Key patterns or breakthroughs |
+| `memory_status` | Weekly health checks | Check for memory bloat |
+| `delete_memory` | Remove outdated solutions | By ID when superseded |
+| `delete_memories_by_tags` | Major refactors | Clean deprecated patterns |
+
+### Memory Quality Guidelines
+- **Be specific**: Include error messages, stack traces, working code
+- **Include test commands**: How to verify the fix works
+- **Tag thoroughly**: Technology stack, error type, severity
+- **Link related memories**: Reference IDs of connected solutions
 
 ### Backend Testing Directives
 - **CRITICAL: Mock only external dependencies - NEVER mock internal business logic**
@@ -61,6 +116,7 @@ Essential guidance for Claude Code when working on this fullstack IAM Dashboard 
 
 **Context7**: `mcp__context7__resolve-library-id` + `mcp__context7__get-library-docs`  
 **Playwright E2E**: `mcp__playwright__browser_navigate|click|type|snapshot|take_screenshot`
+
 
 ## 🚀 Essential Commands
 
@@ -189,7 +245,8 @@ uv run pytest              # Run tests
 
 ### Essential Requirements
 1. **Docker First**: Always run `./scripts/deploy-production.sh` before testing
-2. **80%+ test coverage** required
+2. **Memory System**: MANDATORY `recall_memories` before enum/datetime/migration changes, `store_memory` after fixes
+3. **80%+ test coverage** required
 4. **Validate external data** with Zod/Pydantic
 5. **Use TypeScript strictly** (no `any`)
 6. **Use UV for Python** (never edit pyproject.toml directly)
