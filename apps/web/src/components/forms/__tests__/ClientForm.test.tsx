@@ -74,7 +74,7 @@ describe('ClientForm', () => {
       await waitFor(() => {
         expect(screen.getByText('✓')).toBeInTheDocument()
         expect(
-          screen.getByText(/cpf válido.*@brazilian-utils/i)
+          screen.getByText(/cpf válido.*utilizando.*@brazilian-utils/i)
         ).toBeInTheDocument()
       })
     })

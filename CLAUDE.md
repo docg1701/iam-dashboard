@@ -15,9 +15,8 @@ Essential guidance for Claude Code when working on this fullstack IAM Dashboard 
 
 ### ⚠️ CRITICAL COMPATIBILITY RULES
 - **NEVER use deprecated `datetime.utcnow()`** - causes Python 3.12+ warnings
-- **NEVER modify enum fields without checking LONG-TERM-MEMORY.md Bug #1** - SQLModel-Alembic incompatibility  
-- **NEVER use timezone-aware datetime in models** - see LONG-TERM-MEMORY.md Bug #2 for PostgreSQL compatibility
-- **ALWAYS check LONG-TERM-MEMORY.md before touching**: enums, datetime fields, or migrations
+- **Use timezone-naive datetime in models** for PostgreSQL compatibility
+- **Be careful with enum field modifications** - SQLModel-Alembic can have incompatibilities
 
 ### Backend Testing Directives
 - **CRITICAL: Mock only external dependencies - NEVER mock internal business logic**
@@ -57,38 +56,6 @@ Essential guidance for Claude Code when working on this fullstack IAM Dashboard 
 - **Correct workflow**: `Read` → `Edit` → `Bash` (for validation)
 - **NEVER skip reading** - Even for "obvious" changes, read the file first
 
-## 🧠 LONG-TERM MEMORY SYSTEM
-
-### Critical Bug Prevention
-**BEFORE modifying any of these areas, CONSULT LONG-TERM-MEMORY.md**:
-
-- **SQLModel Enum Fields** → See `LONG-TERM-MEMORY.md` Bug #1 (Alembic enum incompatibility)
-- **DateTime Fields in Models** → See `LONG-TERM-MEMORY.md` Bug #2 (PostgreSQL timezone issues)
-- **PostgreSQL Extensions** → See `LONG-TERM-MEMORY.md` Bug #3 (Missing extension setup)
-- **Alembic Migrations** → Check all 3 bugs before generating migrations
-
-### Why This Memory System Exists
-This project has encountered **critical regressions** caused by Claude's outdated training data on:
-1. **SQLModel-Alembic integration** (enum handling patterns from pre-2024)
-2. **PostgreSQL datetime compatibility** (timezone-aware vs naive datetime)
-3. **Extension management** in production environments
-
-**The LONG-TERM-MEMORY.md file contains:**
-- ✅ **Proven fixes** with Context7-validated documentation
-- ✅ **Prevention checklists** to avoid regression
-- ✅ **Test commands** to verify fixes work
-- ✅ **Working code examples** from production
-
-### Workflow When Touching Critical Areas
-```bash
-# 1. ALWAYS check memory first
-cat LONG-TERM-MEMORY.md | grep -A 20 "Bug #[1-3]"
-
-# 2. Use Context7 for current documentation if needed
-# 3. Apply fixes from memory system, don't guess
-# 4. Run test commands from memory system
-# 5. Update memory system if new patterns discovered
-```
 
 ## 🛠️ MCP Tools
 
@@ -222,8 +189,7 @@ uv run pytest              # Run tests
 
 ### Essential Requirements
 1. **Docker First**: Always run `./scripts/deploy-production.sh` before testing
-2. **Memory System**: Check `LONG-TERM-MEMORY.md` before touching enum/datetime/migration code
-3. **80%+ test coverage** required
+2. **80%+ test coverage** required
 4. **Validate external data** with Zod/Pydantic
 5. **Use TypeScript strictly** (no `any`)
 6. **Use UV for Python** (never edit pyproject.toml directly)

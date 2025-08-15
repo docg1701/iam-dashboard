@@ -220,7 +220,7 @@ describe('ClientForm', () => {
 
         await waitFor(() => {
           expect(
-            screen.getByText('CPF deve ter 11 dígitos')
+            screen.getByText('CPF inválido')
           ).toBeInTheDocument()
         })
       })

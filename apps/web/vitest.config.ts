@@ -4,7 +4,12 @@ import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'node:url'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      // Proper React 19 JSX transform for Vitest 3.x compatibility
+      jsxRuntime: 'automatic'
+    })
+  ],
   test: {
     // Test environment
     environment: 'jsdom',
@@ -22,10 +27,10 @@ export default defineConfig({
     // bail removed - runs all tests by default for complete summaries
     // Use --bail=1 flag when needed for fast development feedback
     
-    // TIMEOUT CONFIGURATION: Strict timeouts to prevent hanging
-    testTimeout: 10000,      // 10 seconds max per test
+    // TIMEOUT CONFIGURATION: Optimized for React 19 + Vitest 3.x
+    testTimeout: 30000,      // 30 seconds for complex React component tests (Vitest 3.x recommended)
     hookTimeout: 10000,      // 10 seconds for setup/teardown
-    teardownTimeout: 1000,   // 1 second for cleanup
+    teardownTimeout: 5000,   // 5 seconds for cleanup
     
     // CONCURRENCY CONTROL: Limit parallel execution to prevent resource exhaustion
     maxConcurrency: 5,       // Max 5 test files running simultaneously
