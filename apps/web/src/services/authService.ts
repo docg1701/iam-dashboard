@@ -4,14 +4,17 @@
  * Based on Story 1.3 requirements and API specification
  */
 
-import { 
-  LoginCredentials, 
-  LoginResponse, 
+import {
+  LoginCredentials,
+  LoginResponse,
   RefreshTokenResponse,
   TwoFactorSetupResponse,
   User,
-  UserPermission
+  UserPermission,
+  SessionInfo,
+  HttpError,
 } from '@/types/auth'
+
 import { httpClient } from './httpClient'
 
 class AuthService {
@@ -32,8 +35,9 @@ class AuthService {
       )
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Login failed'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message = httpError.response?.data?.detail || 'Login failed'
       throw new Error(message)
     }
   }
@@ -46,7 +50,7 @@ class AuthService {
       await httpClient.post(`${this.apiPath}/logout`)
     } catch (error) {
       // Even if logout fails on server, we should clear local tokens
-      console.warn('Logout request failed, but continuing with local cleanup')
+      // TODO: Log logout failures to monitoring service
     }
   }
 
@@ -63,8 +67,9 @@ class AuthService {
       )
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Token refresh failed'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message = httpError.response?.data?.detail || 'Token refresh failed'
       throw new Error(message)
     }
   }
@@ -72,15 +77,21 @@ class AuthService {
   /**
    * Get current user profile and permissions
    */
-  async getCurrentUser(): Promise<{ user: User; permissions: UserPermission[] }> {
+  async getCurrentUser(): Promise<{
+    user: User
+    permissions: UserPermission[]
+  }> {
     try {
-      const response = await httpClient.get<{ user: User; permissions: UserPermission[] }>(
-        `${this.apiPath}/me`
-      )
+      const response = await httpClient.get<{
+        user: User
+        permissions: UserPermission[]
+      }>(`${this.apiPath}/me`)
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to get user profile'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message =
+        httpError.response?.data?.detail || 'Failed to get user profile'
       throw new Error(message)
     }
   }
@@ -95,8 +106,9 @@ class AuthService {
       )
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to setup 2FA'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message = httpError.response?.data?.detail || 'Failed to setup 2FA'
       throw new Error(message)
     }
   }
@@ -104,18 +116,21 @@ class AuthService {
   /**
    * Verify and enable two-factor authentication
    */
-  async enable2FA(totpCode: string): Promise<{ success: boolean; backup_codes: string[] }> {
+  async enable2FA(
+    totpCode: string
+  ): Promise<{ success: boolean; backup_codes: string[] }> {
     try {
-      const response = await httpClient.post<{ success: boolean; backup_codes: string[] }>(
-        `${this.apiPath}/enable-2fa`,
-        {
-          totp_code: totpCode,
-        }
-      )
+      const response = await httpClient.post<{
+        success: boolean
+        backup_codes: string[]
+      }>(`${this.apiPath}/enable-2fa`, {
+        totp_code: totpCode,
+      })
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to enable 2FA'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message = httpError.response?.data?.detail || 'Failed to enable 2FA'
       throw new Error(message)
     }
   }
@@ -133,8 +148,10 @@ class AuthService {
       )
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to disable 2FA'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message =
+        httpError.response?.data?.detail || 'Failed to disable 2FA'
       throw new Error(message)
     }
   }
@@ -149,8 +166,10 @@ class AuthService {
       )
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to generate backup codes'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message =
+        httpError.response?.data?.detail || 'Failed to generate backup codes'
       throw new Error(message)
     }
   }
@@ -158,7 +177,10 @@ class AuthService {
   /**
    * Change user password
    */
-  async changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean }> {
+  async changePassword(
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ success: boolean }> {
     try {
       const response = await httpClient.post<{ success: boolean }>(
         `${this.apiPath}/change-password`,
@@ -169,8 +191,10 @@ class AuthService {
       )
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to change password'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message =
+        httpError.response?.data?.detail || 'Failed to change password'
       throw new Error(message)
     }
   }
@@ -188,8 +212,10 @@ class AuthService {
       )
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to request password reset'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message =
+        httpError.response?.data?.detail || 'Failed to request password reset'
       throw new Error(message)
     }
   }
@@ -197,7 +223,10 @@ class AuthService {
   /**
    * Reset password with token from email
    */
-  async resetPassword(token: string, newPassword: string): Promise<{ success: boolean }> {
+  async resetPassword(
+    token: string,
+    newPassword: string
+  ): Promise<{ success: boolean }> {
     try {
       const response = await httpClient.post<{ success: boolean }>(
         `${this.apiPath}/reset-password`,
@@ -208,8 +237,10 @@ class AuthService {
       )
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to reset password'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message =
+        httpError.response?.data?.detail || 'Failed to reset password'
       throw new Error(message)
     }
   }
@@ -227,8 +258,10 @@ class AuthService {
       )
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to verify email'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message =
+        httpError.response?.data?.detail || 'Failed to verify email'
       throw new Error(message)
     }
   }
@@ -236,15 +269,17 @@ class AuthService {
   /**
    * Get user sessions and device information
    */
-  async getUserSessions(): Promise<{ sessions: any[] }> {
+  async getUserSessions(): Promise<{ sessions: SessionInfo[] }> {
     try {
-      const response = await httpClient.get<{ sessions: any[] }>(
+      const response = await httpClient.get<{ sessions: SessionInfo[] }>(
         `${this.apiPath}/sessions`
       )
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to get user sessions'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message =
+        httpError.response?.data?.detail || 'Failed to get user sessions'
       throw new Error(message)
     }
   }
@@ -259,8 +294,10 @@ class AuthService {
       )
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to revoke session'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message =
+        httpError.response?.data?.detail || 'Failed to revoke session'
       throw new Error(message)
     }
   }
@@ -268,15 +305,21 @@ class AuthService {
   /**
    * Revoke all sessions except current
    */
-  async revokeAllOtherSessions(): Promise<{ success: boolean; revoked_count: number }> {
+  async revokeAllOtherSessions(): Promise<{
+    success: boolean
+    revoked_count: number
+  }> {
     try {
-      const response = await httpClient.delete<{ success: boolean; revoked_count: number }>(
-        `${this.apiPath}/sessions/others`
-      )
+      const response = await httpClient.delete<{
+        success: boolean
+        revoked_count: number
+      }>(`${this.apiPath}/sessions/others`)
 
       return response
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to revoke sessions'
+    } catch (error: unknown) {
+      const httpError = error as HttpError
+      const message =
+        httpError.response?.data?.detail || 'Failed to revoke sessions'
       throw new Error(message)
     }
   }

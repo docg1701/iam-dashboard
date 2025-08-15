@@ -4,19 +4,22 @@ Integration example for authentication middleware.
 This file demonstrates how to integrate the auth middleware into the main FastAPI application
 and provides usage examples for route protection with different access levels.
 """
-from typing import List
-from fastapi import FastAPI, Depends, APIRouter
+
+from typing import Any
+
+from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from ..middleware.auth import (
     AuthMiddleware,
+    UserDict,
     get_current_user,
-    require_sysadmin,
-    require_admin,
-    require_user,
-    require_agent_permission,
     get_user_session_info,
     invalidate_user_sessions,
+    require_admin,
+    require_agent_permission,
+    require_sysadmin,
+    require_user,
 )
 from ..models.permission import AgentName
 
@@ -24,26 +27,26 @@ from ..models.permission import AgentName
 def setup_auth_middleware(app: FastAPI) -> None:
     """
     Add authentication middleware to FastAPI application.
-    
+
     Add this to your main.py create_app() function:
-    
+
     Example:
         from .middleware.integration_example import setup_auth_middleware
-        
+
         def create_app() -> FastAPI:
             app = FastAPI(...)
-            
+
             # Add other middleware first (CORS, etc.)
-            
+
             # Add auth middleware (should be one of the last middleware added)
             setup_auth_middleware(app)
-            
+
             return app
     """
     # Define paths that don't require authentication
     exclude_paths = [
         "/docs",
-        "/redoc", 
+        "/redoc",
         "/openapi.json",
         "/health",
         "/api/v1/auth/login",
@@ -52,9 +55,10 @@ def setup_auth_middleware(app: FastAPI) -> None:
         "/api/v1/auth/forgot-password",
         "/api/v1/auth/reset-password",
     ]
-    
+
     # Add authentication middleware
-    app.add_middleware(AuthMiddleware, exclude_paths=exclude_paths)
+    middleware_instance = AuthMiddleware(app, exclude_paths=exclude_paths)
+    app.middleware("http")(middleware_instance.dispatch)
 
 
 # Example router demonstrating different access levels
@@ -62,92 +66,102 @@ example_router = APIRouter(prefix="/example", tags=["example"])
 
 
 @example_router.get("/public")
-async def public_endpoint():
+async def public_endpoint() -> dict[str, str]:
     """Public endpoint - no authentication required."""
     return {"message": "This is a public endpoint"}
 
 
 @example_router.get("/user")
-async def user_endpoint(current_user: dict = Depends(require_user)):
+async def user_endpoint(
+    current_user: UserDict = Depends(require_user),
+) -> dict[str, Any]:
     """User endpoint - requires any authenticated user."""
     return {
         "message": "Hello authenticated user",
         "user_id": current_user["user_id"],
-        "user_role": current_user["user_role"]
+        "user_role": current_user["user_role"],
     }
 
 
 @example_router.get("/admin")
-async def admin_endpoint(current_user: dict = Depends(require_admin)):
+async def admin_endpoint(
+    current_user: UserDict = Depends(require_admin),
+) -> dict[str, Any]:
     """Admin endpoint - requires admin role or higher."""
     return {
         "message": "Hello admin user",
         "user_id": current_user["user_id"],
-        "user_role": current_user["user_role"]
+        "user_role": current_user["user_role"],
     }
 
 
 @example_router.get("/sysadmin")
-async def sysadmin_endpoint(current_user: dict = Depends(require_sysadmin)):
+async def sysadmin_endpoint(
+    current_user: UserDict = Depends(require_sysadmin),
+) -> dict[str, Any]:
     """Sysadmin endpoint - requires sysadmin role."""
     return {
         "message": "Hello system administrator",
-        "user_id": current_user["user_id"], 
-        "user_role": current_user["user_role"]
+        "user_id": current_user["user_id"],
+        "user_role": current_user["user_role"],
     }
 
 
 @example_router.get("/client-management/read")
 async def client_management_read(
-    current_user: dict = Depends(require_agent_permission(AgentName.CLIENT_MANAGEMENT, "read"))
-):
+    current_user: UserDict = Depends(
+        require_agent_permission(AgentName.CLIENT_MANAGEMENT, "read")
+    ),
+) -> dict[str, Any]:
     """Client management read endpoint - requires specific agent permission."""
     return {
         "message": "Client management data",
         "user_id": current_user["user_id"],
-        "permission": "client_management.read"
+        "permission": "client_management.read",
     }
 
 
 @example_router.post("/client-management/create")
 async def client_management_create(
-    current_user: dict = Depends(require_agent_permission(AgentName.CLIENT_MANAGEMENT, "create"))
-):
+    current_user: UserDict = Depends(
+        require_agent_permission(AgentName.CLIENT_MANAGEMENT, "create")
+    ),
+) -> dict[str, Any]:
     """Client management create endpoint - requires create permission."""
     return {
         "message": "Client created successfully",
         "user_id": current_user["user_id"],
-        "permission": "client_management.create"
+        "permission": "client_management.create",
     }
 
 
 @example_router.get("/session-info")
-async def get_session_info(current_user: dict = Depends(get_current_user)):
+async def get_session_info(
+    current_user: UserDict = Depends(get_current_user),
+) -> dict[str, Any]:
     """Get current user session information."""
     user_id = current_user["user_id"]
     session_info = await get_user_session_info(user_id)
-    
-    return {
-        "user_id": user_id,
-        "session_info": session_info
-    }
+
+    return {"user_id": user_id, "session_info": session_info}
 
 
 @example_router.post("/logout-other-sessions")
-async def logout_other_sessions(current_user: dict = Depends(get_current_user)):
+async def logout_other_sessions(
+    current_user: UserDict = Depends(get_current_user),
+) -> dict[str, Any]:
     """Logout user from all sessions except current."""
     user_id = current_user["user_id"]
     current_token = current_user["token"]
-    
+
     invalidated_count = await invalidate_user_sessions(
-        user_id=user_id, 
-        keep_current_token=current_token
+        user_id=user_id, keep_current_token=current_token
     )
-    
+
     return {
         "message": f"Logged out from {invalidated_count} other sessions",
         "user_id": user_id,
-        "invalidated_sessions": invalidated_count
+        "invalidated_sessions": invalidated_count,
     }
 
 
@@ -155,68 +169,80 @@ async def logout_other_sessions(current_user: dict = Depends(get_current_user)):
 def setup_auth_error_handlers(app: FastAPI) -> None:
     """
     Setup custom error handlers for authentication/authorization errors.
-    
+
     Add this to your main.py create_app() function after creating the FastAPI app.
     """
-    
+
     @app.exception_handler(401)
-    async def auth_exception_handler(request, exc):
+    async def auth_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         """Handle authentication errors."""
         return JSONResponse(
             status_code=401,
             content={
                 "error": "Authentication required",
                 "message": "Please provide a valid access token",
-                "type": "authentication_error"
+                "type": "authentication_error",
             },
-            headers={"WWW-Authenticate": "Bearer"}
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     @app.exception_handler(403)
-    async def authorization_exception_handler(request, exc):
-        """Handle authorization errors.""" 
+    async def authorization_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
+        """Handle authorization errors."""
         return JSONResponse(
             status_code=403,
             content={
-                "error": "Access forbidden", 
+                "error": "Access forbidden",
                 "message": "Insufficient permissions for this operation",
-                "type": "authorization_error"
-            }
+                "type": "authorization_error",
+            },
         )
 
 
 # Route dependency examples for common patterns
-def create_protected_routes():
+def create_protected_routes() -> None:
     """
     Examples of different route protection patterns.
-    
+
     Use these patterns in your actual route definitions.
     """
-    
+
     # Pattern 1: Basic authentication required
     @example_router.get("/pattern1")
-    async def basic_auth_required(current_user: dict = Depends(get_current_user)):
+    async def basic_auth_required(
+        current_user: UserDict = Depends(get_current_user),
+    ) -> dict[str, Any]:
         return {"authenticated": True, "user": current_user}
-    
+
     # Pattern 2: Role-based access with custom validation
     @example_router.get("/pattern2")
-    async def custom_role_validation(current_user: dict = Depends(get_current_user)):
+    async def custom_role_validation(
+        current_user: UserDict = Depends(get_current_user),
+    ) -> JSONResponse | dict[str, str]:
         # Custom validation logic can be added here
         if current_user["user_role"] not in ["admin", "sysadmin"]:
-            return JSONResponse(status_code=403, content={"error": "Admin access required"})
+            return JSONResponse(
+                status_code=403, content={"error": "Admin access required"}
+            )
         return {"message": "Admin access granted"}
-    
+
     # Pattern 3: Agent permission with operation validation
     @example_router.get("/pattern3")
     async def agent_permission_with_validation(
-        current_user: dict = Depends(require_agent_permission(AgentName.PDF_PROCESSING, "read"))
-    ):
+        current_user: UserDict = Depends(
+            require_agent_permission(AgentName.PDF_PROCESSING, "read")
+        ),
+    ) -> dict[str, str]:
         # Additional business logic validation
         return {"message": "PDF processing access granted"}
-    
+
     # Pattern 4: Optional authentication (for mixed public/private content)
     @example_router.get("/pattern4")
-    async def optional_authentication(current_user: dict = Depends(get_current_user)):
+    async def optional_authentication(
+        current_user: UserDict = Depends(get_current_user),
+    ) -> dict[str, Any]:
         # This endpoint works with or without authentication
         if current_user:
             return {"message": "Hello authenticated user", "user": current_user}
@@ -233,20 +259,20 @@ Integration checklist for adding auth middleware to your FastAPI app:
 2. Add to your create_app() function:
    def create_app() -> FastAPI:
        app = FastAPI(...)
-       
+
        # Add CORS and other middleware first
-       
+
        # Add authentication middleware (near the end)
        setup_auth_middleware(app)
-       
+
        # Add error handlers
        setup_auth_error_handlers(app)
-       
+
        return app
 
 3. Use dependencies in your routes:
    from ..middleware.auth import require_user, require_admin, require_sysadmin
-   
+
    @router.get("/protected")
    async def protected_route(current_user: dict = Depends(require_user)):
        return {"user": current_user}
@@ -254,7 +280,7 @@ Integration checklist for adding auth middleware to your FastAPI app:
 4. For agent-specific permissions:
    from ..middleware.auth import require_agent_permission
    from ..models.permission import AgentName
-   
+
    @router.get("/client-data")
    async def get_client_data(
        current_user: dict = Depends(require_agent_permission(AgentName.CLIENT_MANAGEMENT, "read"))
@@ -263,6 +289,6 @@ Integration checklist for adding auth middleware to your FastAPI app:
 
 5. Session management:
    from ..middleware.auth import get_user_session_info, invalidate_user_sessions
-   
+
    # Use these functions to manage user sessions programmatically
 """

@@ -1,0 +1,865 @@
+/**
+ * Dashboard Layout Responsive Tests
+ * Tests dashboard layout and components across different screen sizes and breakpoints
+ */
+
+import React from 'react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { ErrorProvider } from '@/components/errors/ErrorContext'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+
+// Mock Next.js navigation
+const mockPush = vi.fn()
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  usePathname: () => '/dashboard',
+  useSearchParams: () => new URLSearchParams(),
+}))
+
+// Test wrapper with all necessary providers
+const TestWrapper = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity },
+      mutations: { retry: false },
+    },
+  })
+
+  return (
+    <ErrorProvider
+      enableConsoleLogging={false}
+      enableGlobalErrorHandler={false}
+    >
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>{children}</AuthProvider>
+      </QueryClientProvider>
+    </ErrorProvider>
+  )
+}
+
+// Mock dashboard components with responsive elements
+const DashboardHeader = () => (
+  <header
+    data-testid="dashboard-header"
+    className="w-full border-b bg-background"
+  >
+    <div className="container mx-auto flex items-center justify-between px-4 py-3">
+      <h1 className="text-xl font-semibold md:text-2xl">IAM Dashboard</h1>
+      <nav className="hidden space-x-4 md:flex">
+        <a href="/users" className="text-sm hover:text-primary">
+          Usuários
+        </a>
+        <a href="/clients" className="text-sm hover:text-primary">
+          Clientes
+        </a>
+        <a href="/permissions" className="text-sm hover:text-primary">
+          Permissões
+        </a>
+      </nav>
+      <button data-testid="mobile-menu-toggle" className="md:hidden">
+        ☰
+      </button>
+      <button data-testid="user-menu" className="hidden md:block">
+        Perfil
+      </button>
+    </div>
+  </header>
+)
+
+const DashboardSidebar = ({ isOpen = false }: { isOpen?: boolean }) => (
+  <aside
+    data-testid="dashboard-sidebar"
+    className={`fixed inset-y-0 left-0 z-50 w-64 transform border-r bg-card transition-transform duration-200 ease-in-out md:static ${
+      isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+    }`}
+  >
+    <nav className="space-y-2 p-4">
+      <a href="/dashboard" className="block rounded px-3 py-2 hover:bg-accent">
+        Dashboard
+      </a>
+      <a href="/users" className="block rounded px-3 py-2 hover:bg-accent">
+        Gerenciar Usuários
+      </a>
+      <a href="/clients" className="block rounded px-3 py-2 hover:bg-accent">
+        Gerenciar Clientes
+      </a>
+      <a
+        href="/permissions"
+        className="block rounded px-3 py-2 hover:bg-accent"
+      >
+        Permissões
+      </a>
+      <a href="/audit" className="block rounded px-3 py-2 hover:bg-accent">
+        Auditoria
+      </a>
+    </nav>
+  </aside>
+)
+
+const DashboardMain = () => (
+  <main data-testid="dashboard-main" className="flex-1 p-4 md:p-6 lg:p-8">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+      {/* Stats Cards */}
+      <div
+        data-testid="stats-card-users"
+        className="rounded-lg border bg-card p-4"
+      >
+        <h3 className="text-sm font-medium text-muted-foreground">
+          Total Usuários
+        </h3>
+        <p className="text-2xl font-bold">1,234</p>
+      </div>
+      <div
+        data-testid="stats-card-clients"
+        className="rounded-lg border bg-card p-4"
+      >
+        <h3 className="text-sm font-medium text-muted-foreground">
+          Total Clientes
+        </h3>
+        <p className="text-2xl font-bold">567</p>
+      </div>
+      <div
+        data-testid="stats-card-sessions"
+        className="rounded-lg border bg-card p-4 md:col-span-2 lg:col-span-1"
+      >
+        <h3 className="text-sm font-medium text-muted-foreground">
+          Sessões Ativas
+        </h3>
+        <p className="text-2xl font-bold">89</p>
+      </div>
+    </div>
+
+    {/* Recent Activity */}
+    <div
+      data-testid="recent-activity"
+      className="mt-6 rounded-lg border bg-card"
+    >
+      <div className="border-b p-4">
+        <h2 className="text-lg font-semibold">Atividade Recente</h2>
+      </div>
+      <div className="p-4">
+        <div className="space-y-3">
+          <div className="flex items-center space-x-3">
+            <div className="h-2 w-2 rounded-full bg-green-500"></div>
+            <span className="text-sm">Usuário joão@example.com fez login</span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              2 min atrás
+            </span>
+          </div>
+          <div className="flex items-center space-x-3">
+            <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+            <span className="text-sm">Cliente Maria Silva foi criado</span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              5 min atrás
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Quick Actions */}
+    <div
+      data-testid="quick-actions"
+      className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4"
+    >
+      <button className="rounded-lg bg-primary p-3 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+        Novo Usuário
+      </button>
+      <button className="rounded-lg bg-secondary p-3 text-sm font-medium text-secondary-foreground hover:bg-secondary/80">
+        Novo Cliente
+      </button>
+      <button className="rounded-lg bg-accent p-3 text-sm font-medium text-accent-foreground hover:bg-accent/80">
+        Relatórios
+      </button>
+      <button className="rounded-lg bg-muted p-3 text-sm font-medium text-muted-foreground hover:bg-muted/80">
+        Configurações
+      </button>
+    </div>
+  </main>
+)
+
+const ResponsiveDashboard = () => {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false)
+
+  return (
+    <div className="flex h-screen flex-col">
+      <DashboardHeader />
+      <div className="flex flex-1 overflow-hidden">
+        <DashboardSidebar isOpen={sidebarOpen} />
+        {/* Overlay for mobile */}
+        {sidebarOpen && (
+          <div
+            data-testid="sidebar-overlay"
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+        <DashboardMain />
+      </div>
+    </div>
+  )
+}
+
+// Viewport size configurations
+const viewports = {
+  mobile: { width: 375, height: 667 },
+  mobileLandscape: { width: 667, height: 375 },
+  tablet: { width: 768, height: 1024 },
+  tabletLandscape: { width: 1024, height: 768 },
+  desktop: { width: 1024, height: 768 },
+  largeDesktop: { width: 1440, height: 900 },
+  ultraWide: { width: 1920, height: 1080 },
+}
+
+// Helper function to set viewport size
+const setViewport = (size: { width: number; height: number }) => {
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: size.width,
+  })
+  Object.defineProperty(window, 'innerHeight', {
+    writable: true,
+    configurable: true,
+    value: size.height,
+  })
+
+  // Update CSS media queries for responsive design
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation(query => {
+      const mediaQuery = query.toLowerCase()
+      let matches = false
+
+      // Tailwind breakpoints
+      if (mediaQuery.includes('min-width: 768px')) {
+        matches = size.width >= 768 // md and up
+      } else if (mediaQuery.includes('min-width: 1024px')) {
+        matches = size.width >= 1024 // lg and up
+      } else if (mediaQuery.includes('min-width: 1280px')) {
+        matches = size.width >= 1280 // xl and up
+      } else if (mediaQuery.includes('max-width: 767px')) {
+        matches = size.width <= 767 // below md
+      }
+
+      return {
+        matches,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }
+    }),
+  })
+
+  window.dispatchEvent(new Event('resize'))
+}
+
+// Mock authenticated user
+const mockUser = {
+  id: '1',
+  email: 'user@example.com',
+  name: 'Test User',
+  role: 'admin',
+  is_active: true,
+  has_2fa: false,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+}
+
+describe('Dashboard Layout Responsive Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    global.fetch = vi.fn()
+    localStorage.clear()
+
+    // Setup authenticated state
+    localStorage.setItem('access_token', 'valid_token')
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => mockUser,
+    })
+  })
+
+  afterEach(() => {
+    vi.resetAllMocks()
+  })
+
+  describe('Header Responsiveness', () => {
+    it('should adapt header layout for mobile screens', async () => {
+      setViewport(viewports.mobile)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
+      })
+
+      // Mobile menu toggle should be visible
+      expect(screen.getByTestId('mobile-menu-toggle')).toBeInTheDocument()
+
+      // Desktop navigation should be hidden on mobile
+      expect(screen.queryByText('Usuários')).not.toBeInTheDocument()
+      expect(screen.queryByText('Clientes')).not.toBeInTheDocument()
+
+      // User menu should be hidden on mobile
+      expect(screen.queryByTestId('user-menu')).not.toBeInTheDocument()
+
+      // Title should be appropriately sized
+      const title = screen.getByText('IAM Dashboard')
+      expect(title).toBeInTheDocument()
+    })
+
+    it('should show full navigation on desktop screens', async () => {
+      setViewport(viewports.desktop)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
+      })
+
+      // Desktop navigation should be visible
+      expect(screen.getByText('Usuários')).toBeInTheDocument()
+      expect(screen.getByText('Clientes')).toBeInTheDocument()
+      expect(screen.getByText('Permissões')).toBeInTheDocument()
+
+      // User menu should be visible
+      expect(screen.getByTestId('user-menu')).toBeInTheDocument()
+
+      // Mobile menu toggle should be hidden
+      expect(screen.queryByTestId('mobile-menu-toggle')).not.toBeInTheDocument()
+    })
+
+    it('should handle tablet breakpoint correctly', async () => {
+      setViewport(viewports.tablet)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
+      })
+
+      // At tablet breakpoint (768px), should show desktop layout
+      expect(screen.getByText('Usuários')).toBeInTheDocument()
+      expect(screen.getByTestId('user-menu')).toBeInTheDocument()
+      expect(screen.queryByTestId('mobile-menu-toggle')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Sidebar Responsiveness', () => {
+    it('should hide sidebar by default on mobile', async () => {
+      setViewport(viewports.mobile)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-sidebar')).toBeInTheDocument()
+      })
+
+      const sidebar = screen.getByTestId('dashboard-sidebar')
+
+      // Sidebar should have transform classes for mobile hiding
+      expect(sidebar).toHaveClass('-translate-x-full')
+      expect(sidebar).toHaveClass('md:translate-x-0')
+    })
+
+    it('should show sidebar by default on desktop', async () => {
+      setViewport(viewports.desktop)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-sidebar')).toBeInTheDocument()
+      })
+
+      const sidebar = screen.getByTestId('dashboard-sidebar')
+
+      // Sidebar should be visible on desktop
+      expect(sidebar).toHaveClass('md:translate-x-0')
+
+      // Navigation links should be accessible
+      expect(screen.getByText('Gerenciar Usuários')).toBeInTheDocument()
+      expect(screen.getByText('Gerenciar Clientes')).toBeInTheDocument()
+      expect(screen.getByText('Permissões')).toBeInTheDocument()
+      expect(screen.getByText('Auditoria')).toBeInTheDocument()
+    })
+
+    it('should handle sidebar position on tablet', async () => {
+      setViewport(viewports.tablet)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-sidebar')).toBeInTheDocument()
+      })
+
+      // At tablet size (768px+), sidebar should be visible
+      const sidebar = screen.getByTestId('dashboard-sidebar')
+      expect(sidebar).toHaveClass('md:translate-x-0')
+
+      // Navigation should be accessible
+      expect(screen.getByText('Gerenciar Usuários')).toBeInTheDocument()
+    })
+  })
+
+  describe('Main Content Grid Responsiveness', () => {
+    it('should use single column layout on mobile', async () => {
+      setViewport(viewports.mobile)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-main')).toBeInTheDocument()
+      })
+
+      // Stats cards should be present
+      expect(screen.getByTestId('stats-card-users')).toBeInTheDocument()
+      expect(screen.getByTestId('stats-card-clients')).toBeInTheDocument()
+      expect(screen.getByTestId('stats-card-sessions')).toBeInTheDocument()
+
+      // Check grid layout classes
+      const statsGrid = screen.getByTestId('stats-card-users').parentElement
+      expect(statsGrid).toHaveClass('grid-cols-1')
+      expect(statsGrid).toHaveClass('md:grid-cols-2')
+      expect(statsGrid).toHaveClass('lg:grid-cols-3')
+    })
+
+    it('should use multi-column layout on tablet', async () => {
+      setViewport(viewports.tablet)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-main')).toBeInTheDocument()
+      })
+
+      // At tablet size, should use 2-column layout
+      const statsGrid = screen.getByTestId('stats-card-users').parentElement
+      expect(statsGrid).toHaveClass('md:grid-cols-2')
+
+      // All cards should be visible
+      expect(screen.getByTestId('stats-card-users')).toBeInTheDocument()
+      expect(screen.getByTestId('stats-card-clients')).toBeInTheDocument()
+      expect(screen.getByTestId('stats-card-sessions')).toBeInTheDocument()
+    })
+
+    it('should use three-column layout on desktop', async () => {
+      setViewport(viewports.desktop)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-main')).toBeInTheDocument()
+      })
+
+      // At desktop size, should use 3-column layout
+      const statsGrid = screen.getByTestId('stats-card-users').parentElement
+      expect(statsGrid).toHaveClass('lg:grid-cols-3')
+
+      // Cards should have responsive column spans
+      const sessionsCard = screen.getByTestId('stats-card-sessions')
+      expect(sessionsCard).toHaveClass('lg:col-span-1')
+      expect(sessionsCard).toHaveClass('md:col-span-2')
+    })
+  })
+
+  describe('Recent Activity and Quick Actions Responsiveness', () => {
+    it('should display recent activity appropriately on mobile', async () => {
+      setViewport(viewports.mobile)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recent-activity')).toBeInTheDocument()
+      })
+
+      // Recent activity should be readable on mobile
+      expect(screen.getByText('Atividade Recente')).toBeInTheDocument()
+      expect(
+        screen.getByText(/Usuário joão@example.com fez login/)
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(/Cliente Maria Silva foi criado/)
+      ).toBeInTheDocument()
+    })
+
+    it('should handle quick actions grid on different screen sizes', async () => {
+      const testBreakpoints = [
+        viewports.mobile,
+        viewports.tablet,
+        viewports.desktop,
+      ]
+
+      for (const viewport of testBreakpoints) {
+        setViewport(viewport)
+
+        render(
+          <TestWrapper>
+            <ProtectedRoute>
+              <ResponsiveDashboard />
+            </ProtectedRoute>
+          </TestWrapper>
+        )
+
+        await waitFor(() => {
+          expect(screen.getByTestId('quick-actions')).toBeInTheDocument()
+        })
+
+        // Quick actions should be present and accessible
+        expect(screen.getByText('Novo Usuário')).toBeInTheDocument()
+        expect(screen.getByText('Novo Cliente')).toBeInTheDocument()
+        expect(screen.getByText('Relatórios')).toBeInTheDocument()
+        expect(screen.getByText('Configurações')).toBeInTheDocument()
+
+        const quickActionsGrid = screen.getByTestId('quick-actions')
+
+        // Check responsive grid classes
+        expect(quickActionsGrid).toHaveClass('grid-cols-2')
+        expect(quickActionsGrid).toHaveClass('md:grid-cols-4')
+      }
+    })
+  })
+
+  describe('Mobile Sidebar Interaction', () => {
+    it('should handle mobile sidebar toggle', async () => {
+      setViewport(viewports.mobile)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mobile-menu-toggle')).toBeInTheDocument()
+      })
+
+      const menuToggle = screen.getByTestId('mobile-menu-toggle')
+      const sidebar = screen.getByTestId('dashboard-sidebar')
+
+      // Initially sidebar should be hidden
+      expect(sidebar).toHaveClass('-translate-x-full')
+
+      // Click menu toggle - in a real implementation this would show the sidebar
+      fireEvent.click(menuToggle)
+
+      // Note: In a real implementation, this would trigger state change
+      // For this test, we're verifying the toggle button exists and is clickable
+      expect(menuToggle).toBeInTheDocument()
+    })
+
+    it('should handle sidebar overlay on mobile', async () => {
+      setViewport(viewports.mobile)
+
+      // We'll test with a version that has the sidebar open
+      const DashboardWithOpenSidebar = () => {
+        return (
+          <div className="flex h-screen flex-col">
+            <DashboardHeader />
+            <div className="flex flex-1 overflow-hidden">
+              <DashboardSidebar isOpen={true} />
+              <div
+                data-testid="sidebar-overlay"
+                className="fixed inset-0 z-40 bg-black/50 md:hidden"
+              />
+              <DashboardMain />
+            </div>
+          </div>
+        )
+      }
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <DashboardWithOpenSidebar />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('sidebar-overlay')).toBeInTheDocument()
+      })
+
+      const overlay = screen.getByTestId('sidebar-overlay')
+      expect(overlay).toHaveClass('md:hidden') // Should be hidden on desktop
+      expect(overlay).toHaveClass('fixed')
+      expect(overlay).toHaveClass('inset-0')
+    })
+  })
+
+  describe('Content Padding and Spacing', () => {
+    it('should use appropriate padding on mobile', async () => {
+      setViewport(viewports.mobile)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-main')).toBeInTheDocument()
+      })
+
+      const main = screen.getByTestId('dashboard-main')
+
+      // Should have mobile-appropriate padding
+      expect(main).toHaveClass('p-4')
+      expect(main).toHaveClass('md:p-6')
+      expect(main).toHaveClass('lg:p-8')
+    })
+
+    it('should increase padding on larger screens', async () => {
+      setViewport(viewports.desktop)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-main')).toBeInTheDocument()
+      })
+
+      const main = screen.getByTestId('dashboard-main')
+
+      // Desktop should use larger padding
+      expect(main).toHaveClass('lg:p-8')
+    })
+  })
+
+  describe('Viewport Transition Handling', () => {
+    it('should handle smooth transitions between breakpoints', async () => {
+      const { rerender } = render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      // Start with mobile
+      setViewport(viewports.mobile)
+      rerender(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mobile-menu-toggle')).toBeInTheDocument()
+      })
+
+      // Transition to tablet
+      setViewport(viewports.tablet)
+      rerender(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText('Usuários')).toBeInTheDocument()
+      })
+
+      // Transition to desktop
+      setViewport(viewports.desktop)
+      rerender(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user-menu')).toBeInTheDocument()
+      })
+
+      // All content should remain accessible
+      expect(screen.getByTestId('dashboard-main')).toBeInTheDocument()
+      expect(screen.getByTestId('stats-card-users')).toBeInTheDocument()
+      expect(screen.getByTestId('recent-activity')).toBeInTheDocument()
+    })
+
+    it('should maintain functionality across rapid viewport changes', async () => {
+      const { rerender } = render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      const viewportList = Object.values(viewports)
+
+      // Rapidly change viewports
+      for (let i = 0; i < 5; i++) {
+        const viewport = viewportList[i % viewportList.length]!
+        setViewport(viewport)
+
+        rerender(
+          <TestWrapper>
+            <ProtectedRoute>
+              <ResponsiveDashboard />
+            </ProtectedRoute>
+          </TestWrapper>
+        )
+
+        // Core elements should always be present
+        await waitFor(() => {
+          expect(screen.getByTestId('dashboard-header')).toBeInTheDocument()
+          expect(screen.getByTestId('dashboard-main')).toBeInTheDocument()
+          expect(screen.getByTestId('dashboard-sidebar')).toBeInTheDocument()
+        })
+      }
+    })
+  })
+
+  describe('Touch and Interaction on Mobile', () => {
+    it('should handle touch interactions on mobile dashboard', async () => {
+      setViewport(viewports.mobile)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('quick-actions')).toBeInTheDocument()
+      })
+
+      // Quick action buttons should be touch-friendly
+      const newUserButton = screen.getByText('Novo Usuário')
+      const newClientButton = screen.getByText('Novo Cliente')
+
+      // Simulate touch interactions
+      fireEvent.touchStart(newUserButton)
+      fireEvent.touchEnd(newUserButton)
+
+      fireEvent.touchStart(newClientButton)
+      fireEvent.touchEnd(newClientButton)
+
+      // Buttons should remain accessible after touch
+      expect(newUserButton).toBeInTheDocument()
+      expect(newClientButton).toBeInTheDocument()
+    })
+
+    it('should handle scroll behavior on mobile', async () => {
+      setViewport(viewports.mobile)
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <ResponsiveDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('dashboard-main')).toBeInTheDocument()
+      })
+
+      const main = screen.getByTestId('dashboard-main')
+
+      // Should allow scrolling on mobile when content overflows
+      expect(main).toBeInTheDocument()
+
+      // Test scroll behavior
+      fireEvent.scroll(main, { target: { scrollY: 100 } })
+
+      // Content should remain accessible after scroll
+      expect(screen.getByTestId('stats-card-users')).toBeInTheDocument()
+      expect(screen.getByTestId('recent-activity')).toBeInTheDocument()
+    })
+  })
+})

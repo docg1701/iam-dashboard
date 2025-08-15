@@ -2,7 +2,7 @@
  * Secure token storage implementation
  * Production: httpOnly cookies with secure flags
  * Development: encrypted localStorage with AES encryption
- * 
+ *
  * Based on Story 1.3 security requirements
  */
 
@@ -43,7 +43,6 @@ class DevEncryption {
 
       return btoa(String.fromCharCode(...encrypted))
     } catch (error) {
-      console.error('Encryption error:', error)
       return data // Fallback to unencrypted
     }
   }
@@ -52,7 +51,9 @@ class DevEncryption {
     try {
       const keyBytes = new TextEncoder().encode(this.key)
       const encryptedBytes = new Uint8Array(
-        atob(encryptedData).split('').map(char => char.charCodeAt(0))
+        atob(encryptedData)
+          .split('')
+          .map(char => char.charCodeAt(0))
       )
       const decrypted = new Uint8Array(encryptedBytes.length)
 
@@ -62,7 +63,6 @@ class DevEncryption {
 
       return new TextDecoder().decode(decrypted)
     } catch (error) {
-      console.error('Decryption error:', error)
       return encryptedData // Fallback
     }
   }
@@ -73,7 +73,7 @@ class ProductionTokenStorage implements TokenStorage {
     // In production, tokens are stored in httpOnly cookies
     // This would be handled by the server-side cookie parsing
     // For now, we'll use a fallback approach
-    
+
     try {
       // Check if we have access token info in a secure way
       // This is just a placeholder - actual production implementation
@@ -89,7 +89,6 @@ class ProductionTokenStorage implements TokenStorage {
 
       return null
     } catch (error) {
-      console.error('Error reading tokens from cookies:', error)
       return null
     }
   }
@@ -98,25 +97,26 @@ class ProductionTokenStorage implements TokenStorage {
     // In production, this would be handled by server-side cookie setting
     // with httpOnly, secure, and sameSite flags
     // This is just a placeholder implementation
-    
-    const tokenInfo = encodeURIComponent(JSON.stringify({
-      token_type: tokens.token_type,
-      expires_in: tokens.expires_in
-    }))
+
+    const tokenInfo = encodeURIComponent(
+      JSON.stringify({
+        token_type: tokens.token_type,
+        expires_in: tokens.expires_in,
+      })
+    )
 
     // Set non-sensitive token info
     document.cookie = `token_info=${tokenInfo}; Secure; SameSite=Strict; Path=/`
-    
+
     // The actual tokens would be set by the server as httpOnly cookies
-    console.info('Tokens would be set as httpOnly cookies in production')
   }
 
   removeTokens(): void {
     // Remove token info cookie
-    document.cookie = 'token_info=; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/'
-    
+    document.cookie =
+      'token_info=; expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/'
+
     // In production, this would make a request to server to clear httpOnly cookies
-    console.info('httpOnly cookies would be cleared via server endpoint in production')
   }
 
   isTokenExpired(token: string): boolean {
@@ -129,7 +129,6 @@ class ProductionTokenStorage implements TokenStorage {
       const currentTime = Math.floor(Date.now() / 1000)
       return payload.exp <= currentTime
     } catch (error) {
-      console.error('Error parsing token:', error)
       return true // Assume expired if we can't parse
     }
   }
@@ -153,7 +152,6 @@ class DevelopmentTokenStorage implements TokenStorage {
       const decryptedData = this.encryption.decrypt(encryptedData)
       return JSON.parse(decryptedData)
     } catch (error) {
-      console.error('Error reading tokens from localStorage:', error)
       this.removeTokens() // Clear corrupted data
       return null
     }
@@ -165,7 +163,6 @@ class DevelopmentTokenStorage implements TokenStorage {
       const encryptedData = this.encryption.encrypt(tokenData)
       localStorage.setItem(this.storageKey, encryptedData)
     } catch (error) {
-      console.error('Error storing tokens in localStorage:', error)
       throw new Error('Failed to store authentication tokens')
     }
   }
@@ -174,7 +171,7 @@ class DevelopmentTokenStorage implements TokenStorage {
     try {
       localStorage.removeItem(this.storageKey)
     } catch (error) {
-      console.error('Error removing tokens from localStorage:', error)
+      // Silently handle removal errors
     }
   }
 
@@ -187,9 +184,8 @@ class DevelopmentTokenStorage implements TokenStorage {
       const payload = JSON.parse(atob(tokenParts[1]!))
       const currentTime = Math.floor(Date.now() / 1000)
       // Add 5 minute buffer for token refresh
-      return payload.exp <= (currentTime + 300)
+      return payload.exp <= currentTime + 300
     } catch (error) {
-      console.error('Error parsing token:', error)
       return true // Assume expired if we can't parse
     }
   }
@@ -198,7 +194,7 @@ class DevelopmentTokenStorage implements TokenStorage {
 // Factory function to get appropriate storage based on environment
 export function createTokenStorage(): TokenStorage {
   const isProduction = process.env.NODE_ENV === 'production'
-  
+
   if (isProduction) {
     return new ProductionTokenStorage()
   } else {

@@ -89,9 +89,55 @@ export interface TokenStorage {
   isTokenExpired(token: string): boolean
 }
 
-export type AuthAction = 
+export interface SessionInfo {
+  id: string
+  user_id: string
+  device_info?: string
+  ip_address?: string
+  user_agent?: string
+  last_activity: string
+  created_at: string
+  is_current?: boolean
+}
+
+export interface ErrorContext {
+  errorId?: string
+  message: string
+  stack?: string
+  componentStack?: string | null
+  url?: string
+  userAgent?: string
+  timestamp: string
+  userId?: string | null
+  sessionId?: string
+  buildVersion?: string
+  environment?: string
+}
+
+export interface HttpError {
+  message: string
+  response?: {
+    status: number
+    statusText: string
+    data?: {
+      detail?: string
+      message?: string
+      errors?: Array<{
+        field: string
+        message: string
+      }>
+    }
+  }
+  name?: string
+  code?: string
+}
+
+export type AuthAction =
   | { type: 'AUTH_START' }
-  | { type: 'AUTH_SUCCESS'; payload: { user: User; permissions: UserPermission[]; tokens: AuthTokens } }
+  | {
+      type: 'AUTH_SUCCESS'
+      payload: { user: User; permissions: UserPermission[]; tokens: AuthTokens }
+    }
   | { type: 'AUTH_FAILURE'; payload: { error: string } }
   | { type: 'AUTH_LOGOUT' }
   | { type: 'REFRESH_SUCCESS'; payload: { tokens: AuthTokens } }

@@ -53,7 +53,7 @@
   * {
     @apply border-border;
   }
-  
+
   body {
     @apply bg-background text-foreground;
   }
@@ -63,15 +63,15 @@
   .animate-fade-in {
     animation: fade-in 0.15s ease-out;
   }
-  
+
   .animate-fade-out {
     animation: fade-out 0.15s ease-out;
   }
-  
+
   .animate-slide-in {
     animation: slide-in 0.2s ease-out;
   }
-  
+
   .animate-slide-out {
     animation: slide-out 0.2s ease-out;
   }
@@ -88,7 +88,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-border rounded-md;
+  @apply rounded-md bg-border;
 }
 
 ::-webkit-scrollbar-thumb:hover {

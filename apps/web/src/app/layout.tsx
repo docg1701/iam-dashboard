@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+
 import { cn } from '@/utils/cn'
+
 import { Providers } from './providers'
 import '@/styles/globals.css'
 
@@ -12,7 +14,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'Dashboard IAM - Gerenciamento de Permissões',
-  description: 'Sistema revolucionário de gerenciamento de permissões com arquitetura multi-agente',
+  description:
+    'Sistema revolucionário de gerenciamento de permissões com arquitetura multi-agente',
   keywords: ['IAM', 'dashboard', 'permissões', 'gerenciamento', 'multi-agente'],
   authors: [{ name: 'IAM Dashboard Team' }],
   creator: 'IAM Dashboard Team',
@@ -22,14 +25,17 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'
+  ),
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
     url: '/',
     siteName: 'Dashboard IAM',
     title: 'Dashboard IAM - Gerenciamento de Permissões',
-    description: 'Sistema revolucionário de gerenciamento de permissões com arquitetura multi-agente',
+    description:
+      'Sistema revolucionário de gerenciamento de permissões com arquitetura multi-agente',
     images: [
       {
         url: '/og-image.png',
@@ -42,7 +48,8 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Dashboard IAM - Gerenciamento de Permissões',
-    description: 'Sistema revolucionário de gerenciamento de permissões com arquitetura multi-agente',
+    description:
+      'Sistema revolucionário de gerenciamento de permissões com arquitetura multi-agente',
     images: ['/og-image.png'],
   },
   robots: {
@@ -63,9 +70,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={cn(inter.variable)} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
       </body>
     </html>
   )

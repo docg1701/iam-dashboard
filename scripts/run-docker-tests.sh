@@ -1,11 +1,71 @@
 #!/bin/bash
 
 # Docker Container Tests Runner
-# Generated: $(date)
 # Purpose: Test Docker containers, builds, and container orchestration
+# Profiles: complete (default), fast, build, integration, security
+# Usage: ./run-docker-tests.sh [profile]
 
 # Don't exit on error - we want to capture all Docker test results even if some fail
 # set -e  # REMOVED to continue execution on test failures
+
+# Show help if requested
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    echo "🐳 Docker Container Tests Runner"
+    echo ""
+    echo "Usage: $0 [profile]"
+    echo ""
+    echo "Available profiles:"
+    echo "  complete    (default) - All Docker tests: build, container, compose, security"
+    echo "  fast        - Essential tests only: config validation and quick health checks"
+    echo "  build       - Container builds only: backend and frontend image builds"
+    echo "  integration - Integration tests only: compose validation and stack readiness"
+    echo "  security    - Security tests only: container security scanning and validation"
+    echo ""
+    echo "Examples:"
+    echo "  $0                    # Run complete Docker test suite"
+    echo "  $0 fast              # Quick Docker environment validation"
+    echo "  $0 build             # Test container image builds only"
+    echo "  $0 integration       # Test Docker Compose and stack integration"
+    echo ""
+    echo "Environment Variables:"
+    echo "  DOCKER_AUTO_CLEANUP  Auto-cleanup test images (default: false)"
+    echo "  BUILD_TIMEOUT        Build timeout in seconds (default: 600)"
+    echo ""
+    echo "Results saved to: scripts/test-results/docker-*_TIMESTAMP.log"
+    exit 0
+fi
+
+# Configure test profile
+TEST_PROFILE="${1:-complete}"
+
+case "$TEST_PROFILE" in
+    fast)
+        SKIP_BUILDS=true
+        SKIP_SECURITY=true
+        SKIP_INTEGRATION_DEEP=true
+        ;;
+    build)
+        SKIP_INTEGRATION=true
+        SKIP_SECURITY=true
+        ;;
+    integration)
+        SKIP_BUILDS=true
+        SKIP_SECURITY=true
+        ;;
+    security)
+        SKIP_BUILDS=true
+        SKIP_INTEGRATION=true
+        ;;
+    complete|*)
+        # Run all tests
+        ;;
+esac
+
+# Set build timeout based on profile
+BUILD_TIMEOUT="${BUILD_TIMEOUT:-600}"
+if [[ "$TEST_PROFILE" == "fast" ]]; then
+    BUILD_TIMEOUT=120
+fi
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +75,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # Create results directory
 mkdir -p "${RESULTS_DIR}"
 
-echo "🐳 Starting Docker Container Tests - ${TIMESTAMP}"
+echo "🐳 Starting Docker Container Tests (Profile: ${TEST_PROFILE}) - ${TIMESTAMP}"
 echo "Results will be saved to: ${RESULTS_DIR}"
 
 # Navigate to project root
@@ -64,62 +124,80 @@ run_docker_test "dockerfile-check" "Docker configuration validation" \
 run_docker_test "compose-config" "Docker Compose configuration validation" \
     "docker compose config"
 
-echo "🏗️ Testing Docker Image Builds..."
+# Container Build Tests (skipped for integration and security profiles)
+if [[ "${SKIP_BUILDS}" != "true" ]]; then
+    echo "🏗️ Testing Docker Image Builds..."
 
-# Backend Docker build test - simplified
-run_docker_test "backend-build" "Backend Docker build test" \
-    "timeout 600s docker build -f deployment/docker/Dockerfile.backend -t iam-backend:test ."
+    # Backend Docker build test - using dynamic timeout
+    run_docker_test "backend-build" "Backend Docker build test" \
+        "timeout ${BUILD_TIMEOUT}s docker build -f apps/api/Dockerfile -t iam-backend:test apps/api/"
 
-# Frontend Docker build test - simplified  
-run_docker_test "frontend-build" "Frontend Docker build test" \
-    "timeout 600s docker build -f deployment/docker/Dockerfile.frontend -t iam-frontend:test ."
+    # Frontend Docker build test - using dynamic timeout
+    run_docker_test "frontend-build" "Frontend Docker build test" \
+        "timeout ${BUILD_TIMEOUT}s docker build -f apps/web/Dockerfile -t iam-frontend:test apps/web/"
 
-echo "🚀 Testing Container Quick Start..."
+    echo "🚀 Testing Container Quick Start..."
 
-# Backend container validation - simplified
-run_docker_test "backend-container" "Backend container validation" \
-    "docker run --rm iam-backend:test echo 'Backend container runs successfully'"
+    # Backend container validation - simplified
+    run_docker_test "backend-container" "Backend container validation" \
+        "docker run --rm iam-backend:test echo 'Backend container runs successfully'"
 
-# Frontend container validation - simplified
-run_docker_test "frontend-container" "Frontend container validation" \
-    "docker run --rm iam-frontend:test echo 'Frontend container runs successfully'"
-
-echo "🔗 Testing Docker Compose Integration..."
-
-# Test docker compose services definition
-run_docker_test "compose-services" "Docker Compose services validation" \
-    "docker compose ps --services"
-
-# Quick compose build test (no full startup)
-run_docker_test "compose-build" "Docker Compose build validation" \
-    "timeout 120s docker compose build --parallel || docker compose config"
-
-echo "🗄️ Testing Database Container..."
-
-# Quick PostgreSQL container test
-run_docker_test "postgres-container" "PostgreSQL container quick test" \
-    "timeout 30s bash -c 'docker compose up -d postgres && sleep 10 && docker compose exec -T postgres pg_isready -U postgres -h localhost && docker compose stop postgres'"
-
-echo "🔒 Testing Container Security..."
-
-# Basic security checks
-run_docker_test "security-basic" "Basic container security validation" \
-    "bash -c 'docker images iam-backend:test --format \"table {{.Repository}}\t{{.Tag}}\t{{.Size}}\" && docker images iam-frontend:test --format \"table {{.Repository}}\t{{.Tag}}\t{{.Size}}\" || echo \"Images not built yet\"'"
-
-# Scan images for vulnerabilities if Docker security tools available
-if command -v docker scan &> /dev/null; then
-    run_docker_test "security-scan-backend" "Backend image security scan" \
-        "timeout 60s docker scan iam-backend:test || echo 'Security scan completed with warnings'"
+    # Frontend container validation - simplified
+    run_docker_test "frontend-container" "Frontend container validation" \
+        "docker run --rm iam-frontend:test echo 'Frontend container runs successfully'"
 else
-    echo "  ⚠️ Docker scan not available - basic security check performed"
-    echo "Docker scan not available - using basic security validation" > "${RESULTS_DIR}/docker-security-scan_${TIMESTAMP}.log"
+    echo "⏭️ Skipping Docker builds (profile: ${TEST_PROFILE})"
 fi
 
-echo "🧪 Testing Stack Readiness..."
+# Docker Compose Integration Tests (skipped for build and security profiles)
+if [[ "${SKIP_INTEGRATION}" != "true" ]]; then
+    echo "🔗 Testing Docker Compose Integration..."
 
-# Quick stack readiness test (no full startup)
-run_docker_test "stack-readiness" "Stack deployment readiness check" \
-    "bash -c 'docker compose config --quiet && echo \"Compose file valid\" && docker images | grep -E \"(iam-|postgres)\" && echo \"Required images available\" || echo \"Stack needs setup\"'"
+    # Test docker compose services definition
+    run_docker_test "compose-services" "Docker Compose services validation" \
+        "docker compose ps --services"
+
+    # Quick compose build test (no full startup)
+    run_docker_test "compose-build" "Docker Compose build validation" \
+        "timeout 120s docker compose build --parallel || docker compose config"
+
+    echo "🗄️ Testing Database Container..."
+
+    # Quick PostgreSQL container test
+    run_docker_test "postgres-container" "PostgreSQL container quick test" \
+        "timeout 30s bash -c 'docker compose up -d postgres && sleep 10 && docker compose exec -T postgres pg_isready -U postgres -h localhost && docker compose stop postgres'"
+    
+    # Deep integration tests (skipped for fast profile)
+    if [[ "${SKIP_INTEGRATION_DEEP}" != "true" ]]; then
+        echo "🚀 Testing Stack Readiness..."
+
+        # Quick stack readiness test (no full startup)
+        run_docker_test "stack-readiness" "Stack deployment readiness check" \
+            "bash -c 'docker compose config --quiet && echo \"Compose file valid\" && docker images | grep -E \"(iam-|postgres)\" && echo \"Required images available\" || echo \"Stack needs setup\"'"
+    fi
+else
+    echo "⏭️ Skipping Docker Compose integration tests (profile: ${TEST_PROFILE})"
+fi
+
+# Container Security Tests (only for security and complete profiles)
+if [[ "${SKIP_SECURITY}" != "true" ]]; then
+    echo "🔒 Testing Container Security..."
+
+    # Basic security checks
+    run_docker_test "security-basic" "Basic container security validation" \
+        "bash -c 'docker images iam-backend:test --format \"table {{.Repository}}\t{{.Tag}}\t{{.Size}}\" && docker images iam-frontend:test --format \"table {{.Repository}}\t{{.Tag}}\t{{.Size}}\" || echo \"Images not built yet\"'"
+
+    # Scan images for vulnerabilities if Docker security tools available
+    if command -v docker scan &> /dev/null; then
+        run_docker_test "security-scan-backend" "Backend image security scan" \
+            "timeout 60s docker scan iam-backend:test || echo 'Security scan completed with warnings'"
+    else
+        echo "  ⚠️ Docker scan not available - basic security check performed"
+        echo "Docker scan not available - using basic security validation" > "${RESULTS_DIR}/docker-security-scan_${TIMESTAMP}.log"
+    fi
+else
+    echo "⏭️ Skipping container security tests (profile: ${TEST_PROFILE})"
+fi
 
 echo "🧹 Cleanup Test Resources..."
 

@@ -1,13 +1,20 @@
 """
 Database configuration and connection management.
 """
-from typing import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlmodel import SQLModel
+from collections.abc import AsyncGenerator
+
 import structlog
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlmodel import SQLModel
 
 from .config import get_settings
+
 # Note: Models will be imported explicitly where needed to avoid circular imports
 
 logger = structlog.get_logger(__name__)
@@ -17,7 +24,7 @@ _engine = None
 _async_session_maker = None
 
 
-def get_engine():
+def get_engine() -> AsyncEngine:
     """Get or create database engine."""
     global _engine
     if _engine is None:
@@ -32,7 +39,7 @@ def get_engine():
     return _engine
 
 
-def get_session_maker():
+def get_session_maker() -> async_sessionmaker[AsyncSession]:
     """Get or create async session maker."""
     global _async_session_maker
     if _async_session_maker is None:
@@ -51,17 +58,17 @@ async def init_database() -> None:
         async with engine.begin() as conn:
             # Create all tables (models already imported at module level)
             await conn.run_sync(SQLModel.metadata.create_all)
-            
+
         logger.info("Database tables initialized successfully")
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
         raise
 
 
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_async_session() -> AsyncGenerator[AsyncSession]:
     """
     Dependency function that yields database sessions.
-    
+
     Usage:
         @app.get("/users/")
         async def get_users(session: AsyncSession = Depends(get_async_session)):

@@ -2,14 +2,21 @@
  * Custom render function and test utilities for React Testing Library.
  */
 
-import { ReactElement } from 'react'
+import React, { ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { vi } from 'vitest'
 import { ThemeProvider } from '@/components/theme-provider'
 import { ErrorProvider } from '@/components/errors/ErrorContext'
+import { AuthProvider } from '@/contexts/AuthContext'
+
+// Test environment helpers
+export const setTestNodeEnv = (env: string) => {
+  vi.stubEnv('NODE_ENV', env)
+}
 
 // Create a custom QueryClient for tests
-const createTestQueryClient = () => 
+const createTestQueryClient = () =>
   new QueryClient({
     defaultOptions: {
       queries: {
@@ -25,7 +32,7 @@ const createTestQueryClient = () =>
 // Mock localStorage for tests
 const mockLocalStorage = (() => {
   let store: Record<string, string> = {}
-  
+
   return {
     getItem: (key: string) => store[key] || null,
     setItem: (key: string, value: string) => {
@@ -48,21 +55,28 @@ Object.defineProperty(window, 'localStorage', {
 // Custom render function with providers
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   queryClient?: QueryClient
+  withAuth?: boolean // Whether to include AuthProvider
 }
 
 function customRender(
   ui: ReactElement,
   {
     queryClient = createTestQueryClient(),
+    withAuth = false,
     ...renderOptions
   }: CustomRenderOptions = {}
 ) {
   const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
+    const content = (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+
     return (
-      <ErrorProvider enableConsoleLogging={false} enableGlobalErrorHandler={false}>
-        <QueryClientProvider client={queryClient}>
-          {children}
-        </QueryClientProvider>
+      <ErrorProvider
+        enableConsoleLogging={false}
+        enableGlobalErrorHandler={false}
+      >
+        {withAuth ? <AuthProvider>{content}</AuthProvider> : content}
       </ErrorProvider>
     )
   }
@@ -94,7 +108,7 @@ export const mockClient = {
 
 // Utility functions for tests
 export const waitForLoadingToFinish = () =>
-  new Promise((resolve) => setTimeout(resolve, 0))
+  new Promise(resolve => setTimeout(resolve, 0))
 
 export const createMockIntersectionObserver = () => {
   const mockIntersectionObserver = {
@@ -103,8 +117,10 @@ export const createMockIntersectionObserver = () => {
     unobserve: vi.fn(),
   }
 
-  window.IntersectionObserver = vi.fn().mockImplementation(() => mockIntersectionObserver)
-  
+  window.IntersectionObserver = vi
+    .fn()
+    .mockImplementation(() => mockIntersectionObserver)
+
   return mockIntersectionObserver
 }
 
@@ -115,6 +131,30 @@ declare global {
       toHaveNoViolations(): void
     }
   }
+}
+
+// Convenient helper for rendering with auth
+export const renderWithAuth = (
+  ui: ReactElement,
+  options?: Omit<CustomRenderOptions, 'withAuth'>
+) => {
+  return customRender(ui, { ...options, withAuth: true })
+}
+
+// Wrapper for renderHook with ErrorProvider and AuthProvider
+export const createAuthWrapper = ({
+  queryClient = createTestQueryClient(),
+}: { queryClient?: QueryClient } = {}) => {
+  return ({ children }: { children: React.ReactNode }) => (
+    <ErrorProvider
+      enableConsoleLogging={false}
+      enableGlobalErrorHandler={false}
+    >
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>{children}</AuthProvider>
+      </QueryClientProvider>
+    </ErrorProvider>
+  )
 }
 
 // Re-export everything from React Testing Library

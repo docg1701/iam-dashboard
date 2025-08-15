@@ -5,10 +5,11 @@
 
 'use client'
 
-import React, { useState } from 'react'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import React, { useState } from 'react'
+import { useForm } from 'react-hook-form'
+
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/contexts/AuthContext'
@@ -66,8 +67,9 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
       })
 
       onSuccess?.()
-    } catch (err: any) {
-      const errorMessage = err.message || 'Erro interno do servidor'
+    } catch (err: unknown) {
+      const error = err as Error
+      const errorMessage = error.message || 'Erro interno do servidor'
 
       // Handle 2FA requirement
       if (errorMessage.includes('2FA') || errorMessage.includes('two-factor')) {
@@ -90,7 +92,10 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
           type: 'server',
           message: errorMessage,
         })
-      } else if (errorMessage.includes('TOTP') || errorMessage.includes('código')) {
+      } else if (
+        errorMessage.includes('TOTP') ||
+        errorMessage.includes('código')
+      ) {
         setError('totp_code', {
           type: 'server',
           message: errorMessage,
@@ -120,8 +125,8 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
   }, [])
 
   return (
-    <Card className="w-full max-w-md mx-auto p-6">
-      <div className="space-y-2 text-center mb-6">
+    <Card className="mx-auto w-full max-w-md p-6">
+      <div className="mb-6 space-y-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">
           Entrar no Dashboard IAM
         </h1>
@@ -133,7 +138,10 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Email Field */}
         <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+          <label
+            htmlFor="email"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
             E-mail
           </label>
           <input
@@ -152,7 +160,10 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
 
         {/* Password Field */}
         <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+          <label
+            htmlFor="password"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
             Senha
           </label>
           <div className="relative">
@@ -179,14 +190,19 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
             </button>
           </div>
           {errors.password && (
-            <p className="text-sm text-destructive">{errors.password.message}</p>
+            <p className="text-sm text-destructive">
+              {errors.password.message}
+            </p>
           )}
         </div>
 
         {/* TOTP Code Field (shown when 2FA is required) */}
         {showTotpInput && (
           <div className="space-y-2">
-            <label htmlFor="totp_code" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            <label
+              htmlFor="totp_code"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
               Código de Autenticação (2FA)
             </label>
             <input
@@ -197,15 +213,17 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
               autoComplete="one-time-code"
               disabled={isSubmitting}
               placeholder="000000"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-center tracking-widest ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-center text-sm tracking-widest ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               {...register('totp_code')}
-              onChange={(e) => {
+              onChange={e => {
                 const value = e.target.value.replace(/\D/g, '').slice(0, 6)
                 setValue('totp_code', value)
               }}
             />
             {errors.totp_code && (
-              <p className="text-sm text-destructive">{errors.totp_code.message}</p>
+              <p className="text-sm text-destructive">
+                {errors.totp_code.message}
+              </p>
             )}
             <p className="text-xs text-muted-foreground">
               Digite o código de 6 dígitos do seu aplicativo autenticador
@@ -250,7 +268,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
       </form>
 
       {/* Footer Links */}
-      <div className="mt-4 text-center space-y-2">
+      <div className="mt-4 space-y-2 text-center">
         <p className="text-sm text-muted-foreground">
           Esqueceu sua senha?{' '}
           <button

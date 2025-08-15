@@ -5,11 +5,18 @@
 
 'use client'
 
-import * as React from 'react'
-import { QRCodeSVG } from 'qrcode.react'
 import { Copy, Eye, EyeOff, CheckCheck } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
+import * as React from 'react'
+
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/utils/cn'
 
@@ -25,17 +32,20 @@ export interface QRCodeDisplayProps {
 }
 
 const QRCodeDisplay = React.forwardRef<HTMLDivElement, QRCodeDisplayProps>(
-  ({
-    value,
-    title = 'Configurar Autenticação em Dois Fatores',
-    description = 'Escaneie o código QR com seu aplicativo autenticador ou digite a chave secreta manualmente.',
-    showSecret = false,
-    className,
-    size = 200,
-    level = 'M',
-    onSecretToggle,
-    ...props
-  }, ref) => {
+  (
+    {
+      value,
+      title = 'Configurar Autenticação em Dois Fatores',
+      description = 'Escaneie o código QR com seu aplicativo autenticador ou digite a chave secreta manualmente.',
+      showSecret = false,
+      className,
+      size = 200,
+      level = 'M',
+      onSecretToggle,
+      ...props
+    },
+    ref
+  ) => {
     const [secretVisible, setSecretVisible] = React.useState(showSecret)
     const [copied, setCopied] = React.useState(false)
     const { toast } = useToast()
@@ -51,7 +61,7 @@ const QRCodeDisplay = React.forwardRef<HTMLDivElement, QRCodeDisplayProps>(
     }
 
     const secret = getSecretFromUrl(value)
-    
+
     const toggleSecretVisibility = () => {
       const newState = !secretVisible
       setSecretVisible(newState)
@@ -73,9 +83,10 @@ const QRCodeDisplay = React.forwardRef<HTMLDivElement, QRCodeDisplayProps>(
         setCopied(true)
         toast({
           title: 'Copiado!',
-          description: 'A chave secreta foi copiada para a área de transferência.',
+          description:
+            'A chave secreta foi copiada para a área de transferência.',
         })
-        
+
         setTimeout(() => setCopied(false), 2000)
       } catch (error) {
         toast({
@@ -93,7 +104,11 @@ const QRCodeDisplay = React.forwardRef<HTMLDivElement, QRCodeDisplayProps>(
 
     if (!value) {
       return (
-        <Card className={cn('w-full max-w-md mx-auto', className)} ref={ref} {...props}>
+        <Card
+          className={cn('mx-auto w-full max-w-md', className)}
+          ref={ref}
+          {...props}
+        >
           <CardHeader className="text-center">
             <CardTitle className="text-destructive">Erro</CardTitle>
             <CardDescription>
@@ -105,23 +120,25 @@ const QRCodeDisplay = React.forwardRef<HTMLDivElement, QRCodeDisplayProps>(
     }
 
     return (
-      <Card className={cn('w-full max-w-md mx-auto', className)} ref={ref} {...props}>
+      <Card
+        className={cn('mx-auto w-full max-w-md', className)}
+        ref={ref}
+        {...props}
+      >
         <CardHeader className="text-center">
           <CardTitle className="text-lg">{title}</CardTitle>
-          <CardDescription className="text-sm">
-            {description}
-          </CardDescription>
+          <CardDescription className="text-sm">{description}</CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-4">
           {/* QR Code */}
-          <div className="flex justify-center p-4 bg-white rounded-lg">
+          <div className="flex justify-center rounded-lg bg-white p-4">
             <QRCodeSVG
               value={value}
               size={size}
               level={level}
               includeMargin={true}
-              className="border border-gray-200 rounded"
+              className="rounded border border-gray-200"
             />
           </div>
 
@@ -129,9 +146,7 @@ const QRCodeDisplay = React.forwardRef<HTMLDivElement, QRCodeDisplayProps>(
           {secret && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium">
-                  Configuração Manual
-                </h4>
+                <h4 className="text-sm font-medium">Configuração Manual</h4>
                 <Button
                   type="button"
                   variant="ghost"
@@ -157,21 +172,23 @@ const QRCodeDisplay = React.forwardRef<HTMLDivElement, QRCodeDisplayProps>(
                 <div className="relative">
                   <div
                     className={cn(
-                      'min-h-[2.5rem] w-full p-2 text-sm font-mono bg-muted rounded border',
+                      'min-h-[2.5rem] w-full rounded border bg-muted p-2 font-mono text-sm',
                       'flex items-center break-all',
-                      !secretVisible && 'blur-sm select-none'
+                      !secretVisible && 'select-none blur-sm'
                     )}
                   >
-                    {secretVisible ? formatSecret(secret) : '••••••••••••••••••••••••••••••••'}
+                    {secretVisible
+                      ? formatSecret(secret)
+                      : '••••••••••••••••••••••••••••••••'}
                   </div>
-                  
+
                   {secretVisible && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       onClick={copySecret}
-                      className="absolute top-1 right-1 h-6 w-6 p-0"
+                      className="absolute right-1 top-1 h-6 w-6 p-0"
                       title="Copiar chave secreta"
                     >
                       {copied ? (
@@ -184,24 +201,31 @@ const QRCodeDisplay = React.forwardRef<HTMLDivElement, QRCodeDisplayProps>(
                 </div>
               </div>
 
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>• Abra seu aplicativo autenticador (Google Authenticator, Authy, etc.)</p>
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p>
+                  • Abra seu aplicativo autenticador (Google Authenticator,
+                  Authy, etc.)
+                </p>
                 <p>• Adicione uma nova conta manualmente</p>
                 <p>• Digite a chave secreta acima</p>
-                <p>• Use "Dashboard IAM" como nome da conta</p>
+                <p>• Use &quot;Dashboard IAM&quot; como nome da conta</p>
               </div>
             </div>
           )}
 
           {/* Recommended Apps */}
-          <div className="pt-2 border-t">
-            <h5 className="text-xs font-medium text-muted-foreground mb-2">
+          <div className="border-t pt-2">
+            <h5 className="mb-2 text-xs font-medium text-muted-foreground">
               Aplicativos Recomendados:
             </h5>
             <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
-              <span className="px-2 py-1 bg-muted rounded-full">Google Authenticator</span>
-              <span className="px-2 py-1 bg-muted rounded-full">Authy</span>
-              <span className="px-2 py-1 bg-muted rounded-full">Microsoft Authenticator</span>
+              <span className="rounded-full bg-muted px-2 py-1">
+                Google Authenticator
+              </span>
+              <span className="rounded-full bg-muted px-2 py-1">Authy</span>
+              <span className="rounded-full bg-muted px-2 py-1">
+                Microsoft Authenticator
+              </span>
             </div>
           </div>
         </CardContent>

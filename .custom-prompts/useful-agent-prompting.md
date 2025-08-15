@@ -4,7 +4,13 @@
 ### Develop Story from start minding the BMAD Method:
 
 ```markdown
-*develop-story according to the BMAD Method. Read core-config. Read docs/architecture/index.md and then read all needed docs/architecture/*.md. If your are coding Frontend, read every UI/UX file in docs/architecture. Spawn 2 agents in parallel to speed it up.
+*develop-story docs/stories/[story-filename] e siga as instruções abaixo:
+- FOLLOW the BMAD Method;
+- Read docs/architecture/index.md and then read files in docs/architecture AS REQUIRED by the STORY FILE;
+- IF CODING FRONTEND: read every UI/UX file in docs/architecture;
+- SPAWN 2 agents in parallel to speed it up IDEPENDENT TASKS;
+- ALWAYS use ABSOLUTE path to check files, directories and run scripts;
+- USE SCRIPTS in scripts/ to run tests.
 ``` 
 
 ### Develop Story Again fixing errors and bugs:
@@ -50,4 +56,20 @@ Procure novamente por mocks escondidos nos arquivos de testes de BACKEND que vao
 
 ```markdown
 *review docs/stories/[story-file] para corrigir todos os testes que falham no [frontend, backend, quality, database, docker etc] -  ULTRATHINK - use scripts para testes - vença todos os testes - não modifique a documentação - pense e planeje e revise o plano antes de executar correções - lembre-se que o projeto usa DOCKER - para modificar ou escrever testes siga docs/architecture/testing-strategy.md
+```
+
+```markdown
+[ultrathink] Rode o script de testes scripts/run-frontend-tests.sh e em seguida:
+- leia os logs e descubra o coverage real;
+- Estude a estratégia em "Test Configuration Troubleshooting" no CLAUDE.md;
+- Use o MCP Context7 para atualizar seu conhecimento sobre as bibliotecas e frameworks utilizados no projeto;
+- Evite erros de sintaxe e correção de bugs que geram outrosbugs: atualize seu conhecimento com MCP Context7;
+- Use 2 agents em paralelo para acelerar TASKS que podem ser executadas de forma independente;
+- Vença todos os TESTS e atinga a COVERAGE mínima esperada; 
+- NÃO USE type Any, siga as recomendações em CLAUDE.md;
+- NÃO TOME DECISÕES SEM PLANEJAR: Pense, planeje, revise o plano e só então execute;
+- DADOS Fundamentais sobre o projeto: Roda em containers docker;
+- CONTEXTO INDISPENSÁVEL: Leia docs/architecture/coding-standards.md, tech-stack.md, source-tree.md e testing-strategy.md;
+- PROIBIDO: Não modifique a DOCUMENTAÇÃO nem a ARQUITETURA do projeto;
+- Resolva todos os problemas.
 ```

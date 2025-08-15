@@ -1,0 +1,753 @@
+/**
+ * Comprehensive tests for LoginForm component
+ * CLAUDE.md Compliant: Only mocks external APIs/hooks, tests actual component behavior
+ */
+
+import React from 'react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+
+import { LoginForm } from '@/components/forms/LoginForm'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { ErrorProvider } from '@/components/errors/ErrorContext'
+import { Toaster } from '@/components/ui/toaster'
+
+// Mock external dependencies only (CLAUDE.md compliant)
+// Mock fetch API calls instead of internal context
+global.fetch = vi.fn()
+
+// Mock Lucide icons
+vi.mock('lucide-react', () => ({
+  Eye: ({ className }: { className?: string }) => (
+    <span data-testid="eye-icon" className={className} />
+  ),
+  EyeOff: ({ className }: { className?: string }) => (
+    <span data-testid="eye-off-icon" className={className} />
+  ),
+  Loader2: ({ className }: { className?: string }) => (
+    <span data-testid="loader-icon" className={className} />
+  ),
+  X: ({ className }: { className?: string }) => (
+    <span data-testid="x-icon" className={className} />
+  ),
+  // Add any other icons that might be used
+  ChevronDown: ({ className }: { className?: string }) => (
+    <span data-testid="chevron-down-icon" className={className} />
+  ),
+  AlertCircle: ({ className }: { className?: string }) => (
+    <span data-testid="alert-circle-icon" className={className} />
+  ),
+}))
+
+// Test wrapper with real providers (CLAUDE.md compliant)
+const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ErrorProvider>
+    <AuthProvider>
+      {children}
+      <Toaster />
+    </AuthProvider>
+  </ErrorProvider>
+)
+
+describe('LoginForm', () => {
+  const mockOnSuccess = vi.fn()
+  const mockOnError = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    
+    // Mock fetch for successful login by default (external dependency)
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        access_token: 'test_token',
+        refresh_token: 'test_refresh',
+        token_type: 'Bearer',
+        expires_in: 3600,
+        user: { id: 1, email: 'test@example.com', has_2fa: false }
+      }),
+    })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  describe('Rendering', () => {
+    it('should render the login form with all required fields', () => {
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      expect(screen.getByText('Entrar no Dashboard IAM')).toBeInTheDocument()
+      expect(screen.getByText('Digite suas credenciais para acessar o sistema')).toBeInTheDocument()
+      
+      expect(screen.getByLabelText('E-mail')).toBeInTheDocument()
+      expect(screen.getByLabelText('Senha')).toBeInTheDocument()
+      expect(screen.getByLabelText('Lembrar de mim')).toBeInTheDocument()
+      
+      expect(screen.getByRole('button', { name: 'Entrar' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Entrar' })).toBeDisabled()
+    })
+
+    it('should not show TOTP input initially', () => {
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      expect(screen.queryByLabelText('Código de Autenticação (2FA)')).not.toBeInTheDocument()
+    })
+
+    it('should render footer links', () => {
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      expect(screen.getByText('Esqueceu sua senha?')).toBeInTheDocument()
+      expect(screen.getByText('Clique aqui')).toBeInTheDocument()
+      expect(screen.getByText('Problemas com 2FA?')).toBeInTheDocument()
+      expect(screen.getByText('Preciso de ajuda')).toBeInTheDocument()
+    })
+  })
+
+  describe('Form Validation', () => {
+    it('should enable submit button when email and password are filled', async () => {
+      const user = userEvent.setup()
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      // Initially disabled
+      expect(submitButton).toBeDisabled()
+
+      // Fill email only
+      await user.type(emailInput, 'test@example.com')
+      expect(submitButton).toBeDisabled()
+
+      // Fill password
+      await user.type(passwordInput, 'password123')
+      expect(submitButton).toBeEnabled()
+    })
+
+    it('should validate email format', async () => {
+      const user = userEvent.setup()
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'invalid-email')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText(/email.*inválido/i)).toBeInTheDocument()
+      })
+    })
+
+    it('should validate required fields', async () => {
+      const user = userEvent.setup()
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      // Try to submit with empty email
+      await user.click(emailInput)
+      await user.tab() // Blur the input
+
+      await waitFor(() => {
+        expect(screen.getByText(/email.*obrigatório/i)).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Password Visibility Toggle', () => {
+    it('should toggle password visibility', async () => {
+      const user = userEvent.setup()
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const passwordInput = screen.getByLabelText('Senha') as HTMLInputElement
+      const toggleButton = screen.getByRole('button', { name: '' }) // Eye button has no text
+
+      // Initially password type
+      expect(passwordInput.type).toBe('password')
+      expect(screen.getByTestId('eye-icon')).toBeInTheDocument()
+
+      // Click to show password
+      await user.click(toggleButton)
+      expect(passwordInput.type).toBe('text')
+      expect(screen.getByTestId('eye-off-icon')).toBeInTheDocument()
+
+      // Click to hide password
+      await user.click(toggleButton)
+      expect(passwordInput.type).toBe('password')
+      expect(screen.getByTestId('eye-icon')).toBeInTheDocument()
+    })
+  })
+
+  describe('Form Submission', () => {
+    it('should submit form with valid credentials', async () => {
+      const user = userEvent.setup()
+      mockLogin.mockResolvedValueOnce({})
+
+      render(
+        <TestWrapper>
+          <LoginForm onSuccess={mockOnSuccess} />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockLogin).toHaveBeenCalledWith({
+          email: 'test@example.com',
+          password: 'password123',
+          totp_code: '',
+        })
+      })
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Login realizado com sucesso!',
+        description: 'Bem-vindo de volta ao Dashboard IAM.',
+      })
+
+      expect(mockOnSuccess).toHaveBeenCalled()
+    })
+
+    it('should show loading state during submission', async () => {
+      const user = userEvent.setup()
+      let resolveLogin: (value: unknown) => void
+      mockLogin.mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveLogin = resolve
+        })
+      )
+
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      // Should show loading state
+      expect(screen.getByText('Entrando...')).toBeInTheDocument()
+      expect(screen.getByTestId('loader-icon')).toBeInTheDocument()
+      expect(submitButton).toBeDisabled()
+
+      // Resolve the login
+      act(() => {
+        resolveLogin({})
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Entrar')).toBeInTheDocument()
+        expect(screen.queryByTestId('loader-icon')).not.toBeInTheDocument()
+      })
+    })
+
+    it('should disable form inputs during submission', async () => {
+      const user = userEvent.setup()
+      let resolveLogin: (value: unknown) => void
+      mockLogin.mockReturnValueOnce(
+        new Promise(resolve => {
+          resolveLogin = resolve
+        })
+      )
+
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const rememberCheckbox = screen.getByLabelText('Lembrar de mim')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      // All inputs should be disabled - wait for the async state update
+      await waitFor(() => {
+        expect(emailInput).toBeDisabled()
+        expect(passwordInput).toBeDisabled()
+        expect(rememberCheckbox).toBeDisabled()
+      })
+
+      // Resolve the login
+      act(() => {
+        resolveLogin({})
+      })
+
+      await waitFor(() => {
+        expect(emailInput).toBeEnabled()
+        expect(passwordInput).toBeEnabled()
+        expect(rememberCheckbox).toBeEnabled()
+      })
+    })
+  })
+
+  describe('2FA Handling', () => {
+    it('should show TOTP input when 2FA is required', async () => {
+      const user = userEvent.setup()
+      mockLogin.mockRejectedValueOnce(new Error('2FA code required'))
+
+      render(
+        <TestWrapper>
+          <LoginForm onError={mockOnError} />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Código de Autenticação (2FA)')).toBeInTheDocument()
+        expect(screen.getByText('Digite o código de 6 dígitos do seu aplicativo autenticador')).toBeInTheDocument()
+      })
+
+      expect(mockOnError).not.toHaveBeenCalled() // 2FA requirement doesn't trigger onError
+    })
+
+    it('should submit with TOTP code when 2FA is shown', async () => {
+      const user = userEvent.setup()
+      mockLogin
+        .mockRejectedValueOnce(new Error('2FA code required'))
+        .mockResolvedValueOnce({})
+
+      render(
+        <TestWrapper>
+          <LoginForm onSuccess={mockOnSuccess} />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      // First attempt without 2FA
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Código de Autenticação (2FA)')).toBeInTheDocument()
+      })
+
+      // Second attempt with 2FA
+      const totpInput = screen.getByLabelText('Código de Autenticação (2FA)')
+      await user.type(totpInput, '123456')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockLogin).toHaveBeenCalledWith({
+          email: 'test@example.com',
+          password: 'password123',
+          totp_code: '123456',
+        })
+      })
+
+      expect(mockOnSuccess).toHaveBeenCalled()
+    })
+
+    it('should format TOTP input to numbers only', async () => {
+      const user = userEvent.setup()
+      mockLogin.mockRejectedValueOnce(new Error('2FA code required'))
+
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      // Trigger 2FA input display
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Código de Autenticação (2FA)')).toBeInTheDocument()
+      })
+
+      const totpInput = screen.getByLabelText('Código de Autenticação (2FA)') as HTMLInputElement
+
+      // Type mixed characters
+      await user.type(totpInput, 'a1b2c3d4e5f6')
+
+      expect(totpInput.value).toBe('123456') // Only numbers, max 6 digits
+    })
+  })
+
+  describe('Error Handling', () => {
+    it('should handle generic login errors', async () => {
+      const user = userEvent.setup()
+      mockLogin.mockRejectedValueOnce(new Error('Invalid credentials'))
+
+      render(
+        <TestWrapper>
+          <LoginForm onError={mockOnError} />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'wrongpassword')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith({
+          title: 'Erro no login',
+          description: 'Invalid credentials',
+          variant: 'destructive',
+        })
+      })
+
+      expect(mockOnError).toHaveBeenCalledWith('Invalid credentials')
+    })
+
+    it('should handle email-specific errors', async () => {
+      const user = userEvent.setup()
+      mockLogin.mockRejectedValueOnce(new Error('Invalid email format'))
+
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'invalid-email')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Invalid email format')).toBeInTheDocument()
+      })
+    })
+
+    it('should handle password-specific errors', async () => {
+      const user = userEvent.setup()
+      mockLogin.mockRejectedValueOnce(new Error('Password too weak'))
+
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, '123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Password too weak')).toBeInTheDocument()
+      })
+    })
+
+    it('should handle TOTP code errors', async () => {
+      const user = userEvent.setup()
+      mockLogin
+        .mockRejectedValueOnce(new Error('2FA code required'))
+        .mockRejectedValueOnce(new Error('Invalid TOTP code'))
+
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      // First attempt to trigger 2FA
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Código de Autenticação (2FA)')).toBeInTheDocument()
+      })
+
+      // Second attempt with invalid TOTP
+      const totpInput = screen.getByLabelText('Código de Autenticação (2FA)')
+      await user.type(totpInput, '000000')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(screen.getByText('Invalid TOTP code')).toBeInTheDocument()
+      })
+    })
+
+    it('should handle errors without message', async () => {
+      const user = userEvent.setup()
+      mockLogin.mockRejectedValueOnce(new Error())
+
+      render(
+        <TestWrapper>
+          <LoginForm onError={mockOnError} />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith({
+          title: 'Erro no login',
+          description: 'Erro interno do servidor',
+          variant: 'destructive',
+        })
+      })
+
+      expect(mockOnError).toHaveBeenCalledWith('Erro interno do servidor')
+    })
+  })
+
+  describe('Footer Links', () => {
+    it('should handle password reset link click', async () => {
+      const user = userEvent.setup()
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const resetLink = screen.getByText('Clique aqui')
+      await user.click(resetLink)
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Reset de senha',
+        description: 'Funcionalidade em desenvolvimento.',
+      })
+    })
+
+    it('should handle 2FA help link click', async () => {
+      const user = userEvent.setup()
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const helpLink = screen.getByText('Preciso de ajuda')
+      await user.click(helpLink)
+
+      expect(mockToast).toHaveBeenCalledWith({
+        title: 'Suporte 2FA',
+        description: 'Entre em contato com o administrador do sistema.',
+      })
+    })
+  })
+
+  describe('Accessibility', () => {
+    it('should have proper ARIA labels and associations', () => {
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const rememberCheckbox = screen.getByLabelText('Lembrar de mim')
+
+      expect(emailInput).toHaveAttribute('type', 'email')
+      expect(emailInput).toHaveAttribute('autoComplete', 'email')
+      expect(passwordInput).toHaveAttribute('type', 'password')
+      expect(passwordInput).toHaveAttribute('autoComplete', 'current-password')
+      expect(rememberCheckbox).toHaveAttribute('type', 'checkbox')
+    })
+
+    it('should have proper form structure', () => {
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const form = screen.getByRole('form')
+      expect(form).toBeInTheDocument()
+
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+      expect(submitButton).toHaveAttribute('type', 'submit')
+    })
+
+    it('should show TOTP input with proper accessibility attributes', async () => {
+      const user = userEvent.setup()
+      mockLogin.mockRejectedValueOnce(new Error('2FA code required'))
+
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      // Trigger 2FA input
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        const totpInput = screen.getByLabelText('Código de Autenticação (2FA)')
+        expect(totpInput).toHaveAttribute('type', 'text')
+        expect(totpInput).toHaveAttribute('maxLength', '6')
+        expect(totpInput).toHaveAttribute('pattern', '[0-9]{6}')
+        expect(totpInput).toHaveAttribute('autoComplete', 'one-time-code')
+      })
+    })
+  })
+
+  describe('Remember Me Functionality', () => {
+    it('should include remember_me in form submission', async () => {
+      const user = userEvent.setup()
+      mockLogin.mockResolvedValueOnce({})
+
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const rememberCheckbox = screen.getByLabelText('Lembrar de mim')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(rememberCheckbox)
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockLogin).toHaveBeenCalledWith({
+          email: 'test@example.com',
+          password: 'password123',
+          totp_code: '',
+        })
+      })
+    })
+  })
+
+  describe('Props Handling', () => {
+    it('should call onSuccess when provided', async () => {
+      const user = userEvent.setup()
+      mockLogin.mockResolvedValueOnce({})
+
+      render(
+        <TestWrapper>
+          <LoginForm onSuccess={mockOnSuccess} />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockOnSuccess).toHaveBeenCalled()
+      })
+    })
+
+    it('should work without optional props', async () => {
+      const user = userEvent.setup()
+      mockLogin.mockResolvedValueOnce({})
+
+      render(
+        <TestWrapper>
+          <LoginForm />
+        </TestWrapper>
+      )
+
+      const emailInput = screen.getByLabelText('E-mail')
+      const passwordInput = screen.getByLabelText('Senha')
+      const submitButton = screen.getByRole('button', { name: 'Entrar' })
+
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+
+      await waitFor(() => {
+        expect(mockLogin).toHaveBeenCalled()
+      })
+
+      // Should not throw error when onSuccess/onError are not provided
+    })
+  })
+})

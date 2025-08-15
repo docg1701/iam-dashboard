@@ -55,6 +55,8 @@ packages = ["src"]
 [tool.ruff]
 target-version = "py313"
 line-length = 88
+
+[tool.ruff.lint]
 select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
@@ -70,7 +72,7 @@ ignore = [
     "C901", # too complex
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 
 [tool.mypy]
@@ -84,7 +86,7 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 warn_return_any = true
 strict_equality = true
-strict_concatenate = true
+extra_checks = true
 
 [[tool.mypy.overrides]]
 module = [
@@ -115,8 +117,11 @@ filterwarnings = [
 [dependency-groups]
 dev = [
     "aiosqlite>=0.21.0",
+    "mypy>=1.17.1",
+    "pip-audit>=2.9.0",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
     "pytest-cov>=6.2.1",
     "ruff>=0.12.8",
+    "types-redis>=4.6.0.20241004",
 ]

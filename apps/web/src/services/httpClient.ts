@@ -4,7 +4,13 @@
  * Based on Story 1.3 requirements
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
+import axios, {
+  AxiosInstance,
+  AxiosRequestConfig,
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+} from 'axios'
+
 import { AuthTokens, RefreshTokenResponse } from '@/types/auth'
 import { tokenStorage } from '@/utils/tokenStorage'
 
@@ -16,7 +22,7 @@ class HttpClient {
 
   constructor() {
     this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-    
+
     this.client = axios.create({
       baseURL: this.baseURL,
       timeout: 10000,
@@ -34,14 +40,14 @@ class HttpClient {
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
         const tokens = tokenStorage.getTokens()
-        
+
         if (tokens?.access_token) {
           config.headers.Authorization = `Bearer ${tokens.access_token}`
         }
 
         return config
       },
-      (error) => {
+      error => {
         return Promise.reject(error)
       }
     )
@@ -49,7 +55,7 @@ class HttpClient {
     // Response interceptor to handle token refresh
     this.client.interceptors.response.use(
       (response: AxiosResponse) => response,
-      async (error) => {
+      async error => {
         const originalRequest = error.config
 
         // Check if error is 401 and we haven't already tried to refresh
@@ -58,12 +64,12 @@ class HttpClient {
 
           try {
             const newTokens = await this.handleTokenRefresh()
-            
+
             // Update the original request with new token
             originalRequest.headers.Authorization = `Bearer ${newTokens.access_token}`
-            
+
             // Retry the original request
-            return this.client(originalRequest)
+            return this.client.request(originalRequest)
           } catch (refreshError) {
             // Refresh failed, redirect to login
             this.handleAuthFailure()
@@ -84,11 +90,10 @@ class HttpClient {
 
     this.isRefreshing = true
 
-    this.refreshPromise = this.refreshTokens()
-      .finally(() => {
-        this.isRefreshing = false
-        this.refreshPromise = null
-      })
+    this.refreshPromise = this.refreshTokens().finally(() => {
+      this.isRefreshing = false
+      this.refreshPromise = null
+    })
 
     return this.refreshPromise
   }
@@ -101,8 +106,8 @@ class HttpClient {
     }
 
     try {
-      const response = await axios.post<RefreshTokenResponse>(
-        `${this.baseURL}/api/v1/auth/refresh`,
+      const response = await this.client.post<RefreshTokenResponse>(
+        `/api/v1/auth/refresh`,
         {
           refresh_token: currentTokens.refresh_token,
         },
@@ -124,7 +129,6 @@ class HttpClient {
       tokenStorage.setTokens(newTokens)
       return newTokens
     } catch (error) {
-      console.error('Token refresh failed:', error)
       tokenStorage.removeTokens()
       throw new Error('Failed to refresh authentication tokens')
     }
@@ -132,39 +136,55 @@ class HttpClient {
 
   private handleAuthFailure(): void {
     tokenStorage.removeTokens()
-    
+
     // Emit custom event for auth failure
-    window.dispatchEvent(new CustomEvent('auth:failure', {
-      detail: { reason: 'token_refresh_failed' }
-    }))
+    window.dispatchEvent(
+      new CustomEvent('auth:failure', {
+        detail: { reason: 'token_refresh_failed' },
+      })
+    )
 
     // In a real app, you might want to redirect to login
     // But we'll let the auth context handle this
-    console.warn('Authentication failed, tokens cleared')
   }
 
   // Public methods for making HTTP requests
-  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async get<T = unknown>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response = await this.client.get<T>(url, config)
     return response.data
   }
 
-  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async post<T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
     const response = await this.client.post<T>(url, data, config)
     return response.data
   }
 
-  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async put<T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
     const response = await this.client.put<T>(url, data, config)
     return response.data
   }
 
-  async patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+  async patch<T = unknown>(
+    url: string,
+    data?: unknown,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
     const response = await this.client.patch<T>(url, data, config)
     return response.data
   }
 
-  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+  async delete<T = unknown>(
+    url: string,
+    config?: AxiosRequestConfig
+  ): Promise<T> {
     const response = await this.client.delete<T>(url, config)
     return response.data
   }
@@ -177,7 +197,7 @@ class HttpClient {
   // Method to check if tokens need refresh
   shouldRefreshTokens(): boolean {
     const tokens = tokenStorage.getTokens()
-    
+
     if (!tokens?.access_token) {
       return false
     }
@@ -188,7 +208,9 @@ class HttpClient {
   // Get current auth status
   isAuthenticated(): boolean {
     const tokens = tokenStorage.getTokens()
-    return !!(tokens?.access_token && !tokenStorage.isTokenExpired(tokens.access_token))
+    return !!(
+      tokens?.access_token && !tokenStorage.isTokenExpired(tokens.access_token)
+    )
   }
 }
 

@@ -1,10 +1,11 @@
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
+import { validateCPF, formatCPF } from '@shared/utils'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { validateCPF, formatCPF } from '@shared/utils'
+
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -17,22 +18,22 @@ const clientSchema = z.object({
   cpf: z
     .string()
     .min(11, 'CPF deve ter 11 dígitos')
-    .refine((cpf) => {
+    .refine(cpf => {
       const cleanCPF = cpf.replace(/\D/g, '')
       return validateCPF(cleanCPF)
     }, 'CPF inválido'),
   birthDate: z
     .string()
     .min(1, 'Data de nascimento é obrigatória')
-    .refine((date) => {
+    .refine(date => {
       const birthDate = new Date(date)
       const today = new Date()
       const age = today.getFullYear() - birthDate.getFullYear()
       return age >= 16 && age <= 120
-    }, 'Cliente deve ter entre 16 e 120 anos')
+    }, 'Cliente deve ter entre 16 e 120 anos'),
 })
 
-type ClientFormData = z.infer<typeof clientSchema>
+export type ClientFormData = z.infer<typeof clientSchema>
 
 interface ClientFormProps {
   onSubmit: (data: ClientFormData) => void
@@ -41,24 +42,24 @@ interface ClientFormProps {
   initialData?: Partial<ClientFormData>
 }
 
-export function ClientForm({ 
-  onSubmit, 
-  onCancel, 
+export function ClientForm({
+  onSubmit,
+  onCancel,
   isLoading = false,
-  initialData 
+  initialData,
 }: ClientFormProps) {
   const [cpfValue, setCpfValue] = useState(initialData?.cpf || '')
-  
+
   const {
     register,
     handleSubmit,
     formState: { errors, isValid },
     setValue,
-    watch
+    watch,
   } = useForm<ClientFormData>({
     resolver: zodResolver(clientSchema),
     defaultValues: initialData,
-    mode: 'onChange'
+    mode: 'onChange',
   })
 
   // Formatação em tempo real do CPF
@@ -77,21 +78,24 @@ export function ClientForm({
     // Remove formatação do CPF antes do envio
     const cleanData = {
       ...data,
-      cpf: data.cpf.replace(/\D/g, '')
+      cpf: data.cpf.replace(/\D/g, ''),
     }
     onSubmit(cleanData)
   }
 
   return (
-    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900">
+    <div className="mx-auto max-w-md rounded-lg bg-white p-6 shadow-md">
+      <h2 className="mb-6 text-2xl font-bold text-gray-900">
         {initialData ? 'Editar Cliente' : 'Novo Cliente'}
       </h2>
-      
+
       <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
         {/* Campo Nome */}
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-gray-700"
+          >
             Nome Completo *
           </label>
           <Input
@@ -109,7 +113,10 @@ export function ClientForm({
 
         {/* Campo CPF com validação em tempo real */}
         <div>
-          <label htmlFor="cpf" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="cpf"
+            className="block text-sm font-medium text-gray-700"
+          >
             CPF *
           </label>
           <div className="relative">
@@ -146,7 +153,10 @@ export function ClientForm({
 
         {/* Campo Data de Nascimento */}
         <div>
-          <label htmlFor="birthDate" className="block text-sm font-medium text-gray-700">
+          <label
+            htmlFor="birthDate"
+            className="block text-sm font-medium text-gray-700"
+          >
             Data de Nascimento *
           </label>
           <Input
@@ -157,7 +167,9 @@ export function ClientForm({
             disabled={isLoading}
           />
           {errors.birthDate && (
-            <p className="mt-1 text-sm text-red-600">{errors.birthDate.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.birthDate.message}
+            </p>
           )}
         </div>
 
@@ -170,7 +182,7 @@ export function ClientForm({
           >
             {isLoading ? 'Salvando...' : 'Salvar Cliente'}
           </Button>
-          
+
           {onCancel && (
             <Button
               type="button"
@@ -186,7 +198,7 @@ export function ClientForm({
 
       {/* Informações de Debugging em Desenvolvimento */}
       {process.env.NODE_ENV === 'development' && (
-        <div className="mt-6 p-4 bg-gray-100 rounded text-xs">
+        <div className="mt-6 rounded bg-gray-100 p-4 text-xs">
           <h4 className="font-semibold">Debug Info:</h4>
           <p>CPF Input: {cpfInput}</p>
           <p>CPF Formatado: {cpfValue}</p>

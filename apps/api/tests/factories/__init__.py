@@ -4,14 +4,15 @@ Factory classes for test data generation.
 Provides factory patterns for creating realistic test data for all models
 following the testing strategy requirements.
 """
-from .user_factory import UserFactory
+
+from .audit_factory import AuditLogFactory
 from .client_factory import ClientFactory
 from .permission_factory import UserAgentPermissionFactory
-from .audit_factory import AuditLogFactory
+from .user_factory import UserFactory
 
 __all__ = [
     "UserFactory",
-    "ClientFactory", 
+    "ClientFactory",
     "UserAgentPermissionFactory",
     "AuditLogFactory",
 ]

@@ -3,12 +3,14 @@ Pytest configuration for model tests.
 
 Provides fixtures and configuration for testing SQLModel classes.
 """
-import pytest
+
 import asyncio
 import os
 import sys
-from typing import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
+
+import pytest
 
 # Add src to path for imports
 sys.path.append(str(Path(__file__).parent.parent.parent / "src"))
@@ -24,7 +26,7 @@ from sqlmodel import SQLModel
 
 
 @pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
+def event_loop() -> Generator[asyncio.AbstractEventLoop]:
     """Create an instance of the default event loop for the test session."""
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
@@ -39,31 +41,29 @@ async def test_engine():
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         echo=False,  # Set to True for SQL debugging
-        connect_args={"check_same_thread": False}
+        connect_args={"check_same_thread": False},
     )
-    
+
     # Create all tables
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
-    
+
     yield engine
-    
+
     await engine.dispose()
 
 
 @pytest.fixture
-async def test_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
+async def test_session(test_engine) -> AsyncGenerator[AsyncSession]:
     """Create a test database session."""
     async_session = sessionmaker(
-        test_engine,
-        class_=AsyncSession,
-        expire_on_commit=False
+        test_engine, class_=AsyncSession, expire_on_commit=False
     )
-    
+
     async with async_session() as session:
         # Start a transaction that we'll rollback at the end
         transaction = await session.begin()
-        
+
         try:
             yield session
         finally:

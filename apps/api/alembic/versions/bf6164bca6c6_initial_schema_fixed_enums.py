@@ -1,8 +1,8 @@
-"""Initial schema with PostgreSQL support
+"""initial_schema_fixed_enums
 
-Revision ID: 573f587bc07e
+Revision ID: bf6164bca6c6
 Revises: 
-Create Date: 2025-08-11 22:34:45.042746
+Create Date: 2025-08-14 19:04:57.680731
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel
 
 
 # revision identifiers, used by Alembic.
-revision = '573f587bc07e'
+revision = 'bf6164bca6c6'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -24,7 +24,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('email', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('password_hash', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('role', sa.Enum('SYSADMIN', 'ADMIN', 'USER', name='userrole'), nullable=False),
+    sa.Column('role', sa.Enum('sysadmin', 'admin', 'user', name='userrole'), nullable=False),
     sa.Column('totp_secret', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=False),
@@ -38,7 +38,7 @@ def upgrade() -> None:
     op.create_table('audit_logs',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('actor_id', sa.Uuid(), nullable=True),
-    sa.Column('action', sa.Enum('CREATE', 'READ', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'PERMISSION_CHANGE', name='auditaction'), nullable=False),
+    sa.Column('action', sa.Enum('create', 'read', 'update', 'delete', 'login', 'logout', 'permission_change', name='auditaction'), nullable=False),
     sa.Column('resource_type', sqlmodel.sql.sqltypes.AutoString(length=50), nullable=False),
     sa.Column('resource_id', sa.Uuid(), nullable=True),
     sa.Column('old_values', sa.JSON(), nullable=True),
@@ -75,7 +75,7 @@ def upgrade() -> None:
     op.create_table('user_agent_permissions',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('user_id', sa.Uuid(), nullable=False),
-    sa.Column('agent_name', sa.Enum('CLIENT_MANAGEMENT', 'PDF_PROCESSING', 'REPORTS_ANALYSIS', 'AUDIO_RECORDING', name='agentname'), nullable=False),
+    sa.Column('agent_name', sa.Enum('client_management', 'pdf_processing', 'reports_analysis', 'audio_recording', name='agentname'), nullable=False),
     sa.Column('can_create', sa.Boolean(), nullable=False),
     sa.Column('can_read', sa.Boolean(), nullable=False),
     sa.Column('can_update', sa.Boolean(), nullable=False),

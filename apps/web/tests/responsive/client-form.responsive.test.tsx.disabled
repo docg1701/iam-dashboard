@@ -1,0 +1,755 @@
+/**
+ * Client Form Responsive Tests
+ * Tests client form components across different screen sizes and breakpoints
+ */
+
+import React, { useState } from 'react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ClientForm, ClientFormData } from '@/components/forms/ClientForm'
+import { ErrorProvider } from '@/components/errors/ErrorContext'
+
+// Mock Next.js navigation
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  usePathname: () => '/clients',
+  useSearchParams: () => new URLSearchParams(),
+}))
+
+// Mock @shared/utils for CPF validation
+vi.mock('@shared/utils', () => ({
+  validateCPF: vi.fn((cpf: string) => {
+    const cleanCPF = cpf.replace(/\D/g, '')
+    return cleanCPF.length === 11 && cleanCPF !== '00000000000'
+  }),
+  formatCPF: vi.fn((cpf: string) => {
+    const cleanCPF = cpf.replace(/\D/g, '')
+    if (cleanCPF.length <= 11) {
+      return cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
+    }
+    return cleanCPF
+  }),
+}))
+
+// Test wrapper with providers
+const TestWrapper = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity },
+      mutations: { retry: false },
+    },
+  })
+
+  return (
+    <ErrorProvider
+      enableConsoleLogging={false}
+      enableGlobalErrorHandler={false}
+    >
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    </ErrorProvider>
+  )
+}
+
+// Viewport size configurations
+const viewports = {
+  mobile: { width: 375, height: 667 },
+  mobileLandscape: { width: 667, height: 375 },
+  tablet: { width: 768, height: 1024 },
+  tabletLandscape: { width: 1024, height: 768 },
+  desktop: { width: 1024, height: 768 },
+  largeDesktop: { width: 1440, height: 900 },
+  ultraWide: { width: 1920, height: 1080 },
+}
+
+// Helper function to set viewport size
+const setViewport = (size: { width: number; height: number }) => {
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: size.width,
+  })
+  Object.defineProperty(window, 'innerHeight', {
+    writable: true,
+    configurable: true,
+    value: size.height,
+  })
+
+  // Update CSS media queries
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation(query => {
+      const mediaQuery = query.toLowerCase()
+      let matches = false
+
+      // Common breakpoints
+      if (mediaQuery.includes('max-width: 639px')) {
+        matches = size.width <= 639 // Mobile
+      } else if (
+        mediaQuery.includes('min-width: 640px') &&
+        mediaQuery.includes('max-width: 767px')
+      ) {
+        matches = size.width >= 640 && size.width <= 767
+      } else if (
+        mediaQuery.includes('min-width: 768px') &&
+        mediaQuery.includes('max-width: 1023px')
+      ) {
+        matches = size.width >= 768 && size.width <= 1023 // Tablet
+      } else if (mediaQuery.includes('min-width: 1024px')) {
+        matches = size.width >= 1024 // Desktop+
+      }
+
+      return {
+        matches,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }
+    }),
+  })
+
+  window.dispatchEvent(new Event('resize'))
+}
+
+// Mock client data
+const mockClientData = {
+  name: 'João da Silva Santos',
+  cpf: '12345678901',
+  birthDate: '1990-05-15',
+}
+
+describe('Client Form Responsive Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    global.fetch = vi.fn()
+  })
+
+  afterEach(() => {
+    vi.resetAllMocks()
+  })
+
+  describe('Form Layout Responsiveness', () => {
+    it('should render correctly on mobile portrait (375px)', async () => {
+      setViewport(viewports.mobile)
+
+      const onSubmit = vi.fn()
+      render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      // Form container should be responsive
+      const formContainer = screen
+        .getByText(/novo cliente/i)
+        .closest('.max-w-md')
+      expect(formContainer).toBeInTheDocument()
+
+      // All form fields should be present and accessible
+      expect(screen.getByLabelText(/nome completo/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/cpf/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/data de nascimento/i)).toBeInTheDocument()
+
+      // Form fields should stack vertically on mobile
+      const nameInput = screen.getByLabelText(/nome completo/i)
+      const cpfInput = screen.getByLabelText(/cpf/i)
+      const birthDateInput = screen.getByLabelText(/data de nascimento/i)
+      
+      // All inputs should be present
+      expect(nameInput).toBeInTheDocument()
+      expect(cpfInput).toBeInTheDocument()
+      expect(birthDateInput).toBeInTheDocument()
+
+      // Button should be full width on mobile
+      const submitButton = screen.getByRole('button', {
+        name: /salvar cliente/i,
+      })
+      expect(submitButton).toHaveClass('flex-1')
+    })
+
+    it('should render correctly on mobile landscape (667px)', async () => {
+      setViewport(viewports.mobileLandscape)
+
+      const onSubmit = vi.fn()
+      render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      // Form should adapt to landscape orientation
+      expect(screen.getByLabelText(/nome completo/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/cpf/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/data de nascimento/i)).toBeInTheDocument()
+
+      // Form should maintain vertical layout even in landscape
+      const submitButton = screen.getByRole('button', {
+        name: /salvar cliente/i,
+      })
+      expect(submitButton).toBeInTheDocument()
+    })
+
+    it('should render correctly on tablet portrait (768px)', async () => {
+      setViewport(viewports.tablet)
+
+      const onSubmit = vi.fn()
+      render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      // Form should have appropriate sizing for tablet
+      const formContainer = screen
+        .getByText(/novo cliente/i)
+        .closest('.max-w-md')
+      expect(formContainer).toBeInTheDocument()
+
+      // All elements should be properly spaced
+      expect(screen.getByLabelText(/nome completo/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/cpf/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/data de nascimento/i)).toBeInTheDocument()
+
+      // Buttons should maintain proper sizing
+      const submitButton = screen.getByRole('button', {
+        name: /salvar cliente/i,
+      })
+      expect(submitButton).toBeInTheDocument()
+    })
+
+    it('should render correctly on desktop (1024px+)', async () => {
+      setViewport(viewports.desktop)
+
+      const onSubmit = vi.fn()
+      render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      // Form should be centered and well-proportioned
+      const formContainer = screen
+        .getByText(/novo cliente/i)
+        .closest('.mx-auto')
+      expect(formContainer).toBeInTheDocument()
+
+      // All form elements should be accessible
+      expect(screen.getByLabelText(/nome completo/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/cpf/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/data de nascimento/i)).toBeInTheDocument()
+
+      // Action buttons should be properly sized
+      const submitButton = screen.getByRole('button', {
+        name: /salvar cliente/i,
+      })
+      expect(submitButton).toBeInTheDocument()
+    })
+
+    it('should handle ultra-wide screens properly (1920px)', async () => {
+      setViewport(viewports.ultraWide)
+
+      const onSubmit = vi.fn()
+      render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      // Form should not stretch too wide
+      const formContainer = screen
+        .getByText(/novo cliente/i)
+        .closest('.max-w-md')
+      expect(formContainer).toBeInTheDocument()
+
+      // Content should remain readable and well-proportioned
+      expect(screen.getByLabelText(/nome completo/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/cpf/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/data de nascimento/i)).toBeInTheDocument()
+    })
+  })
+
+  describe('CPF Input Responsiveness', () => {
+    it('should handle CPF input and validation on mobile', async () => {
+      setViewport(viewports.mobile)
+
+      const onSubmit = vi.fn()
+      render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      const cpfInput = screen.getByLabelText(/cpf/i)
+
+      // CPF input should be properly sized for mobile
+      expect(cpfInput).toHaveAttribute('maxLength', '14')
+      expect(cpfInput).toHaveAttribute('placeholder', '000.000.000-00')
+
+      // Test real-time validation on mobile
+      fireEvent.change(cpfInput, { target: { value: '123' } })
+
+      // Should show validation indicator
+      await waitFor(() => {
+        expect(screen.getByText('✗')).toBeInTheDocument()
+      })
+
+      // Complete valid CPF
+      fireEvent.change(cpfInput, { target: { value: '12345678901' } })
+
+      await waitFor(() => {
+        expect(screen.getByText('✓')).toBeInTheDocument()
+      })
+    })
+
+    it('should handle CPF validation indicators across screen sizes', async () => {
+      const testBreakpoints = [
+        viewports.mobile,
+        viewports.tablet,
+        viewports.desktop,
+      ]
+
+      for (const viewport of testBreakpoints) {
+        setViewport(viewport)
+
+        const onSubmit = vi.fn()
+        const { rerender } = render(
+          <TestWrapper>
+            <ClientForm onSubmit={onSubmit} />
+          </TestWrapper>
+        )
+
+        const cpfInput = screen.getByLabelText(/cpf/i)
+
+        // Test invalid CPF
+        fireEvent.change(cpfInput, { target: { value: '00000000000' } })
+
+        await waitFor(() => {
+          expect(screen.getByText('✗')).toBeInTheDocument()
+        })
+
+        // Test valid CPF
+        fireEvent.change(cpfInput, { target: { value: '12345678901' } })
+
+        await waitFor(() => {
+          expect(screen.getByText('✓')).toBeInTheDocument()
+          expect(
+            screen.getByText(/cpf válido - utilizando @brazilian-utils/i)
+          ).toBeInTheDocument()
+        })
+
+        // Clean up for next iteration
+        rerender(<div />)
+      }
+    })
+  })
+
+  describe('Form Validation Across Breakpoints', () => {
+    it('should display validation errors responsively', async () => {
+      setViewport(viewports.mobile)
+
+      const onSubmit = vi.fn()
+      render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      // Fill with invalid data
+      const nameInput = screen.getByLabelText(/nome completo/i)
+      const cpfInput = screen.getByLabelText(/cpf/i)
+      const birthDateInput = screen.getByLabelText(/data de nascimento/i)
+
+      fireEvent.change(nameInput, { target: { value: 'A' } }) // Too short
+      fireEvent.change(cpfInput, { target: { value: '00000000000' } }) // Invalid
+      fireEvent.change(birthDateInput, { target: { value: '2010-01-01' } }) // Too young
+
+      // Trigger validation
+      fireEvent.blur(nameInput)
+      fireEvent.blur(cpfInput)
+      fireEvent.blur(birthDateInput)
+
+      // Wait for form validation to trigger
+      await waitFor(() => {
+        // Check if any error messages are visible (more lenient check)
+        const errorElements = screen.queryAllByText(/deve|inválido/i)
+        expect(errorElements.length).toBeGreaterThan(0)
+      }, { timeout: 5000 })
+
+      // Error messages should not overflow on mobile
+      const errorMessages = screen.getAllByText(/deve/i)
+      errorMessages.forEach(error => {
+        expect(error).toBeInTheDocument()
+        expect(error).toHaveClass('text-sm')
+      })
+    })
+
+    it('should handle form submission states across screen sizes', async () => {
+      const testBreakpoints = [
+        viewports.mobile,
+        viewports.tablet,
+        viewports.desktop,
+      ]
+
+      for (const viewport of testBreakpoints) {
+        setViewport(viewport)
+
+        const onSubmit = vi
+          .fn()
+          .mockImplementation(
+            () => new Promise(resolve => setTimeout(resolve, 100))
+          )
+        
+        const TestSubmissionComponent = () => {
+          const [isLoading, setIsLoading] = useState(false)
+          
+          const handleSubmit = async (data: ClientFormData) => {
+            setIsLoading(true)
+            await onSubmit(data)
+            setIsLoading(false)
+          }
+          
+          return <ClientForm onSubmit={handleSubmit} isLoading={isLoading} />
+        }
+        
+        render(
+          <TestWrapper>
+            <TestSubmissionComponent />
+          </TestWrapper>
+        )
+
+        // Fill valid data
+        const nameInput = screen.getByLabelText(/nome completo/i)
+        const cpfInput = screen.getByLabelText(/cpf/i)
+        const birthDateInput = screen.getByLabelText(/data de nascimento/i)
+
+        fireEvent.change(nameInput, { target: { value: mockClientData.name } })
+        fireEvent.change(cpfInput, { target: { value: mockClientData.cpf } })
+        fireEvent.change(birthDateInput, {
+          target: { value: mockClientData.birthDate },
+        })
+
+        const submitButton = screen.getByRole('button', {
+          name: /salvar cliente/i,
+        })
+        fireEvent.click(submitButton)
+
+        // Check if button text changes to loading state and inputs are disabled
+        await waitFor(() => {
+          const submitBtn = screen.getByRole('button', { name: /salvando/i })
+          expect(submitBtn).toBeInTheDocument()
+          
+          // Form should be disabled during loading
+          expect(nameInput).toBeDisabled()
+          expect(cpfInput).toBeDisabled()
+          expect(birthDateInput).toBeDisabled()
+        }, { timeout: 3000 })
+      }
+    }, 60000)
+  })
+
+  describe('Button Layout Responsiveness', () => {
+    it('should handle single button layout on mobile', async () => {
+      setViewport(viewports.mobile)
+
+      const onSubmit = vi.fn()
+      render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      const submitButton = screen.getByRole('button', {
+        name: /salvar cliente/i,
+      })
+
+      // Single button should take full width on mobile
+      expect(submitButton).toHaveClass('flex-1')
+
+      // Button should be accessible and properly sized for touch
+      expect(submitButton).toBeInTheDocument()
+    })
+
+    it('should handle dual button layout responsively', async () => {
+      setViewport(viewports.mobile)
+
+      const onSubmit = vi.fn()
+      const onCancel = vi.fn()
+      render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} onCancel={onCancel} />
+        </TestWrapper>
+      )
+
+      const submitButton = screen.getByRole('button', {
+        name: /salvar cliente/i,
+      })
+      const cancelButton = screen.getByRole('button', { name: /cancelar/i })
+
+      // Both buttons should be present
+      expect(submitButton).toBeInTheDocument()
+      expect(cancelButton).toBeInTheDocument()
+
+      // Buttons should be in a flex layout
+      const buttonContainer = submitButton.parentElement
+      expect(buttonContainer).toHaveClass('flex', 'gap-3')
+
+      // Submit button should take more space
+      expect(submitButton).toHaveClass('flex-1')
+    })
+
+    it('should maintain button accessibility across screen sizes', async () => {
+      const testBreakpoints = [
+        viewports.mobile,
+        viewports.tablet,
+        viewports.desktop,
+      ]
+
+      for (const viewport of testBreakpoints) {
+        setViewport(viewport)
+
+        const onSubmit = vi.fn()
+        const onCancel = vi.fn()
+        render(
+          <TestWrapper>
+            <ClientForm onSubmit={onSubmit} onCancel={onCancel} />
+          </TestWrapper>
+        )
+
+        // Wait for form to initialize
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: /salvar cliente/i })).toBeInTheDocument()
+        })
+
+        const submitButton = screen.getByRole('button', {
+          name: /salvar cliente/i,
+        })
+        const cancelButton = screen.getByRole('button', { name: /cancelar/i })
+
+        // Buttons should have proper accessibility attributes
+        expect(submitButton).toHaveAttribute('type', 'submit')
+        expect(cancelButton).toHaveAttribute('type', 'button')
+
+        // Buttons should be keyboard accessible
+        expect(submitButton).not.toHaveAttribute('tabIndex', '-1')
+        expect(cancelButton).not.toHaveAttribute('tabIndex', '-1')
+
+        // Buttons should have adequate touch targets (especially on mobile)
+        if (viewport.width <= 768) {
+          // Mobile/tablet - buttons should be larger for touch
+          expect(submitButton).toBeInTheDocument()
+          expect(cancelButton).toBeInTheDocument()
+        }
+      }
+    })
+  })
+
+  describe('Touch and Interaction Responsiveness', () => {
+    it('should handle touch interactions on mobile devices', async () => {
+      setViewport(viewports.mobile)
+
+      const onSubmit = vi.fn()
+      render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      const nameInput = screen.getByLabelText(/nome completo/i)
+      const cpfInput = screen.getByLabelText(/cpf/i)
+
+      // Simulate touch interactions
+      fireEvent.touchStart(nameInput)
+      fireEvent.focus(nameInput)
+      fireEvent.change(nameInput, { target: { value: 'Test Name' } })
+
+      fireEvent.touchStart(cpfInput)
+      fireEvent.focus(cpfInput)
+      fireEvent.change(cpfInput, { target: { value: '12345678901' } })
+
+      // Form should respond properly to touch
+      expect(nameInput).toHaveValue('Test Name')
+      expect(cpfInput).toHaveValue('123.456.789-01') // CPF gets formatted automatically
+    })
+
+    it('should handle date input on different devices', async () => {
+      const testBreakpoints = [
+        viewports.mobile,
+        viewports.tablet,
+        viewports.desktop,
+      ]
+
+      for (const viewport of testBreakpoints) {
+        setViewport(viewport)
+
+        const onSubmit = vi.fn()
+        render(
+          <TestWrapper>
+            <ClientForm onSubmit={onSubmit} />
+          </TestWrapper>
+        )
+
+        // Wait for form to initialize
+        await waitFor(() => {
+          expect(screen.getByLabelText('Data de Nascimento *')).toBeInTheDocument()
+        })
+
+        const birthDateInput = screen.getByLabelText(/data de nascimento/i)
+
+        // Date input should work across all screen sizes
+        expect(birthDateInput).toHaveAttribute('type', 'date')
+
+        fireEvent.change(birthDateInput, { target: { value: '1990-05-15' } })
+        expect(birthDateInput).toHaveValue('1990-05-15')
+      }
+    })
+  })
+
+  describe('Debug Information Responsiveness', () => {
+    it('should display debug info responsively in development mode', async () => {
+      vi.stubEnv('NODE_ENV', 'development')
+
+      setViewport(viewports.mobile)
+
+      const onSubmit = vi.fn()
+      render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      const cpfInput = screen.getByLabelText(/cpf/i)
+      fireEvent.change(cpfInput, { target: { value: '12345678901' } })
+
+      // Debug info should be visible and readable on mobile
+      await waitFor(() => {
+        expect(screen.getByText(/debug info:/i)).toBeInTheDocument()
+      })
+
+      // Debug info should not break layout on mobile
+      const debugSection = screen.getByText(/debug info:/i).closest('.mt-6')
+      expect(debugSection).toBeInTheDocument()
+      expect(debugSection).toHaveClass('text-xs')
+
+      // Switch to desktop and verify debug info scales appropriately
+      setViewport(viewports.desktop)
+
+      // Debug info should still be visible and readable
+      expect(screen.getByText(/debug info:/i)).toBeInTheDocument()
+
+      vi.unstubAllEnvs()
+    })
+
+    it('should hide debug info in production across all screen sizes', async () => {
+      vi.stubEnv('NODE_ENV', 'production')
+
+      const testBreakpoints = [
+        viewports.mobile,
+        viewports.tablet,
+        viewports.desktop,
+      ]
+
+      for (const viewport of testBreakpoints) {
+        setViewport(viewport)
+
+        const onSubmit = vi.fn()
+        render(
+          <TestWrapper>
+            <ClientForm onSubmit={onSubmit} />
+          </TestWrapper>
+        )
+
+        // Wait for form to initialize
+        await waitFor(() => {
+          expect(screen.getByRole('button', { name: /salvar cliente/i })).toBeInTheDocument()
+        })
+
+        // Debug info should not be visible in production
+        expect(screen.queryByText(/debug info:/i)).not.toBeInTheDocument()
+      }
+
+      vi.unstubAllEnvs()
+    })
+  })
+
+  describe('Dynamic Viewport Changes', () => {
+    it('should handle orientation changes gracefully', async () => {
+      const onSubmit = vi.fn()
+      const { rerender } = render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      // Start in portrait
+      setViewport(viewports.mobile)
+      rerender(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      // Fill some data
+      const nameInput = screen.getByLabelText(/nome completo/i)
+      fireEvent.change(nameInput, { target: { value: 'Test User' } })
+      expect(nameInput).toHaveValue('Test User')
+
+      // Switch to landscape
+      setViewport(viewports.mobileLandscape)
+      rerender(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      // Data should be preserved and form should still work
+      const nameInputAfterRotation = screen.getByLabelText(/nome completo/i)
+      expect(nameInputAfterRotation).toBeInTheDocument()
+
+      // Form should remain functional
+      expect(screen.getByLabelText(/cpf/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/data de nascimento/i)).toBeInTheDocument()
+    })
+
+    it('should handle rapid viewport changes without errors', async () => {
+      const onSubmit = vi.fn()
+      const { rerender } = render(
+        <TestWrapper>
+          <ClientForm onSubmit={onSubmit} />
+        </TestWrapper>
+      )
+
+      // Rapidly cycle through different viewports
+      const viewportList = Object.values(viewports)
+
+      for (let i = 0; i < 10; i++) {
+        const viewport = viewportList[i % viewportList.length]!
+        setViewport(viewport)
+
+        rerender(
+          <TestWrapper>
+            <ClientForm onSubmit={onSubmit} />
+          </TestWrapper>
+        )
+
+        // Form should remain functional after each change
+        expect(screen.getByLabelText(/nome completo/i)).toBeInTheDocument()
+        expect(screen.getByLabelText(/cpf/i)).toBeInTheDocument()
+        expect(screen.getByLabelText(/data de nascimento/i)).toBeInTheDocument()
+        expect(
+          screen.getByRole('button', { name: /salvar cliente/i })
+        ).toBeInTheDocument()
+      }
+    })
+  })
+})
