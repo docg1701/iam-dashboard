@@ -57,7 +57,7 @@ HEALTHCHECK --interval=45s --timeout=15s --start-period=60s --retries=5 \
 EXPOSE 8000
 
 # Run the application with optimized reload (exclude heavy directories)
-CMD ["uv", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "src", "--reload-exclude", "*.pyc", "--reload-exclude", ".venv", "--reload-exclude", "__pycache__", "--reload-exclude", ".cache", "--reload-exclude", "tests", "--access-log", "--log-level", "info"]
+CMD ["uv", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "src", "--reload-exclude", "*.pyc", "--reload-exclude", ".venv", "--reload-exclude", "__pycache__", "--reload-exclude", ".cache", "--reload-exclude", "tests", "--reload-exclude", "*.log", "--reload-exclude", ".pytest_cache", "--reload-delay", "2", "--access-log", "--log-level", "info"]
 
 # Production stage
 FROM base as production

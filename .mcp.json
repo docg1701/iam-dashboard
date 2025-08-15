@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "heimdall-iam_dashboard_af3a926d": {
+      "type": "stdio",
+      "command": "heimdall-mcp",
+      "args": [],
+      "env": {
+        "PROJECT_PATH": "/home/galvani/dev/iam-dashboard"
+      }
+    }
+  }
+}
