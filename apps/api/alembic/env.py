@@ -89,6 +89,7 @@ def do_run_migrations(connection: Connection) -> None:
         # Create PostgreSQL extensions as specified in Story 1.2 Task 5
         connection.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
         connection.execute(text('CREATE EXTENSION IF NOT EXISTS "pgcrypto"'))
+        connection.execute(text('CREATE EXTENSION IF NOT EXISTS "vector"'))
 
         context.run_migrations()
 
