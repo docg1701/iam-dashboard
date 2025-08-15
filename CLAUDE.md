@@ -13,13 +13,11 @@ Essential guidance for Claude Code when working on this fullstack IAM Dashboard 
 - **ALL variable names, function names, class names MUST be in English**
 - **User Interface (UI) content MUST be in Portuguese (Brazil)**
 
-### ⚠️ CRITICAL DATETIME RULE  
-- **NEVER use `datetime.utcnow()`** - it's DEPRECATED and causes warnings in Python 3.12+
-- **NEVER use `datetime.now(UTC)` directly** - causes PostgreSQL compatibility issues
-- **ALWAYS use `datetime.now(UTC).replace(tzinfo=None)`** for PostgreSQL TIMESTAMP WITHOUT TIME ZONE
-- **Required imports**: `from datetime import datetime, UTC`
-- **Field default factory**: `Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))`
-- **⚠️ See LONG-TERM-MEMORY.md Bug #2** for complete PostgreSQL timezone compatibility guide
+### ⚠️ CRITICAL COMPATIBILITY RULES
+- **NEVER use deprecated `datetime.utcnow()`** - causes Python 3.12+ warnings
+- **NEVER modify enum fields without checking LONG-TERM-MEMORY.md Bug #1** - SQLModel-Alembic incompatibility  
+- **NEVER use timezone-aware datetime in models** - see LONG-TERM-MEMORY.md Bug #2 for PostgreSQL compatibility
+- **ALWAYS check LONG-TERM-MEMORY.md before touching**: enums, datetime fields, or migrations
 
 ### Backend Testing Directives
 - **CRITICAL: Mock only external dependencies - NEVER mock internal business logic**
