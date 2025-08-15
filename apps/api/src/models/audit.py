@@ -55,9 +55,9 @@ class AuditLog(SQLModel, table=True):
         ...,
         sa_column=Column(
             SQLAEnum(AuditAction, values_callable=lambda obj: [e.value for e in obj]),
-            nullable=False
+            nullable=False,
         ),
-        description="Action performed in the audit event"
+        description="Action performed in the audit event",
     )
 
     # Resource tracking for polymorphic references

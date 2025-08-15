@@ -8,7 +8,8 @@ from enum import Enum
 
 from pydantic import EmailStr
 from pydantic import ValidationError as PydanticValidationError
-from sqlalchemy import Column, Enum as SQLAEnum
+from sqlalchemy import Column
+from sqlalchemy import Enum as SQLAEnum
 from sqlmodel import Field, SQLModel
 
 
@@ -46,8 +47,8 @@ class User(SQLModel, table=True):
         sa_column=Column(
             SQLAEnum(UserRole, values_callable=lambda obj: [e.value for e in obj]),
             nullable=False,
-            default=UserRole.USER.value
-        )
+            default=UserRole.USER.value,
+        ),
     )
 
     # 2FA support - TOTP secret is optional
@@ -55,8 +56,12 @@ class User(SQLModel, table=True):
 
     # Status and audit fields
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
 
     # Additional metadata for security
     last_login_at: datetime | None = Field(default=None)

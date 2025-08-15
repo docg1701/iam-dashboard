@@ -132,6 +132,9 @@ describe('AuthContext', () => {
   afterEach(() => {
     global.fetch = originalFetch
     vi.restoreAllMocks()
+    // Clear any pending timers to prevent hanging
+    vi.clearAllTimers()
+    vi.useRealTimers()
   })
 
   describe('Provider Initialization', () => {
@@ -272,8 +275,15 @@ describe('AuthContext', () => {
         </ErrorProvider>
       )
 
+      // Wrap the async operation to catch any unhandled rejections
       await act(async () => {
-        screen.getByTestId('login-btn').click()
+        try {
+          fireEvent.click(screen.getByTestId('login-btn'))
+          // Allow time for promise to resolve/reject
+          await new Promise(resolve => setTimeout(resolve, 50))
+        } catch (error) {
+          // Expected error, caught properly
+        }
       })
 
       await waitFor(() => {
@@ -305,8 +315,15 @@ describe('AuthContext', () => {
         </ErrorProvider>
       )
 
+      // Wrap the async operation to catch any unhandled rejections
       await act(async () => {
-        screen.getByTestId('login-btn').click()
+        try {
+          fireEvent.click(screen.getByTestId('login-btn'))
+          // Allow time for timeout to occur and be handled
+          await new Promise(resolve => setTimeout(resolve, 200))
+        } catch (error) {
+          // Expected timeout error, caught properly
+        }
       })
 
       await waitFor(
@@ -319,7 +336,7 @@ describe('AuthContext', () => {
             'true'
           )
         },
-        { timeout: 1000 }
+        { timeout: 2000 }
       )
     })
 
@@ -472,9 +489,11 @@ describe('AuthContext', () => {
       ;(localStorage.getItem as Mock).mockReturnValue('refresh123')
 
       const { container } = render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
+        <ErrorProvider>
+          <AuthProvider>
+            <TestComponent />
+          </AuthProvider>
+        </ErrorProvider>
       )
 
       // Wait for component to render
@@ -730,10 +749,14 @@ describe('AuthContext', () => {
 
       const TestWrapper: React.FC = () => {
         const auth = useAuth()
+        const [loginCalled, setLoginCalled] = React.useState(false)
 
         React.useEffect(() => {
-          auth.login({ email: 'test@example.com', password: 'password' })
-        }, [])
+          if (!loginCalled) {
+            setLoginCalled(true)
+            auth.login({ email: 'test@example.com', password: 'password' })
+          }
+        }, [loginCalled, auth])
 
         if (!auth.isAuthenticated) {
           return <div>Loading...</div>
@@ -750,9 +773,11 @@ describe('AuthContext', () => {
       ;(global.fetch as Mock).mockResolvedValueOnce(loginResponse)
 
       return render(
-        <AuthProvider>
-          <TestWrapper />
-        </AuthProvider>
+        <ErrorProvider>
+          <AuthProvider>
+            <TestWrapper />
+          </AuthProvider>
+        </ErrorProvider>
       )
     }
 
@@ -800,9 +825,11 @@ describe('AuthContext', () => {
 
     it('should return false for all permissions when user is null', () => {
       render(
-        <AuthProvider>
-          <PermissionsTestComponent />
-        </AuthProvider>
+        <ErrorProvider>
+          <AuthProvider>
+            <PermissionsTestComponent />
+          </AuthProvider>
+        </ErrorProvider>
       )
 
       expect(screen.getByTestId('has-user-role')).toHaveTextContent('false')

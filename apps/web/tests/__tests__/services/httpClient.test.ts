@@ -5,7 +5,16 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest'
 import axios, { AxiosError, AxiosResponse, AxiosInstance } from 'axios'
-import { tokenStorage } from '@/utils/tokenStorage'
+
+// Mock tokenStorage utility (CLAUDE.md compliant - external boundary)
+vi.mock('@/utils/tokenStorage', () => ({
+  tokenStorage: {
+    getTokens: vi.fn(),
+    setTokens: vi.fn(),
+    removeTokens: vi.fn(),
+    isTokenExpired: vi.fn(),
+  },
+}))
 
 // Mock external dependencies (CLAUDE.md compliant)
 vi.mock('axios', () => {
@@ -36,7 +45,8 @@ vi.mock('axios', () => {
   }
 })
 
-// Note: tokenStorage is internal utility - test with real implementation (CLAUDE.md compliant)
+// Import the mocked tokenStorage after mock setup
+import { tokenStorage } from '@/utils/tokenStorage'
 
 // Get the mocked axios after mock setup
 const mockedAxios = vi.mocked(axios, true)

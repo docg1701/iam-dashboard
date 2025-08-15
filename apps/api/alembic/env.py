@@ -6,7 +6,8 @@ import asyncio
 import os
 from logging.config import fileConfig
 
-from sqlalchemy import pool, text, Enum as SQLAEnum
+from sqlalchemy import Enum as SQLAEnum
+from sqlalchemy import pool, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
@@ -33,10 +34,11 @@ def render_item(type_, obj, autogen_context):
         # Get the Python enum class
         enum_class = obj.enum_class
         if enum_class:
-            # Use enum VALUES not names  
+            # Use enum VALUES not names
             values = [e.value for e in enum_class]
             return f"sa.Enum({', '.join(repr(v) for v in values)}, name='{obj.name}')"
     return False
+
 
 # Override database URL from environment variable if available
 database_url = os.getenv("SQLALCHEMY_DATABASE_URL") or os.getenv("DATABASE_URL")

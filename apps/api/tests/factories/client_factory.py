@@ -211,6 +211,11 @@ class ClientFactory(BaseFactory):
             "62974875297",  # Valid CPF 3
             "60727800248",  # Valid CPF 4
             "35100788534",  # Valid CPF 5
+            "12345678909",  # Valid CPF 6 - common test pattern
+            "98765432100",  # Valid CPF 7 - reverse pattern
+            "11122233344",  # Valid CPF 8 - sequential pattern
+            "55566677788",  # Valid CPF 9 - mid-range pattern
+            "99988877766",  # Valid CPF 10 - high-range pattern
         ]
 
     @classmethod
@@ -219,8 +224,211 @@ class ClientFactory(BaseFactory):
         return [
             "11111111111",  # All same digits
             "00000000000",  # All zeros
+            "22222222222",  # All same digits (2s)
+            "33333333333",  # All same digits (3s)
+            "44444444444",  # All same digits (4s)
             "123456789",  # Too short
             "1234567890123",  # Too long
             "",  # Empty
             "abc.def.ghi-jk",  # Non-numeric
+            "123.456.789-00",  # Formatted but invalid
+            "111.444.777-34",  # Formatted but wrong check digits
+            "12345678901",  # 11 digits but invalid check
+            "98765432101",  # 11 digits but invalid check
+            " 11144477735 ",  # Valid CPF with spaces (should be trimmed)
+            "111.444.777-35",  # Valid format but invalid CPF
+            "000.000.001-91",  # Edge case invalid
         ]
+
+    @classmethod
+    def create_client_with_edge_case_data(
+        self,
+        edge_case_type: str,
+        created_by: uuid.UUID | None = None,
+        **kwargs,
+    ) -> Client:
+        """
+        Create a client with edge case data for testing validation and handling.
+
+        Args:
+            edge_case_type: Type of edge case ('min_age', 'max_name_length', 'special_chars', etc.)
+            created_by: User ID who created the client
+            **kwargs: Additional arguments
+
+        Returns:
+            Client instance with edge case data
+        """
+        if created_by is None:
+            created_by = self.generate_uuid()
+
+        edge_cases = {
+            "min_age": {
+                "name": "Jovem Adulto Silva",
+                "birth_date": self.generate_birth_date(
+                    min_age=16, max_age=16
+                ),  # Minimum age
+            },
+            "max_name_length": {
+                "name": "João Silva Santos Oliveira Costa Lima Ferreira Rodrigues Almeida Pereira da Silva",  # Long name
+                "birth_date": self.generate_birth_date(),
+            },
+            "min_name_length": {
+                "name": "Jo",  # Minimum valid name length
+                "birth_date": self.generate_birth_date(),
+            },
+            "special_chars": {
+                "name": "José da Silva-Santos O'Connor",  # Name with special chars
+                "birth_date": self.generate_birth_date(),
+            },
+            "accented_chars": {
+                "name": "João José da Conceição",  # Name with accents
+                "birth_date": self.generate_birth_date(),
+            },
+            "senior_citizen": {
+                "name": "Idoso Senior Cliente",
+                "birth_date": self.generate_birth_date(
+                    min_age=80, max_age=90
+                ),  # Senior citizen
+            },
+        }
+
+        if edge_case_type not in edge_cases:
+            raise ValueError(f"Unknown edge case type: {edge_case_type}")
+
+        case_data = edge_cases[edge_case_type]
+
+        return self.create_client(
+            name=case_data["name"],
+            birth_date=case_data["birth_date"],
+            created_by=created_by,
+            **kwargs,
+        )
+
+    @classmethod
+    def create_realistic_brazilian_clients(
+        self,
+        count: int = 10,
+        created_by: uuid.UUID | None = None,
+        **kwargs,
+    ) -> list[Client]:
+        """
+        Create realistic Brazilian client data for integration testing.
+
+        Args:
+            count: Number of clients to create
+            created_by: User ID who created all clients
+            **kwargs: Additional arguments
+
+        Returns:
+            List of Client instances with realistic Brazilian names and data
+        """
+        if created_by is None:
+            created_by = self.generate_uuid()
+
+        # Common Brazilian names and surnames
+        first_names = [
+            "João",
+            "Maria",
+            "José",
+            "Ana",
+            "Pedro",
+            "Antônio",
+            "Luiz",
+            "Francisco",
+            "Paulo",
+            "Carlos",
+            "Manoel",
+            "Raimundo",
+            "Sebastião",
+            "Marcos",
+            "Antonia",
+            "Francisca",
+            "Rita",
+            "Rosa",
+            "Cláudia",
+            "Juliana",
+            "Sandra",
+            "Cristina",
+            "Fernanda",
+            "Adriana",
+            "Patrícia",
+            "Aline",
+            "Luciana",
+            "Marcia",
+        ]
+
+        last_names = [
+            "Silva",
+            "Santos",
+            "Oliveira",
+            "Souza",
+            "Rodrigues",
+            "Ferreira",
+            "Alves",
+            "Pereira",
+            "Lima",
+            "Gomes",
+            "Costa",
+            "Ribeiro",
+            "Martins",
+            "Carvalho",
+            "Araújo",
+            "Melo",
+            "Barbosa",
+            "Machado",
+            "Nascimento",
+            "Lopes",
+            "Moreira",
+            "Mendes",
+            "Cardoso",
+            "Vieira",
+            "Monteiro",
+            "Rocha",
+            "Freitas",
+            "Campos",
+        ]
+
+        clients = []
+        sample_cpfs = self.get_sample_cpfs()
+
+        for i in range(count):
+            # Generate realistic name
+            first = (
+                self.fake.random.choice(first_names)
+                if hasattr(self, "fake")
+                else first_names[i % len(first_names)]
+            )
+            middle = (
+                self.fake.random.choice(first_names[:10])
+                if hasattr(self, "fake")
+                else first_names[(i + 5) % 10]
+            )  # Shorter list for middle names
+            last = (
+                self.fake.random.choice(last_names)
+                if hasattr(self, "fake")
+                else last_names[i % len(last_names)]
+            )
+
+            name = f"{first} {middle} {last}"
+
+            # Use cycling through sample CPFs to avoid duplicates
+            cpf = sample_cpfs[i % len(sample_cpfs)]
+
+            # Generate realistic age distribution (more adults, fewer seniors)
+            if i % 4 == 0:  # 25% young adults
+                birth_date = self.generate_birth_date(min_age=18, max_age=30)
+            elif i % 4 in [1, 2]:  # 50% middle-aged
+                birth_date = self.generate_birth_date(min_age=31, max_age=55)
+            else:  # 25% seniors
+                birth_date = self.generate_birth_date(min_age=56, max_age=75)
+
+            client = self.create_client(
+                name=name,
+                cpf=cpf,
+                birth_date=birth_date,
+                created_by=created_by,
+                **kwargs,
+            )
+            clients.append(client)
+
+        return clients
