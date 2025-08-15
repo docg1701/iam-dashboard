@@ -1,16 +1,23 @@
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 
 export default function HomePage() {
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold tracking-tight mb-4">
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-8 text-center">
+          <h1 className="mb-4 text-4xl font-bold tracking-tight">
             Dashboard IAM
           </h1>
           <p className="text-xl text-muted-foreground">
-            Sistema revolucionário de gerenciamento de permissões com arquitetura multi-agente
+            Sistema revolucionário de gerenciamento de permissões com
+            arquitetura multi-agente
           </p>
         </div>
 
@@ -19,7 +26,8 @@ export default function HomePage() {
             <CardHeader>
               <CardTitle>Gerenciamento de Clientes</CardTitle>
               <CardDescription>
-                Cadastro e administração completa de clientes com metadados personalizáveis
+                Cadastro e administração completa de clientes com metadados
+                personalizáveis
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -59,8 +67,8 @@ export default function HomePage() {
         </div>
 
         <div className="mt-12 text-center">
-          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-            <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse" />
+          <div className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-sm text-green-800 dark:bg-green-900 dark:text-green-300">
+            <div className="mr-2 h-2 w-2 animate-pulse rounded-full bg-green-400" />
             Sistema Online
           </div>
         </div>

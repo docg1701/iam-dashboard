@@ -10,13 +10,21 @@ import { afterEach, beforeAll, vi } from 'vitest'
 // Cleanup after each test case
 afterEach(() => {
   cleanup()
+  // Clean up environment variable stubs
+  vi.unstubAllEnvs()
+  // Clear all timers to prevent hanging
+  vi.clearAllTimers()
+  // Restore all mocks to prevent interference
+  vi.restoreAllMocks()
+  // Clear all intervals and timeouts
+  vi.useRealTimers()
 })
 
 // Global test setup
 beforeAll(() => {
-  // Mock environment variables
-  process.env.NEXT_PUBLIC_API_URL = 'http://localhost:8000'
-  process.env.NODE_ENV = 'test'
+  // Mock environment variables using vi.stubEnv for safer environment variable mocking
+  vi.stubEnv('NEXT_PUBLIC_API_URL', 'http://localhost:8000')
+  vi.stubEnv('NODE_ENV', 'test')
 })
 
 // Mock Next.js router
@@ -77,6 +85,45 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// Mock localStorage with a real-like implementation
+const createMockStorage = () => {
+  const store: Record<string, string> = {}
+  return {
+    getItem: vi.fn((key: string) => store[key] || null),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key]
+    }),
+    clear: vi.fn(() => {
+      Object.keys(store).forEach(key => delete store[key])
+    }),
+    length: 0,
+    key: vi.fn(),
+  }
+}
+
+Object.defineProperty(window, 'localStorage', {
+  value: createMockStorage(),
+  writable: true,
+})
+
+// Mock theme provider requirements
+Object.defineProperty(document, 'documentElement', {
+  value: {
+    classList: {
+      add: vi.fn(),
+      remove: vi.fn(),
+      contains: vi.fn(() => false),
+    },
+    style: {},
+    getAttribute: vi.fn(() => null),
+    setAttribute: vi.fn(),
+  },
+  writable: true,
+})
+
 // Mock scrollTo
 Object.defineProperty(window, 'scrollTo', {
   writable: true,
@@ -94,28 +141,10 @@ global.console = {
 // Setup global fetch mock
 global.fetch = vi.fn()
 
-// Mock LocalStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-  length: 0,
-  key: vi.fn(),
-}
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-})
+// This localStorage mock is already defined above for next-themes compatibility
 
-// Mock SessionStorage
-const sessionStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-  length: 0,
-  key: vi.fn(),
-}
+// Mock SessionStorage with a real-like implementation
 Object.defineProperty(window, 'sessionStorage', {
-  value: sessionStorageMock,
+  value: createMockStorage(),
+  writable: true,
 })

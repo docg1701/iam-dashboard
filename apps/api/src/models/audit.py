@@ -1,16 +1,19 @@
 """
 Audit log model for compliance tracking.
 """
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Optional, Dict, Any
-import uuid
 
-from sqlmodel import SQLModel, Field, Column, JSON
+import uuid
+from datetime import UTC, datetime
+from enum import Enum
+
+from pydantic import ValidationError as PydanticValidationError
+from sqlalchemy import Enum as SQLAEnum
+from sqlmodel import JSON, Column, Field, SQLModel
 
 
 class AuditAction(str, Enum):
     """Audit action enumeration following architecture specifications."""
+
     CREATE = "create"
     READ = "read"
     UPDATE = "update"
@@ -19,108 +22,140 @@ class AuditAction(str, Enum):
     LOGOUT = "logout"
     PERMISSION_CHANGE = "permission_change"
 
+    def __str__(self) -> str:
+        """Return the string value for proper test compatibility."""
+        return self.value
+
+    def __hash__(self) -> int:
+        """Make enum hashable for SQLAlchemy compatibility."""
+        return hash(self.value)
+
 
 class AuditLog(SQLModel, table=True):
     """
     Audit log model for comprehensive compliance tracking.
-    
+
     Tracks all state-changing operations with user, timestamp, and change details
     for complete audit trail and compliance requirements.
     """
+
     __tablename__ = "audit_logs"
-    
+
     # Primary key with UUID
-    id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True)
-    
+    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
+
     # Actor and action tracking
-    actor_id: Optional[uuid.UUID] = Field(
-        default=None, 
-        foreign_key="users.id", 
+    actor_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="users.id",
         index=True,
-        description="User who performed the action (null for system actions)"
+        description="User who performed the action (null for system actions)",
     )
-    action: AuditAction
-    
+    action: AuditAction = Field(
+        ...,
+        sa_column=Column(
+            SQLAEnum(AuditAction, values_callable=lambda obj: [e.value for e in obj]),
+            nullable=False
+        ),
+        description="Action performed in the audit event"
+    )
+
     # Resource tracking for polymorphic references
     resource_type: str = Field(
-        max_length=50, 
+        ...,
+        max_length=50,
         index=True,
-        description="Type of resource affected (e.g., 'user', 'client', 'permission')"
+        description="Type of resource affected (e.g., 'user', 'client', 'permission')",
     )
-    resource_id: Optional[uuid.UUID] = Field(
-        default=None,
-        index=True, 
-        description="ID of the affected resource"
+    resource_id: uuid.UUID | None = Field(
+        default=None, index=True, description="ID of the affected resource"
     )
-    
+
     # Change tracking with JSON fields
-    old_values: Optional[Dict[str, Any]] = Field(
+    old_values: dict[str, object] | None = Field(
         default=None,
         sa_column=Column(JSON),
-        description="Previous values before the change"
+        description="Previous values before the change",
     )
-    new_values: Optional[Dict[str, Any]] = Field(
-        default=None,
-        sa_column=Column(JSON),
-        description="New values after the change"
+    new_values: dict[str, object] | None = Field(
+        default=None, sa_column=Column(JSON), description="New values after the change"
     )
-    
+
     # Security and session tracking
-    ip_address: Optional[str] = Field(
+    ip_address: str | None = Field(
         default=None,
         max_length=45,  # IPv6 max length
         index=True,
-        description="IP address of the client"
+        description="IP address of the client",
     )
-    user_agent: Optional[str] = Field(
-        default=None,
-        max_length=500,
-        description="User agent string from the request"
+    user_agent: str | None = Field(
+        default=None, max_length=500, description="User agent string from the request"
     )
-    session_id: Optional[str] = Field(
+    session_id: str | None = Field(
         default=None,
         max_length=128,
         index=True,
-        description="Session identifier for tracking user sessions"
+        description="Session identifier for tracking user sessions",
     )
-    
+
     # Metadata and timing
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None,
         max_length=500,
-        description="Human-readable description of the action"
+        description="Human-readable description of the action",
     )
     timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc), 
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None),
         index=True,
-        description="Timestamp when the action occurred"
+        description="Timestamp when the action occurred",
     )
-    
+
     # Additional context
-    additional_data: Optional[Dict[str, Any]] = Field(
+    additional_data: dict[str, object] | None = Field(
         default=None,
         sa_column=Column(JSON),
-        description="Additional contextual data for the audit event"
+        description="Additional contextual data for the audit event",
     )
-    
+
+    def __init__(self, **data: object) -> None:
+        """Initialize AuditLog with validation."""
+        # Validate required fields
+        if "action" not in data or data["action"] is None:
+            raise PydanticValidationError.from_exception_data(
+                "AuditLog",
+                [{"type": "missing", "loc": ("action",), "input": data}],
+            )
+        if "resource_type" not in data or data["resource_type"] is None:
+            raise PydanticValidationError.from_exception_data(
+                "AuditLog",
+                [
+                    {
+                        "type": "missing",
+                        "loc": ("resource_type",),
+                        "input": data,
+                    }
+                ],
+            )
+        super().__init__(**data)
+
     @classmethod
     def create_audit_entry(
         cls,
         action: AuditAction,
         resource_type: str,
-        actor_id: Optional[uuid.UUID] = None,
-        resource_id: Optional[uuid.UUID] = None,
-        old_values: Optional[Dict[str, Any]] = None,
-        new_values: Optional[Dict[str, Any]] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        session_id: Optional[str] = None,
-        description: Optional[str] = None,
-        additional_data: Optional[Dict[str, Any]] = None,
+        actor_id: uuid.UUID | None = None,
+        resource_id: uuid.UUID | None = None,
+        old_values: dict[str, object] | None = None,
+        new_values: dict[str, object] | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
+        description: str | None = None,
+        additional_data: dict[str, object] | None = None,
     ) -> "AuditLog":
         """
         Factory method to create audit log entries with consistent formatting.
-        
+
         Args:
             action: The action being audited
             resource_type: Type of resource being affected
@@ -133,7 +168,7 @@ class AuditLog(SQLModel, table=True):
             session_id: Session identifier
             description: Human-readable description
             additional_data: Any additional contextual data
-            
+
         Returns:
             AuditLog instance ready to be saved
         """
@@ -150,6 +185,6 @@ class AuditLog(SQLModel, table=True):
             description=description,
             additional_data=additional_data,
         )
-    
+
     def __repr__(self) -> str:
         return f"AuditLog(id={self.id}, action={self.action}, resource={self.resource_type}:{self.resource_id}, actor={self.actor_id})"

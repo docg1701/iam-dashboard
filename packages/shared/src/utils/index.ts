@@ -2,7 +2,7 @@
  * Shared utility functions
  */
 
-import { cnpj, cpf } from 'cnpj-cpf-validator'
+import { isValidCPF, isValidCNPJ, formatCPF as formatCPFUtil, formatCNPJ as formatCNPJUtil } from '@brazilian-utils/brazilian-utils'
 
 // Date utilities
 export const formatDate = (date: string | Date): string => {
@@ -45,11 +45,11 @@ export const validatePhone = (phone: string): boolean => {
 }
 
 export const validateCPF = (cpfNumber: string): boolean => {
-  return cpf.isValid(cpfNumber)
+  return isValidCPF(cpfNumber)
 }
 
 export const validateCNPJ = (cnpjNumber: string): boolean => {
-  return cnpj.isValid(cnpjNumber)
+  return isValidCNPJ(cnpjNumber)
 }
 
 export const validateCPFOrCNPJ = (document: string): boolean => {
@@ -59,11 +59,11 @@ export const validateCPFOrCNPJ = (document: string): boolean => {
 
 // Formatting utilities
 export const formatCPF = (cpfNumber: string): string => {
-  return cpf.format(cpfNumber)
+  return formatCPFUtil(cpfNumber)
 }
 
 export const formatCNPJ = (cnpjNumber: string): string => {
-  return cnpj.format(cnpjNumber)
+  return formatCNPJUtil(cnpjNumber)
 }
 
 export const formatCPFOrCNPJ = (document: string): string => {

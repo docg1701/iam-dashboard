@@ -1,16 +1,17 @@
 """
 Alembic environment configuration.
 """
+
 import asyncio
 import os
 from logging.config import fileConfig
-from typing import Optional
 
-from sqlalchemy import pool, text
+from sqlalchemy import pool, text, Enum as SQLAEnum
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from alembic import context
 from sqlmodel import SQLModel
+
+from alembic import context
 
 # Import all models to ensure they are registered with SQLModel metadata
 from src.models import *  # noqa: F403, F401
@@ -25,8 +26,20 @@ if config.config_file_name is not None:
 # Add your model's MetaData object here for 'autogenerate' support
 target_metadata = SQLModel.metadata
 
+
+def render_item(type_, obj, autogen_context):
+    """Custom rendering for Enums to use values not names."""
+    if type_ == "type" and isinstance(obj, SQLAEnum):
+        # Get the Python enum class
+        enum_class = obj.enum_class
+        if enum_class:
+            # Use enum VALUES not names  
+            values = [e.value for e in enum_class]
+            return f"sa.Enum({', '.join(repr(v) for v in values)}, name='{obj.name}')"
+    return False
+
 # Override database URL from environment variable if available
-database_url = os.getenv("DATABASE_URL")
+database_url = os.getenv("SQLALCHEMY_DATABASE_URL") or os.getenv("DATABASE_URL")
 if database_url:
     # Convert to async URL if needed
     if database_url.startswith("postgresql://"):
@@ -54,6 +67,7 @@ def run_migrations_offline() -> None:
         compare_type=True,
         compare_server_default=True,
         render_as_batch=False,
+        render_item=render_item,
     )
 
     with context.begin_transaction():
@@ -68,20 +82,22 @@ def do_run_migrations(connection: Connection) -> None:
         compare_type=True,
         compare_server_default=True,
         render_as_batch=False,
+        render_item=render_item,
     )
 
     with context.begin_transaction():
         # Create PostgreSQL extensions as specified in Story 1.2 Task 5
         connection.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
         connection.execute(text('CREATE EXTENSION IF NOT EXISTS "pgcrypto"'))
-        
+        connection.execute(text('CREATE EXTENSION IF NOT EXISTS "vector"'))
+
         context.run_migrations()
 
 
 async def run_async_migrations() -> None:
     """Run migrations in async mode."""
     configuration = config.get_section(config.config_ini_section, {})
-    
+
     # Ensure we're using the async driver
     if "sqlalchemy.url" in configuration:
         url = configuration["sqlalchemy.url"]

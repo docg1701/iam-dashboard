@@ -8,7 +8,7 @@ Define MINIMAL but CRITICAL standards for AI agents, focusing only on project-sp
 - **Permission Validation:** All protected routes and components must use centralized permission checking - never implement custom permission logic
 - **API Error Handling:** All API routes must use the standard error handler with audit logging - ensures compliance and troubleshooting capability
 - **Environment Variables:** Access only through config objects, never process.env directly - prevents configuration errors across client deployments
-- **CPF Validation:** Always use shared cnpj-cpf-validator utility - prevents inconsistent validation between frontend and backend
+- **CPF Validation:** Always use shared validation utilities - backend uses validate-docbr, frontend uses @brazilian-utils - ensures consistent validation across the stack
 - **Database Transactions:** All multi-table operations must use transactions with proper rollback - critical for data consistency in permission changes
 - **Cache Invalidation:** Permission changes must immediately invalidate related cache keys - ensures <10ms performance without stale permissions
 - **Audit Logging:** All state-changing operations must include audit trail within the same transaction - required for compliance

@@ -4,17 +4,17 @@ Data models for the IAM Dashboard.
 All SQLModel data models with proper UUID primary keys and comprehensive validation.
 """
 
-from .user import User, UserRole
+from .audit import AuditAction, AuditLog
 from .client import Client
-from .permission import UserAgentPermission, AgentName
-from .audit import AuditLog, AuditAction
+from .permission import AgentName, UserAgentPermission
+from .user import User, UserRole
 
 __all__ = [
     # User models
     "User",
     "UserRole",
     # Client models
-    "Client", 
+    "Client",
     # Permission models
     "UserAgentPermission",
     "AgentName",

@@ -11,6 +11,9 @@
     "clean": "rm -rf dist .tsbuildinfo",
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "@brazilian-utils/brazilian-utils": "^1.0.0-rc.12"
+  },
   "devDependencies": {
     "typescript": "^5.9.0"
   },

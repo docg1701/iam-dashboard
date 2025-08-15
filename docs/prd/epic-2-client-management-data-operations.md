@@ -47,7 +47,7 @@ so that I can maintain accurate client information and track all changes over ti
 1. **Client Detail View:** Comprehensive display of all client information with edit capabilities
 2. **Edit Functionality:** Inline editing of client data with real-time validation and error handling
 3. **Audit History:** Complete timeline of all changes with user, timestamp, and modification details
-4. **Data Validation:** Comprehensive validation for all fields including CPF format validation using cnpj-cpf-validator and duplicate checks
+4. **Data Validation:** Comprehensive validation for all fields including CPF format validation using validate-docbr and duplicate checks
 5. **Change Confirmation:** Clear confirmation dialogs for data modifications with change summaries
 6. **Permission Control:** Edit permissions enforced based on user role and client status
 7. **Mobile Editing:** Full editing capabilities optimized for mobile and tablet interfaces

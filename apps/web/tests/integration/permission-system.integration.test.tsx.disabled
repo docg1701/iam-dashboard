@@ -1,0 +1,786 @@
+/**
+ * Permission System Integration Tests
+ * Tests complete permission validation workflows including role-based access control,
+ * permission checking, and user authorization flows
+ */
+
+import React from 'react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { ErrorProvider } from '@/components/errors/ErrorContext'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+
+// Mock Next.js navigation
+const mockPush = vi.fn()
+const mockReplace = vi.fn()
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+    replace: mockReplace,
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  usePathname: () => '/dashboard',
+  useSearchParams: () => new URLSearchParams(),
+}))
+
+// Test wrapper with all necessary providers
+const TestWrapper = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity },
+      mutations: { retry: false },
+    },
+  })
+
+  return (
+    <ErrorProvider
+      enableConsoleLogging={false}
+      enableGlobalErrorHandler={false}
+    >
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>{children}</AuthProvider>
+      </QueryClientProvider>
+    </ErrorProvider>
+  )
+}
+
+// Mock components for different permission levels
+const AdminOnlyComponent = () => (
+  <div data-testid="admin-only">
+    <h2>Admin Panel</h2>
+    <p>Administrative controls and settings</p>
+  </div>
+)
+
+const UserDashboard = () => (
+  <div data-testid="user-dashboard">
+    <h2>User Dashboard</h2>
+    <p>General user content</p>
+  </div>
+)
+
+const ManagerComponent = () => (
+  <div data-testid="manager-component">
+    <h2>Manager Tools</h2>
+    <p>Management functionality</p>
+  </div>
+)
+
+const PublicComponent = () => (
+  <div data-testid="public-component">
+    <h2>Public Content</h2>
+    <p>Available to all users</p>
+  </div>
+)
+
+// Mock users with different roles and permissions
+const mockUsers = {
+  admin: {
+    id: '1',
+    email: 'admin@example.com',
+    name: 'Admin User',
+    role: 'admin',
+    is_active: true,
+    has_2fa: false,
+    permissions: ['read', 'write', 'delete', 'admin'],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  manager: {
+    id: '2',
+    email: 'manager@example.com',
+    name: 'Manager User',
+    role: 'admin',
+    is_active: true,
+    has_2fa: false,
+    permissions: ['read', 'write', 'manage'],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  user: {
+    id: '3',
+    email: 'user@example.com',
+    name: 'Regular User',
+    role: 'user',
+    is_active: true,
+    has_2fa: false,
+    permissions: ['read'],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  inactive: {
+    id: '4',
+    email: 'inactive@example.com',
+    name: 'Inactive User',
+    role: 'user',
+    is_active: false,
+    has_2fa: false,
+    permissions: ['read'],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+}
+
+describe('Permission System Integration Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    global.fetch = vi.fn()
+    localStorage.clear()
+    sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.resetAllMocks()
+  })
+
+  describe('Role-Based Access Control', () => {
+    it('should allow admin users access to admin-only content', async () => {
+      localStorage.setItem('access_token', 'admin_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.admin,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute requiredRole="admin">
+            <AdminOnlyComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-only')).toBeInTheDocument()
+        expect(screen.getByText('Admin Panel')).toBeInTheDocument()
+      })
+
+      // Verify user profile API was called
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/auth/me', {
+        headers: {
+          Authorization: 'Bearer admin_token',
+        },
+        credentials: 'include',
+      })
+    })
+
+    it('should deny regular users access to admin-only content', async () => {
+      localStorage.setItem('access_token', 'user_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.user,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute requiredRole="admin">
+            <AdminOnlyComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText(/acesso negado/i)).toBeInTheDocument()
+        expect(
+          screen.getByText(/esta página requer permissão de admin/i)
+        ).toBeInTheDocument()
+      })
+
+      // Admin component should not be rendered
+      expect(screen.queryByTestId('admin-only')).not.toBeInTheDocument()
+    })
+
+    it('should allow manager users access to manager-level content', async () => {
+      localStorage.setItem('access_token', 'manager_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.manager,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute requiredRole="admin">
+            <ManagerComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('manager-component')).toBeInTheDocument()
+        expect(screen.getByText('Manager Tools')).toBeInTheDocument()
+      })
+    })
+
+    it('should deny regular users access to manager-level content', async () => {
+      localStorage.setItem('access_token', 'user_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.user,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute requiredRole="admin">
+            <ManagerComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText(/acesso negado/i)).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('manager-component')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Permission-Based Access Control', () => {
+    it('should allow users with specific permissions to access protected content', async () => {
+      localStorage.setItem('access_token', 'admin_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.admin,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredPermission={{ agent: 'admin', action: 'read' }}
+          >
+            <AdminOnlyComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-only')).toBeInTheDocument()
+      })
+    })
+
+    it('should deny users without required permissions', async () => {
+      localStorage.setItem('access_token', 'user_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.user,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredPermission={{ agent: 'admin', action: 'delete' }}
+          >
+            <AdminOnlyComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText(/acesso negado/i)).toBeInTheDocument()
+        expect(
+          screen.getByText(/você não tem as permissões necessárias/i)
+        ).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('admin-only')).not.toBeInTheDocument()
+    })
+
+    it('should handle multiple permission requirements (AND logic)', async () => {
+      localStorage.setItem('access_token', 'manager_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.manager,
+      })
+
+      // Manager has ['read', 'write', 'manage'] but not 'delete'
+      render(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredPermission={{
+              agent: 'client_management',
+              action: 'delete',
+            }}
+          >
+            <AdminOnlyComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText(/acesso negado/i)).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('admin-only')).not.toBeInTheDocument()
+    })
+
+    it('should allow access when user has all required permissions', async () => {
+      localStorage.setItem('access_token', 'manager_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.manager,
+      })
+
+      // Manager has ['read', 'write', 'manage']
+      render(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredPermission={{
+              agent: 'client_management',
+              action: 'update',
+            }}
+          >
+            <ManagerComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('manager-component')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Combined Role and Permission Checks', () => {
+    it('should allow access when both role and permissions match', async () => {
+      localStorage.setItem('access_token', 'admin_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.admin,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredRole="admin"
+            requiredPermission={{ agent: 'admin', action: 'read' }}
+          >
+            <AdminOnlyComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-only')).toBeInTheDocument()
+      })
+    })
+
+    it('should deny access when role matches but permissions do not', async () => {
+      // Create a mock admin user without admin permission
+      const adminWithoutPermissions = {
+        ...mockUsers.admin,
+        permissions: ['read', 'write'],
+      }
+
+      localStorage.setItem('access_token', 'admin_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => adminWithoutPermissions,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredRole="admin"
+            requiredPermission={{ agent: 'admin', action: 'read' }}
+          >
+            <AdminOnlyComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText(/acesso negado/i)).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('admin-only')).not.toBeInTheDocument()
+    })
+
+    it('should deny access when permissions match but role does not', async () => {
+      // Create a mock user with admin permission but user role
+      const userWithAdminPermission = {
+        ...mockUsers.user,
+        permissions: ['read', 'admin'],
+      }
+
+      localStorage.setItem('access_token', 'user_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => userWithAdminPermission,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredRole="admin"
+            requiredPermission={{ agent: 'admin', action: 'read' }}
+          >
+            <AdminOnlyComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText(/acesso negado/i)).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('admin-only')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('User Status Validation', () => {
+    it('should deny access to inactive users even with valid tokens', async () => {
+      localStorage.setItem('access_token', 'inactive_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.inactive,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <UserDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText(/conta inativa/i)).toBeInTheDocument()
+        expect(
+          screen.getByText(/sua conta foi desativada/i)
+        ).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('user-dashboard')).not.toBeInTheDocument()
+    })
+
+    it('should allow access to active users', async () => {
+      localStorage.setItem('access_token', 'user_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.user,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <UserDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user-dashboard')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Permission Hierarchy and Inheritance', () => {
+    it('should respect role hierarchy (admin > manager > user)', async () => {
+      // Test that admin can access manager content
+      localStorage.setItem('access_token', 'admin_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.admin,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute requiredRole="admin">
+            <ManagerComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('manager-component')).toBeInTheDocument()
+      })
+    })
+
+    it('should handle permission inheritance correctly', async () => {
+      // Admin should have all permissions including lower-level ones
+      localStorage.setItem('access_token', 'admin_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.admin,
+      })
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredPermission={{ agent: 'client_management', action: 'read' }}
+          >
+            <PublicComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('public-component')).toBeInTheDocument()
+      })
+    })
+  })
+
+  describe('Error Handling and Edge Cases', () => {
+    it('should handle API errors gracefully', async () => {
+      localStorage.setItem('access_token', 'invalid_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        json: async () => ({ detail: 'Forbidden' }),
+      })
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <UserDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith('/login')
+      })
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should handle network errors during permission check', async () => {
+      localStorage.setItem('access_token', 'valid_token')
+      global.fetch = vi.fn().mockRejectedValueOnce(new Error('Network error'))
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <UserDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith('/login')
+      })
+
+      consoleSpy.mockRestore()
+    })
+
+    it('should handle malformed user data gracefully', async () => {
+      localStorage.setItem('access_token', 'valid_token')
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ invalid: 'data' }), // Missing required user fields
+      })
+
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <UserDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(mockPush).toHaveBeenCalledWith('/login')
+      })
+
+      consoleSpy.mockRestore()
+    })
+  })
+
+  describe('Dynamic Permission Updates', () => {
+    it('should handle permission changes during session', async () => {
+      localStorage.setItem('access_token', 'user_token')
+
+      // Initial load with user permissions
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.user,
+      })
+
+      const { rerender } = render(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredPermission={{ agent: 'client_management', action: 'read' }}
+          >
+            <UserDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user-dashboard')).toBeInTheDocument()
+      })
+
+      // Simulate permission upgrade to admin
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.admin,
+      })
+
+      // Re-render with admin-level requirement
+      rerender(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredPermission={{ agent: 'admin', action: 'read' }}
+          >
+            <AdminOnlyComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-only')).toBeInTheDocument()
+      })
+    })
+
+    it('should handle permission revocation', async () => {
+      localStorage.setItem('access_token', 'admin_token')
+
+      // Initial load with admin permissions
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.admin,
+      })
+
+      const { rerender } = render(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredPermission={{ agent: 'admin', action: 'read' }}
+          >
+            <AdminOnlyComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('admin-only')).toBeInTheDocument()
+      })
+
+      // Simulate permission downgrade to user
+      global.fetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.user,
+      })
+
+      // Re-render - should lose access
+      rerender(
+        <TestWrapper>
+          <ProtectedRoute
+            requiredPermission={{ agent: 'admin', action: 'read' }}
+          >
+            <AdminOnlyComponent />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByText(/acesso negado/i)).toBeInTheDocument()
+      })
+
+      expect(screen.queryByTestId('admin-only')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Loading States and UX', () => {
+    it('should show loading state during permission check', async () => {
+      localStorage.setItem('access_token', 'valid_token')
+
+      // Mock delayed response
+      global.fetch = vi.fn().mockImplementation(
+        () =>
+          new Promise(resolve =>
+            setTimeout(
+              () =>
+                resolve({
+                  ok: true,
+                  status: 200,
+                  json: async () => mockUsers.user,
+                }),
+              100
+            )
+          )
+      )
+
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <UserDashboard />
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      // Should show loading state initially
+      expect(screen.getByText(/carregando/i)).toBeInTheDocument()
+
+      // Wait for content to load
+      await waitFor(() => {
+        expect(screen.getByTestId('user-dashboard')).toBeInTheDocument()
+      })
+
+      // Loading should be gone
+      expect(screen.queryByText(/carregando/i)).not.toBeInTheDocument()
+    })
+
+    it('should handle concurrent permission checks efficiently', async () => {
+      localStorage.setItem('access_token', 'valid_token')
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => mockUsers.user,
+      })
+
+      // Render multiple protected routes simultaneously
+      render(
+        <TestWrapper>
+          <ProtectedRoute>
+            <div data-testid="route-1">Route 1</div>
+          </ProtectedRoute>
+          <ProtectedRoute>
+            <div data-testid="route-2">Route 2</div>
+          </ProtectedRoute>
+          <ProtectedRoute>
+            <div data-testid="route-3">Route 3</div>
+          </ProtectedRoute>
+        </TestWrapper>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('route-1')).toBeInTheDocument()
+        expect(screen.getByTestId('route-2')).toBeInTheDocument()
+        expect(screen.getByTestId('route-3')).toBeInTheDocument()
+      })
+
+      // Should only make one API call despite multiple protected routes
+      expect(global.fetch).toHaveBeenCalledTimes(1)
+    })
+  })
+})

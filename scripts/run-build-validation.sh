@@ -7,15 +7,69 @@
 # Don't exit on error - we want to capture all build validation results
 # set -e  # REMOVED to allow collecting all results
 
+# Build profile parameter (default: complete)
+BUILD_PROFILE="${1:-complete}"
+
+# Usage message
+usage() {
+    echo "Usage: $0 [profile]"
+    echo ""
+    echo "Build Profiles:"
+    echo "  complete  - Full build validation (default)"
+    echo "  fast      - Quick build check only"
+    echo "  info      - Dependency and environment info only"
+    echo ""
+    echo "Examples:"
+    echo "  $0                    # Complete validation"
+    echo "  $0 fast              # Quick build check"
+    echo "  $0 info              # Environment info only"
+    echo ""
+}
+
+# Check for help flag
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESULTS_DIR="${SCRIPT_DIR}/test-results"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Timing variables for statistics
+BUILD_START_TIME=$(date +%s)
+
+# Profile selection logic
+case "$BUILD_PROFILE" in
+    fast)
+        PROFILE_DESCRIPTION="Fast Mode (build check only)"
+        ;;
+    info)
+        PROFILE_DESCRIPTION="Info Mode (environment info only)"
+        ;;
+    complete|*)
+        PROFILE_DESCRIPTION="Complete Mode (full validation)"
+        ;;
+esac
+
 # Create results directory
 mkdir -p "${RESULTS_DIR}"
 
+# Configure timeouts based on profile
+case "$BUILD_PROFILE" in
+    fast)
+        BUILD_TIMEOUT="${BUILD_TIMEOUT:-60}"    # Quick build timeout
+        TEST_TIMEOUT="${TEST_TIMEOUT:-30}"      # Quick test timeout
+        ;;
+    *)
+        BUILD_TIMEOUT="${BUILD_TIMEOUT:-600}"   # Standard build timeout
+        TEST_TIMEOUT="${TEST_TIMEOUT:-30}"      # Standard test timeout
+        ;;
+esac
+
 echo "🏗️ Starting Build Validation - ${TIMESTAMP}"
+echo "📋 Profile: ${PROFILE_DESCRIPTION}"
 echo "Results will be saved to: ${RESULTS_DIR}"
 
 # Function to run build validation command and report status
@@ -74,28 +128,49 @@ if [ $DEP_FAILED -eq 1 ]; then
     exit 1
 fi
 
-# Build Validation
-echo "📦 Running Build Validation..."
+# Profile-based execution
+case "$BUILD_PROFILE" in
+    fast)
+        echo "📦 Running Fast Build Validation..."
+        run_build_check "production-build" "Production Build Test" \
+            "timeout ${BUILD_TIMEOUT}s npm run build" \
+            "${RESULTS_DIR}/build-validation_${TIMESTAMP}.log"
+        ;;
+    info)
+        echo "📊 Collecting Build Information..."
+        run_build_check "build-info" "Build Information Collection" \
+            "echo '=== Build Information - ${TIMESTAMP} ===' && echo 'Node Version:' && node --version && echo 'NPM Version:' && npm --version && echo 'Project Structure:' && find . -name 'package.json' -not -path './node_modules/*' -not -path './.venv/*' | head -20 && echo '=== End Build Information ==='" \
+            "${RESULTS_DIR}/build-info_${TIMESTAMP}.log"
+        ;;
+    complete|*)
+        echo "📦 Running Complete Build Validation..."
+        
+        # Production Build Test
+        run_build_check "production-build" "Production Build Test" \
+            "timeout ${BUILD_TIMEOUT}s npm run build" \
+            "${RESULTS_DIR}/build-validation_${TIMESTAMP}.log"
 
-# Make build timeout configurable
-BUILD_TIMEOUT="${BUILD_TIMEOUT:-600}"
-run_build_check "production-build" "Production Build Test" \
-    "timeout ${BUILD_TIMEOUT}s npm run build" \
-    "${RESULTS_DIR}/build-validation_${TIMESTAMP}.log"
+        # E2E Test File Check
+        echo "🎭 Checking E2E Test Configuration..."
+        run_build_check "e2e-files" "E2E Test Files Check" \
+            "if [ -d '${PROJECT_ROOT}/apps/web/e2e' ]; then ls -la '${PROJECT_ROOT}/apps/web/e2e/'; echo 'E2E directory found'; else echo 'No E2E directory found - this is OK'; fi" \
+            "${RESULTS_DIR}/e2e-files_${TIMESTAMP}.log"
 
-# E2E Test File Check
-echo "🎭 Checking E2E Test Configuration..."
+        # Vitest Build Validation
+        echo "🧪 Checking Vitest Build Configuration..."
+        cd "${PROJECT_ROOT}/apps/web"
+        run_build_check "vitest-config" "Vitest Configuration Validation" \
+            "timeout ${TEST_TIMEOUT}s npx vitest --run --reporter=default src/**/*.test.* --bail=1 && node ../../scripts/clean-test-summary.js" \
+            "${RESULTS_DIR}/vitest-build-validation_${TIMESTAMP}.log"
+        cd "${PROJECT_ROOT}"
 
-run_build_check "e2e-files" "E2E Test Files Check" \
-    "if [ -d '${PROJECT_ROOT}/apps/web/e2e' ]; then ls -la '${PROJECT_ROOT}/apps/web/e2e/'; echo 'E2E directory found'; else echo 'No E2E directory found - this is OK'; fi" \
-    "${RESULTS_DIR}/e2e-files_${TIMESTAMP}.log"
-
-# Build Information Collection
-echo "📊 Collecting Build Information..."
-
-run_build_check "build-info" "Build Information Collection" \
-    "echo '=== Build Information - ${TIMESTAMP} ===' && echo 'Node Version:' && node --version && echo 'NPM Version:' && npm --version && echo 'Project Structure:' && find . -name 'package.json' -not -path './node_modules/*' -not -path './.venv/*' | head -20 && echo '=== End Build Information ==='" \
-    "${RESULTS_DIR}/build-info_${TIMESTAMP}.log"
+        # Build Information Collection
+        echo "📊 Collecting Build Information..."
+        run_build_check "build-info" "Build Information Collection" \
+            "echo '=== Build Information - ${TIMESTAMP} ===' && echo 'Node Version:' && node --version && echo 'NPM Version:' && npm --version && echo 'Project Structure:' && find . -name 'package.json' -not -path './node_modules/*' -not -path './.venv/*' | head -20 && echo '=== End Build Information ==='" \
+            "${RESULTS_DIR}/build-info_${TIMESTAMP}.log"
+        ;;
+esac
 
 # Generate comprehensive build validation report
 echo "📋 Generating Build Validation Report..."
@@ -109,17 +184,41 @@ BUILD_REPORT="${RESULTS_DIR}/build-validation-report_${TIMESTAMP}.log"
     echo "=================================="
     echo ""
     
-    echo "🏗️ Validation Categories:"
+    echo "🏗️ Validation Categories (${PROFILE_DESCRIPTION}):"
     echo "   ✓ Dependency Availability Check"
-    echo "   ✓ Production Build Validation"
-    echo "   ✓ E2E Test Configuration Check"
-    echo "   ✓ Build Environment Information"
+    case "$BUILD_PROFILE" in
+        fast)
+            echo "   ✓ Production Build Validation"
+            ;;
+        info)
+            echo "   ✓ Build Environment Information"
+            ;;
+        complete|*)
+            echo "   ✓ Production Build Validation"
+            echo "   ✓ E2E Test Configuration Check"
+            echo "   ✓ Vitest Configuration Validation"
+            echo "   ✓ Build Environment Information"
+            echo "   ✓ Clean Test Summaries Generated"
+            ;;
+    esac
     echo ""
     
     echo "📁 Result Files:"
-    echo "   Production Build: build-validation_${TIMESTAMP}.log"
-    echo "   E2E Configuration: e2e-files_${TIMESTAMP}.log"  
-    echo "   Build Information: build-info_${TIMESTAMP}.log"
+    case "$BUILD_PROFILE" in
+        fast)
+            echo "   Production Build: build-validation_${TIMESTAMP}.log"
+            ;;
+        info)
+            echo "   Build Information: build-info_${TIMESTAMP}.log"
+            ;;
+        complete|*)
+            echo "   Production Build: build-validation_${TIMESTAMP}.log"
+            echo "   E2E Configuration: e2e-files_${TIMESTAMP}.log"
+            echo "   Vitest Configuration: vitest-build-validation_${TIMESTAMP}.log"
+            echo "   Build Information: build-info_${TIMESTAMP}.log"
+            echo "   Clean Summary: ./apps/web/test-summary-clean.json"
+            ;;
+    esac
     echo ""
     
     echo "💡 Build Readiness Checklist:"
@@ -137,11 +236,27 @@ cat "${BUILD_REPORT}"
 
 echo ""
 echo "📊 Build Validation Summary - ${TIMESTAMP}"
+echo "Profile: ${PROFILE_DESCRIPTION}"
 echo "All build validation results saved to: ${RESULTS_DIR}"
-echo "Production Build: build-validation_${TIMESTAMP}.log"
-echo "E2E Configuration: e2e-files_${TIMESTAMP}.log"
-echo "Build Information: build-info_${TIMESTAMP}.log"
+
+case "$BUILD_PROFILE" in
+    fast)
+        echo "Production Build: build-validation_${TIMESTAMP}.log"
+        ;;
+    info)
+        echo "Build Information: build-info_${TIMESTAMP}.log"
+        ;;
+    complete|*)
+        echo "Production Build: build-validation_${TIMESTAMP}.log"
+        echo "E2E Configuration: e2e-files_${TIMESTAMP}.log"
+        echo "Vitest Configuration: vitest-build-validation_${TIMESTAMP}.log"
+        echo "Build Information: build-info_${TIMESTAMP}.log"
+        ;;
+esac
+
 echo "Consolidated Report: build-validation-report_${TIMESTAMP}.log"
 
 echo ""
+BUILD_TOTAL_TIME=$(($(date +%s) - BUILD_START_TIME))
+echo "🕰️ Build validation completed in ${BUILD_TOTAL_TIME}s ($((BUILD_TOTAL_TIME / 60))m $((BUILD_TOTAL_TIME % 60))s)"
 echo "✅ Build Validation completed at $(date)"

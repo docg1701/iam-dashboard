@@ -10,7 +10,7 @@ The security and performance architecture ensures enterprise-grade protection an
 - **Secure Storage:** JWT tokens in httpOnly cookies for production, encrypted localStorage for development, sensitive data never in localStorage
 
 ### Backend Security
-- **Input Validation:** Comprehensive Pydantic schemas with field validation + SQLModel constraints + cnpj-cpf-validator for Brazilian document validation + file type/size validation
+- **Input Validation:** Comprehensive Pydantic schemas with field validation + SQLModel constraints + validate-docbr for Brazilian document validation + file type/size validation
 - **Rate Limiting:** Tiered limits: 100 requests/min (users), 500 requests/min (admins), 1000 requests/min (sysadmins) with Redis-based tracking
 - **CORS Policy:** `https://*.com.br, https://iam-dashboard.com.br` with credentials support, preflight caching for 24 hours
 

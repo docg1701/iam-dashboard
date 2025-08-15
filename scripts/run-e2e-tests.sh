@@ -1,11 +1,70 @@
 #!/bin/bash
 
-# End-to-End Tests Runner with Playwright
-# Generated: $(date)
-# Purpose: Run all E2E tests including critical user flows and cross-browser testing
+# End-to-End Tests Runner with MCP Playwright
+# Purpose: Document E2E testing scenarios and service status for MCP Playwright testing
+# Profiles: complete (default), fast, critical, mobile, accessibility
+# Usage: ./run-e2e-tests.sh [profile]
 
 # Don't exit on error - we want to capture all E2E test results
 # set -e  # REMOVED to allow service checks to fail gracefully
+
+# Show help if requested
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+    echo "🎭 End-to-End Tests Runner with MCP Playwright"
+    echo ""
+    echo "Usage: $0 [profile]"
+    echo ""
+    echo "Available profiles:"
+    echo "  complete      (default) - All E2E test scenarios and documentation"
+    echo "  fast          - Essential scenarios only: login and dashboard navigation"
+    echo "  critical      - Critical user flows: authentication, client management"
+    echo "  mobile        - Mobile and responsive design testing scenarios"
+    echo "  accessibility - Accessibility and keyboard navigation scenarios"
+    echo ""
+    echo "Examples:"
+    echo "  $0                       # Document all E2E test scenarios"
+    echo "  $0 fast                 # Quick service check and basic scenarios"
+    echo "  $0 critical             # Critical business flow scenarios"
+    echo "  $0 mobile               # Mobile responsiveness scenarios"
+    echo ""
+    echo "Note: This script documents E2E testing scenarios for MCP Playwright."
+    echo "Actual testing should be performed using MCP Playwright tools:"
+    echo "  mcp__playwright__browser_navigate"
+    echo "  mcp__playwright__browser_click"
+    echo "  mcp__playwright__browser_type"
+    echo "  mcp__playwright__browser_snapshot"
+    echo ""
+    echo "Results saved to: scripts/test-results/e2e-*_TIMESTAMP.log"
+    exit 0
+fi
+
+# Configure test profile
+TEST_PROFILE="${1:-complete}"
+
+case "$TEST_PROFILE" in
+    fast)
+        SKIP_MOBILE=true
+        SKIP_ACCESSIBILITY=true
+        SKIP_INTEGRATION=true
+        ;;
+    critical)
+        SKIP_MOBILE=true
+        SKIP_ACCESSIBILITY=true
+        ;;
+    mobile)
+        SKIP_CRITICAL_ONLY=true
+        SKIP_ACCESSIBILITY=true
+        SKIP_INTEGRATION=true
+        ;;
+    accessibility)
+        SKIP_MOBILE=true
+        SKIP_CRITICAL_ONLY=true
+        SKIP_INTEGRATION=true
+        ;;
+    complete|*)
+        # Document all scenarios
+        ;;
+esac
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +74,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # Create results directory
 mkdir -p "${RESULTS_DIR}"
 
-echo "🎭 Starting End-to-End Tests - ${TIMESTAMP}"
+echo "🎭 Starting End-to-End Tests (Profile: ${TEST_PROFILE}) - ${TIMESTAMP}"
 echo "Results will be saved to: ${RESULTS_DIR}"
 
 # Navigate to frontend directory
@@ -73,51 +132,111 @@ echo "📋 Documenting E2E Test Scenarios..."
 
 E2E_SCENARIOS="${RESULTS_DIR}/e2e-test-scenarios_${TIMESTAMP}.log"
 {
-    echo "Available E2E Test Scenarios for MCP Playwright"
-    echo "=============================================="
+    echo "Available E2E Test Scenarios for MCP Playwright (Profile: ${TEST_PROFILE})"
+    echo "=========================================================================="
     echo "Generated: $(date)"
     echo ""
     
+    # Always document authentication (critical for all profiles)
     echo "🔐 Authentication Flow Tests:"
     echo "- Login with email/password"
     echo "- Two-Factor Authentication (2FA) flow"  
     echo "- Logout functionality"
-    echo "- Session timeout handling"
+    if [[ "${TEST_PROFILE}" != "fast" ]]; then
+        echo "- Session timeout handling"
+        echo "- Invalid credential handling"
+    fi
     echo ""
     
-    echo "👥 Client Management Tests:"
-    echo "- Create new client with CPF validation"
-    echo "- Edit existing client information"
-    echo "- Client search and filtering"
-    echo "- Client deletion with confirmation"
-    echo ""
+    # Client Management (skip for mobile and accessibility profiles)
+    if [[ "${SKIP_CRITICAL_ONLY}" != "true" ]]; then
+        echo "👥 Client Management Tests:"
+        echo "- Create new client with CPF validation"
+        echo "- Edit existing client information"
+        if [[ "${TEST_PROFILE}" != "fast" ]]; then
+            echo "- Client search and filtering"
+            echo "- Client deletion with confirmation"
+            echo "- Bulk client operations"
+        fi
+        echo ""
+        
+        echo "🛡️ Permission Management Tests:"
+        echo "- View permission matrix"
+        echo "- Assign/revoke user permissions"
+        if [[ "${TEST_PROFILE}" != "fast" ]]; then
+            echo "- Bulk permission operations"
+            echo "- Permission audit log review"
+        fi
+        echo ""
+    fi
     
-    echo "🛡️ Permission Management Tests:"
-    echo "- View permission matrix"
-    echo "- Assign/revoke user permissions"
-    echo "- Bulk permission operations"
-    echo "- Permission audit log review"
-    echo ""
+    # Mobile/Responsive tests (only for mobile and complete profiles)
+    if [[ "${SKIP_MOBILE}" != "true" ]]; then
+        echo "📱 Responsive Design Tests:"
+        echo "- Mobile navigation menu"
+        echo "- Form interactions on mobile"
+        echo "- Table responsiveness"
+        echo "- Touch interactions"
+        echo "- Portrait/landscape orientation"
+        echo "- Different screen sizes (phone, tablet)"
+        echo ""
+    fi
     
-    echo "📱 Responsive Design Tests:"
-    echo "- Mobile navigation menu"
-    echo "- Form interactions on mobile"
-    echo "- Table responsiveness"
-    echo "- Touch interactions"
-    echo ""
+    # Accessibility tests (only for accessibility and complete profiles)
+    if [[ "${SKIP_ACCESSIBILITY}" != "true" ]]; then
+        echo "♿ Accessibility Tests:"
+        echo "- Keyboard navigation through all forms"
+        echo "- Tab order validation"
+        echo "- ARIA labels and roles"
+        echo "- Color contrast compliance"
+        echo "- Screen reader compatibility"
+        echo "- Focus management"
+        echo ""
+    fi
     
-    echo "♿ Accessibility Tests:"
-    echo "- Keyboard navigation through all forms"
-    echo "- Tab order validation"
-    echo "- ARIA labels and roles"
-    echo "- Color contrast compliance"
-    echo ""
+    # Integration tests (skip for fast, mobile, and accessibility profiles)
+    if [[ "${SKIP_INTEGRATION}" != "true" ]]; then
+        echo "🔄 Integration Tests:"
+        echo "- Backend API response validation"
+        echo "- Real-time data updates"
+        echo "- Error handling and recovery"
+        echo "- Network failure scenarios"
+        echo "- Cross-browser compatibility"
+        echo ""
+    fi
     
-    echo "🔄 Integration Tests:"
-    echo "- Backend API response validation"
-    echo "- Real-time data updates"
-    echo "- Error handling and recovery"
-    echo "- Network failure scenarios"
+    echo "🎯 Profile-Specific MCP Playwright Commands:"
+    case "$TEST_PROFILE" in
+        fast)
+            echo "# Quick smoke test"
+            echo "mcp__playwright__browser_navigate --url='http://localhost:3000'"
+            echo "mcp__playwright__browser_click --element='Login Button' --ref='button[type=\"submit\"]'"
+            ;;
+        critical)
+            echo "# Critical business flows"
+            echo "mcp__playwright__browser_navigate --url='http://localhost:3000/login'"
+            echo "mcp__playwright__browser_type --element='Email' --ref='input[name=\"email\"]' --text='admin@example.com'"
+            echo "mcp__playwright__browser_navigate --url='http://localhost:3000/clients'"
+            ;;
+        mobile)
+            echo "# Mobile responsiveness"
+            echo "mcp__playwright__browser_resize --width='375' --height='667'"
+            echo "mcp__playwright__browser_navigate --url='http://localhost:3000'"
+            echo "mcp__playwright__browser_click --element='Mobile Menu' --ref='button[aria-label=\"menu\"]'"
+            ;;
+        accessibility)
+            echo "# Accessibility testing"
+            echo "mcp__playwright__browser_navigate --url='http://localhost:3000'"
+            echo "mcp__playwright__browser_press_key --key='Tab'"
+            echo "mcp__playwright__browser_press_key --key='Enter'"
+            ;;
+        *)
+            echo "# Complete testing workflow"
+            echo "mcp__playwright__browser_navigate --url='http://localhost:3000'"
+            echo "mcp__playwright__browser_snapshot"
+            echo "mcp__playwright__browser_take_screenshot --filename='homepage.png'"
+            ;;
+    esac
     
 } > "${E2E_SCENARIOS}"
 
