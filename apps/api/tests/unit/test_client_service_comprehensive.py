@@ -10,15 +10,13 @@ Focus: Lines 68-147 (create_client), 165-192 (get_client), 220-298 (list_clients
 """
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any
 
 import pytest
 from fastapi import HTTPException, status
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import select
 
 from src.models.audit import AuditAction, AuditLog
 from src.models.client import Client
@@ -39,7 +37,9 @@ class TestClientServiceCreateClient:
         """Mock session maker for database operations."""
         mock_session = AsyncMock()
         mock_session_maker = MagicMock()
-        mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_maker.return_value.__aenter__ = AsyncMock(
+            return_value=mock_session
+        )
         mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=None)
         return mock_session_maker, mock_session
 
@@ -76,7 +76,7 @@ class TestClientServiceCreateClient:
         test_client_id = uuid.UUID("87654321-4321-8765-2109-876543210987")
         with patch("uuid.uuid4", return_value=test_client_id):
             client_service = ClientService()
-            
+
             result = await client_service.create_client(
                 client_data=valid_client_data,
                 created_by=user_id,
@@ -120,7 +120,7 @@ class TestClientServiceCreateClient:
         mock_session.execute.return_value = mock_result
 
         client_service = ClientService()
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await client_service.create_client(
                 client_data=valid_client_data,
@@ -148,12 +148,19 @@ class TestClientServiceCreateClient:
         with patch("src.services.client_service.Client") as mock_client_class:
             validation_error = ValidationError.from_exception_data(
                 "Client",
-                [{"type": "value_error", "loc": ("cpf",), "msg": "Invalid CPF", "input": {}}],
+                [
+                    {
+                        "type": "value_error",
+                        "loc": ("cpf",),
+                        "msg": "Invalid CPF",
+                        "input": {},
+                    }
+                ],
             )
             mock_client_class.side_effect = validation_error
 
             client_service = ClientService()
-            
+
             # Use valid data but Client constructor will raise ValidationError
             valid_data = ClientCreateRequest(
                 name="Test Client",
@@ -188,7 +195,7 @@ class TestClientServiceCreateClient:
         mock_session.rollback = AsyncMock()
 
         client_service = ClientService()
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await client_service.create_client(
                 client_data=valid_client_data,
@@ -208,7 +215,9 @@ class TestClientServiceGetClient:
         """Mock session maker for database operations."""
         mock_session = AsyncMock()
         mock_session_maker = MagicMock()
-        mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_maker.return_value.__aenter__ = AsyncMock(
+            return_value=mock_session
+        )
         mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=None)
         return mock_session_maker, mock_session
 
@@ -264,7 +273,7 @@ class TestClientServiceGetClient:
 
         client_service = ClientService()
         client_id = uuid.UUID("00000000-0000-0000-0000-000000000000")
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await client_service.get_client(client_id)
 
@@ -284,7 +293,7 @@ class TestClientServiceGetClient:
 
         client_service = ClientService()
         client_id = uuid.UUID("12345678-1234-5678-9012-123456789012")
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await client_service.get_client(client_id)
 
@@ -300,7 +309,9 @@ class TestClientServiceListClients:
         """Mock session maker for database operations."""
         mock_session = AsyncMock()
         mock_session_maker = MagicMock()
-        mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_maker.return_value.__aenter__ = AsyncMock(
+            return_value=mock_session
+        )
         mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=None)
         return mock_session_maker, mock_session
 
@@ -366,7 +377,7 @@ class TestClientServiceListClients:
         mock_get_session_maker.return_value = mock_session_maker_func
 
         client_service = ClientService()
-        
+
         # Test negative page
         with pytest.raises(HTTPException) as exc_info:
             await client_service.list_clients(page=-1)
@@ -388,7 +399,7 @@ class TestClientServiceListClients:
         mock_get_session_maker.return_value = mock_session_maker_func
 
         client_service = ClientService()
-        
+
         # Test per_page too small
         with pytest.raises(HTTPException) as exc_info:
             await client_service.list_clients(per_page=0)
@@ -437,7 +448,7 @@ class TestClientServiceListClients:
         mock_session.execute.side_effect = SQLAlchemyError("Database error")
 
         client_service = ClientService()
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await client_service.list_clients()
 
@@ -453,7 +464,9 @@ class TestClientServiceUpdateClient:
         """Mock session maker for database operations."""
         mock_session = AsyncMock()
         mock_session_maker = MagicMock()
-        mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_maker.return_value.__aenter__ = AsyncMock(
+            return_value=mock_session
+        )
         mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=None)
         return mock_session_maker, mock_session
 
@@ -485,8 +498,13 @@ class TestClientServiceUpdateClient:
     @patch("src.services.client_service.get_session_maker")
     @patch("src.services.client_service.datetime")
     async def test_update_client_success(
-        self, mock_datetime, mock_get_session_maker, mock_session_maker, 
-        test_client, update_data, user_id
+        self,
+        mock_datetime,
+        mock_get_session_maker,
+        mock_session_maker,
+        test_client,
+        update_data,
+        user_id,
     ):
         """Test successful client update with audit logging."""
         mock_session_maker_func, mock_session = mock_session_maker
@@ -538,7 +556,7 @@ class TestClientServiceUpdateClient:
 
         client_service = ClientService()
         client_id = uuid.UUID("00000000-0000-0000-0000-000000000000")
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await client_service.update_client(
                 client_id=client_id,
@@ -578,7 +596,7 @@ class TestClientServiceUpdateClient:
         mock_session.rollback = AsyncMock()
 
         client_service = ClientService()
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await client_service.update_client(
                 client_id=test_client.id,
@@ -608,13 +626,20 @@ class TestClientServiceUpdateClient:
         with patch.object(test_client, "_validate_fields") as mock_validate:
             validation_error = ValidationError.from_exception_data(
                 "Client",
-                [{"type": "value_error", "loc": ("name",), "msg": "Invalid name", "input": {}}],
+                [
+                    {
+                        "type": "value_error",
+                        "loc": ("name",),
+                        "msg": "Invalid name",
+                        "input": {},
+                    }
+                ],
             )
             mock_validate.side_effect = validation_error
 
             client_service = ClientService()
             update_data = ClientUpdateRequest(name="Updated Name")
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await client_service.update_client(
                     client_id=test_client.id,
@@ -628,7 +653,12 @@ class TestClientServiceUpdateClient:
 
     @patch("src.services.client_service.get_session_maker")
     async def test_update_client_database_error(
-        self, mock_get_session_maker, mock_session_maker, test_client, update_data, user_id
+        self,
+        mock_get_session_maker,
+        mock_session_maker,
+        test_client,
+        update_data,
+        user_id,
     ):
         """Test update client handles database errors."""
         mock_session_maker_func, mock_session = mock_session_maker
@@ -642,7 +672,7 @@ class TestClientServiceUpdateClient:
         mock_session.rollback = AsyncMock()
 
         client_service = ClientService()
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await client_service.update_client(
                 client_id=test_client.id,
@@ -663,7 +693,9 @@ class TestClientServiceDeleteClient:
         """Mock session maker for database operations."""
         mock_session = AsyncMock()
         mock_session_maker = MagicMock()
-        mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_maker.return_value.__aenter__ = AsyncMock(
+            return_value=mock_session
+        )
         mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=None)
         return mock_session_maker, mock_session
 
@@ -687,8 +719,12 @@ class TestClientServiceDeleteClient:
     @patch("src.services.client_service.get_session_maker")
     @patch("src.services.client_service.datetime")
     async def test_delete_client_success(
-        self, mock_datetime, mock_get_session_maker, mock_session_maker, 
-        test_client, user_id
+        self,
+        mock_datetime,
+        mock_get_session_maker,
+        mock_session_maker,
+        test_client,
+        user_id,
     ):
         """Test successful client soft deletion with audit logging."""
         mock_session_maker_func, mock_session = mock_session_maker
@@ -737,7 +773,7 @@ class TestClientServiceDeleteClient:
 
         client_service = ClientService()
         client_id = uuid.UUID("00000000-0000-0000-0000-000000000000")
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await client_service.delete_client(
                 client_id=client_id,
@@ -766,7 +802,7 @@ class TestClientServiceDeleteClient:
         mock_session.rollback = AsyncMock()
 
         client_service = ClientService()
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await client_service.delete_client(
                 client_id=test_client.id,
@@ -793,7 +829,7 @@ class TestClientServiceDeleteClient:
         mock_session.rollback = AsyncMock()
 
         client_service = ClientService()
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await client_service.delete_client(
                 client_id=test_client.id,
@@ -856,12 +892,14 @@ class TestClientServiceIntegration:
 
     def test_service_initialization(self):
         """Test ClientService initializes correctly."""
-        with patch("src.services.client_service.get_session_maker") as mock_get_session_maker:
+        with patch(
+            "src.services.client_service.get_session_maker"
+        ) as mock_get_session_maker:
             mock_session_maker = MagicMock()
             mock_get_session_maker.return_value = mock_session_maker
 
             service = ClientService()
-            
+
             assert service.session_maker == mock_session_maker
             mock_get_session_maker.assert_called_once()
 
@@ -877,7 +915,9 @@ class TestClientServiceIntegration:
         """Test audit log creation with all parameters."""
         mock_session = AsyncMock()
         mock_session_maker = MagicMock()
-        mock_session_maker.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session_maker.return_value.__aenter__ = AsyncMock(
+            return_value=mock_session
+        )
         mock_session_maker.return_value.__aexit__ = AsyncMock(return_value=None)
         mock_get_session_maker.return_value = mock_session_maker
 
@@ -891,10 +931,12 @@ class TestClientServiceIntegration:
         # Capture audit log creation
         captured_audit_logs = []
         original_add = mock_session.add
+
         def capture_add(obj):
             if isinstance(obj, AuditLog):
                 captured_audit_logs.append(obj)
             original_add(obj)
+
         mock_session.add.side_effect = capture_add
 
         client_service = ClientService()

@@ -1,1 +1,220 @@
-{"numTotalTestSuites":9,"numPassedTestSuites":9,"numFailedTestSuites":0,"numPendingTestSuites":0,"numTotalTests":20,"numPassedTests":20,"numFailedTests":0,"numPendingTests":0,"numTodoTests":0,"snapshot":{"added":0,"failure":false,"filesAdded":0,"filesRemoved":0,"filesRemovedList":[],"filesUnmatched":0,"filesUpdated":0,"matched":0,"total":0,"unchecked":0,"uncheckedKeysByFile":[],"unmatched":0,"updated":0,"didUpdate":false},"startTime":1755273174632,"success":true,"testResults":[{"assertionResults":[{"ancestorTitles":["AuthContext","Provider Initialization"],"fullName":"AuthContext Provider Initialization should provide default state values","status":"passed","title":"should provide default state values","duration":28.206176000000028,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Provider Initialization"],"fullName":"AuthContext Provider Initialization should throw error when useAuth used outside provider","status":"passed","title":"should throw error when useAuth used outside provider","duration":4.494327999999996,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Login Functionality"],"fullName":"AuthContext Login Functionality should handle successful login with valid credentials","status":"passed","title":"should handle successful login with valid credentials","duration":15.27204800000004,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Login Functionality"],"fullName":"AuthContext Login Functionality should handle login failure with 401 unauthorized","status":"passed","title":"should handle login failure with 401 unauthorized","duration":15.540468000000033,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Login Functionality"],"fullName":"AuthContext Login Functionality should handle 2FA required error","status":"passed","title":"should handle 2FA required error","duration":58.66966100000002,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Login Functionality"],"fullName":"AuthContext Login Functionality should handle network timeout errors","status":"passed","title":"should handle network timeout errors","duration":209.39000699999997,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Login Functionality"],"fullName":"AuthContext Login Functionality should handle network fetch errors","status":"passed","title":"should handle network fetch errors","duration":9.533023999999955,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Login Functionality"],"fullName":"AuthContext Login Functionality should store tokens in localStorage during development","status":"passed","title":"should store tokens in localStorage during development","duration":5.889766000000009,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Logout Functionality"],"fullName":"AuthContext Logout Functionality should handle successful logout","status":"passed","title":"should handle successful logout","duration":6.195927999999867,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Logout Functionality"],"fullName":"AuthContext Logout Functionality should handle logout even when server call fails","status":"passed","title":"should handle logout even when server call fails","duration":5.734425999999985,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Token Refresh"],"fullName":"AuthContext Token Refresh should handle successful token refresh","status":"passed","title":"should handle successful token refresh","duration":6.936031000000185,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Token Refresh"],"fullName":"AuthContext Token Refresh should logout when refresh token is invalid","status":"passed","title":"should logout when refresh token is invalid","duration":4.732393000000002,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","2FA Functionality"],"fullName":"AuthContext 2FA Functionality should handle 2FA setup","status":"passed","title":"should handle 2FA setup","duration":3.4453779999998915,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","2FA Functionality"],"fullName":"AuthContext 2FA Functionality should handle 2FA enable with user state update","status":"passed","title":"should handle 2FA enable with user state update","duration":8.820492000000058,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Error Handling"],"fullName":"AuthContext Error Handling should clear errors","status":"passed","title":"should clear errors","duration":6.802149999999983,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","Error Handling"],"fullName":"AuthContext Error Handling should handle retry functionality","status":"passed","title":"should handle retry functionality","duration":8.044081000000006,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","usePermissions Hook"],"fullName":"AuthContext usePermissions Hook should correctly check user role permissions","status":"passed","title":"should correctly check user role permissions","duration":6.574634999999944,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","usePermissions Hook"],"fullName":"AuthContext usePermissions Hook should correctly check admin role permissions","status":"passed","title":"should correctly check admin role permissions","duration":4.6299209999999675,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","usePermissions Hook"],"fullName":"AuthContext usePermissions Hook should correctly check sysadmin role permissions","status":"passed","title":"should correctly check sysadmin role permissions","duration":4.635992999999871,"failureMessages":[],"meta":{}},{"ancestorTitles":["AuthContext","usePermissions Hook"],"fullName":"AuthContext usePermissions Hook should return false for all permissions when user is null","status":"passed","title":"should return false for all permissions when user is null","duration":2.8563869999998133,"failureMessages":[],"meta":{}}],"startTime":1755273175318,"endTime":1755273175734.8564,"status":"passed","message":"","name":"/home/galvani/dev/iam-dashboard/apps/web/tests/__tests__/contexts/AuthContext.test.tsx"}]}
+{
+  "numTotalTestSuites": 9,
+  "numPassedTestSuites": 9,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 20,
+  "numPassedTests": 20,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1755273174632,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["AuthContext", "Provider Initialization"],
+          "fullName": "AuthContext Provider Initialization should provide default state values",
+          "status": "passed",
+          "title": "should provide default state values",
+          "duration": 28.206176000000028,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Provider Initialization"],
+          "fullName": "AuthContext Provider Initialization should throw error when useAuth used outside provider",
+          "status": "passed",
+          "title": "should throw error when useAuth used outside provider",
+          "duration": 4.494327999999996,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Login Functionality"],
+          "fullName": "AuthContext Login Functionality should handle successful login with valid credentials",
+          "status": "passed",
+          "title": "should handle successful login with valid credentials",
+          "duration": 15.27204800000004,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Login Functionality"],
+          "fullName": "AuthContext Login Functionality should handle login failure with 401 unauthorized",
+          "status": "passed",
+          "title": "should handle login failure with 401 unauthorized",
+          "duration": 15.540468000000033,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Login Functionality"],
+          "fullName": "AuthContext Login Functionality should handle 2FA required error",
+          "status": "passed",
+          "title": "should handle 2FA required error",
+          "duration": 58.66966100000002,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Login Functionality"],
+          "fullName": "AuthContext Login Functionality should handle network timeout errors",
+          "status": "passed",
+          "title": "should handle network timeout errors",
+          "duration": 209.39000699999997,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Login Functionality"],
+          "fullName": "AuthContext Login Functionality should handle network fetch errors",
+          "status": "passed",
+          "title": "should handle network fetch errors",
+          "duration": 9.533023999999955,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Login Functionality"],
+          "fullName": "AuthContext Login Functionality should store tokens in localStorage during development",
+          "status": "passed",
+          "title": "should store tokens in localStorage during development",
+          "duration": 5.889766000000009,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Logout Functionality"],
+          "fullName": "AuthContext Logout Functionality should handle successful logout",
+          "status": "passed",
+          "title": "should handle successful logout",
+          "duration": 6.195927999999867,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Logout Functionality"],
+          "fullName": "AuthContext Logout Functionality should handle logout even when server call fails",
+          "status": "passed",
+          "title": "should handle logout even when server call fails",
+          "duration": 5.734425999999985,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Token Refresh"],
+          "fullName": "AuthContext Token Refresh should handle successful token refresh",
+          "status": "passed",
+          "title": "should handle successful token refresh",
+          "duration": 6.936031000000185,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Token Refresh"],
+          "fullName": "AuthContext Token Refresh should logout when refresh token is invalid",
+          "status": "passed",
+          "title": "should logout when refresh token is invalid",
+          "duration": 4.732393000000002,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "2FA Functionality"],
+          "fullName": "AuthContext 2FA Functionality should handle 2FA setup",
+          "status": "passed",
+          "title": "should handle 2FA setup",
+          "duration": 3.4453779999998915,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "2FA Functionality"],
+          "fullName": "AuthContext 2FA Functionality should handle 2FA enable with user state update",
+          "status": "passed",
+          "title": "should handle 2FA enable with user state update",
+          "duration": 8.820492000000058,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Error Handling"],
+          "fullName": "AuthContext Error Handling should clear errors",
+          "status": "passed",
+          "title": "should clear errors",
+          "duration": 6.802149999999983,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "Error Handling"],
+          "fullName": "AuthContext Error Handling should handle retry functionality",
+          "status": "passed",
+          "title": "should handle retry functionality",
+          "duration": 8.044081000000006,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "usePermissions Hook"],
+          "fullName": "AuthContext usePermissions Hook should correctly check user role permissions",
+          "status": "passed",
+          "title": "should correctly check user role permissions",
+          "duration": 6.574634999999944,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "usePermissions Hook"],
+          "fullName": "AuthContext usePermissions Hook should correctly check admin role permissions",
+          "status": "passed",
+          "title": "should correctly check admin role permissions",
+          "duration": 4.6299209999999675,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "usePermissions Hook"],
+          "fullName": "AuthContext usePermissions Hook should correctly check sysadmin role permissions",
+          "status": "passed",
+          "title": "should correctly check sysadmin role permissions",
+          "duration": 4.635992999999871,
+          "failureMessages": [],
+          "meta": {}
+        },
+        {
+          "ancestorTitles": ["AuthContext", "usePermissions Hook"],
+          "fullName": "AuthContext usePermissions Hook should return false for all permissions when user is null",
+          "status": "passed",
+          "title": "should return false for all permissions when user is null",
+          "duration": 2.8563869999998133,
+          "failureMessages": [],
+          "meta": {}
+        }
+      ],
+      "startTime": 1755273175318,
+      "endTime": 1755273175734.8564,
+      "status": "passed",
+      "message": "",
+      "name": "/home/galvani/dev/iam-dashboard/apps/web/tests/__tests__/contexts/AuthContext.test.tsx"
+    }
+  ]
+}

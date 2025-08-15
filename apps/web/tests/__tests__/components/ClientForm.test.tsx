@@ -219,9 +219,7 @@ describe('ClientForm', () => {
         await user.click(submitButton)
 
         await waitFor(() => {
-          expect(
-            screen.getByText('CPF inválido')
-          ).toBeInTheDocument()
+          expect(screen.getByText('CPF inválido')).toBeInTheDocument()
         })
       })
 

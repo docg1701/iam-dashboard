@@ -10,7 +10,6 @@ import uuid
 from datetime import UTC, date, datetime
 from unittest.mock import MagicMock, patch
 
-import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from sqlmodel import delete, select
@@ -33,25 +32,29 @@ async def real_db_session(async_session):
     # Define test user IDs for cleanup
     test_user_with_perms_id = uuid.UUID("12345678-1234-5678-9012-123456789012")
     test_user_no_perms_id = uuid.UUID("87654321-4321-8765-4321-876543219876")
-    
+
     # Clean up any existing test data
     await async_session.execute(delete(Client).where(Client.name.like("%Test%")))
     await async_session.execute(delete(User).where(User.email.like("%test%")))
     await async_session.execute(
         delete(UserAgentPermission).where(
-            UserAgentPermission.user_id.in_([test_user_with_perms_id, test_user_no_perms_id])
+            UserAgentPermission.user_id.in_(
+                [test_user_with_perms_id, test_user_no_perms_id]
+            )
         )
     )
     await async_session.commit()
-    
+
     yield async_session
-    
+
     # Clean up after test
     await async_session.execute(delete(Client).where(Client.name.like("%Test%")))
     await async_session.execute(delete(User).where(User.email.like("%test%")))
     await async_session.execute(
         delete(UserAgentPermission).where(
-            UserAgentPermission.user_id.in_([test_user_with_perms_id, test_user_no_perms_id])
+            UserAgentPermission.user_id.in_(
+                [test_user_with_perms_id, test_user_no_perms_id]
+            )
         )
     )
     await async_session.commit()
@@ -643,7 +646,10 @@ class TestClientAPIPermissions:
         # Test without any authorization header
         response = await client.get("/api/v1/clients")
 
-        assert response.status_code in [401, 403]  # Both unauthorized statuses are valid
+        assert response.status_code in [
+            401,
+            403,
+        ]  # Both unauthorized statuses are valid
         assert (
             "Not authenticated" in response.json()["detail"]
             or "Authorization header missing" in response.json()["detail"]

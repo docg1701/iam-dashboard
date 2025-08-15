@@ -25,23 +25,23 @@ beforeAll(() => {
   // Mock environment variables using vi.stubEnv for safer environment variable mocking
   vi.stubEnv('NEXT_PUBLIC_API_URL', 'http://localhost:8000')
   vi.stubEnv('NODE_ENV', 'test')
-  
+
   // Handle unhandled promise rejections to prevent test noise
   // Capture and ignore expected unhandled rejections from AuthContext tests
   const originalUnhandledRejection = process.listeners('unhandledRejection')
   process.removeAllListeners('unhandledRejection')
-  
+
   process.on('unhandledRejection', (reason, promise) => {
     // Check if this is an expected auth error (from AuthContext tests)
     if (
-      reason && 
-      typeof reason === 'object' && 
+      reason &&
+      typeof reason === 'object' &&
       'code' in reason &&
-      (reason.code === 'MISSING_2FA' || 
-       reason.code === 'TIMEOUT' ||
-       reason.code === 'INVALID_CREDENTIALS' ||
-       reason.code === 'NETWORK_ERROR' ||
-       reason.code === 'UNEXPECTED_ERROR')
+      (reason.code === 'MISSING_2FA' ||
+        reason.code === 'TIMEOUT' ||
+        reason.code === 'INVALID_CREDENTIALS' ||
+        reason.code === 'NETWORK_ERROR' ||
+        reason.code === 'UNEXPECTED_ERROR')
     ) {
       // These are expected errors from AuthContext tests, ignore them
       return
@@ -50,18 +50,18 @@ beforeAll(() => {
     // Check if this is an expected fetch error
     if (
       reason &&
-      (reason instanceof Error) &&
+      reason instanceof Error &&
       (reason.message === 'Failed to fetch' ||
-       reason.message === 'Invalid credentials' ||
-       reason.message === 'Test error' ||
-       reason.message === 'Server error' ||
-       reason.message === 'Invalid response from server' ||
-       reason.message.includes('Cannot read properties of undefined'))
+        reason.message === 'Invalid credentials' ||
+        reason.message === 'Test error' ||
+        reason.message === 'Server error' ||
+        reason.message === 'Invalid response from server' ||
+        reason.message.includes('Cannot read properties of undefined'))
     ) {
       // These are expected errors from fetch mocks, ignore them
       return
     }
-    
+
     // For other unhandled rejections, call original handlers
     originalUnhandledRejection.forEach(handler => {
       if (typeof handler === 'function') {
