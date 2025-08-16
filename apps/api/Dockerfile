@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install UV
-RUN pip install uv
+RUN pip install --root-user-action=ignore uv
 
 # Create non-root user FIRST
 RUN useradd --create-home --shell /bin/bash app

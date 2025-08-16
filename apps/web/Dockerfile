@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for Next.js application
 # Stage 1: Base image with Node.js
-FROM node:18-alpine AS base
+FROM node:22-alpine AS base
 
 # Set working directory
 WORKDIR /app
@@ -9,7 +9,7 @@ WORKDIR /app
 RUN apk add --no-cache curl
 
 # Install dependencies only when needed
-FROM base AS deps
+FROM node:22-alpine AS deps
 
 # Copy package files
 COPY package.json package-lock.json* ./
@@ -19,7 +19,7 @@ COPY ../../packages ./packages
 RUN npm install --only=production && npm cache clean --force
 
 # Development stage
-FROM base AS development
+FROM node:22-alpine AS development
 
 # Set environment variables
 ENV NODE_ENV=development
@@ -45,7 +45,7 @@ USER node
 CMD ["npm", "run", "dev"]
 
 # Build stage
-FROM base AS builder
+FROM node:22-alpine AS builder
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -61,7 +61,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM base AS production
+FROM node:22-alpine AS production
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
