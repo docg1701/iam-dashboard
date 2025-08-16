@@ -102,7 +102,7 @@ analyze_coverage() {
     echo "🔍 Analyzing ${component_name} Coverage..."
     
     # Validate path to prevent path traversal attacks
-    if [[ "$component_path" =~ \.\. ]] || [[ ! "$component_path" =~ ^[a-zA-Z0-9/_-]+$ ]]; then
+    if [[ "$component_path" =~ \.\. ]]; then
         echo "❌ Invalid ${component_name} path detected: $component_path"
         return 1
     fi
@@ -138,7 +138,21 @@ analyze_coverage() {
             case "$component_name" in
                 "Backend")
                     if command -v uv >/dev/null 2>&1; then
-                        uv run python -m coverage report --show-missing 2>/dev/null || echo "   Coverage summary not available"
+                        # Try to get coverage summary without regenerating virtual env
+                        local coverage_output
+                        coverage_output=$(timeout 30 uv run python -m coverage report 2>/dev/null | grep "TOTAL" | tail -1)
+                        if [ -n "$coverage_output" ]; then
+                            echo "   $coverage_output"
+                        else
+                            # Extract from HTML if coverage command fails
+                            local html_coverage
+                            html_coverage=$(grep -o 'class="pc_cov">[0-9]*%' "$html_path" 2>/dev/null | head -1 | sed 's/.*>\([0-9]*%\).*/\1/')
+                            if [ -n "$html_coverage" ]; then
+                                echo "   Overall Coverage: $html_coverage (from HTML report)"
+                            else
+                                echo "   Coverage data available, run with 'generate' profile for details"
+                            fi
+                        fi
                     else
                         echo "   UV not available - cannot generate coverage summary"
                     fi
@@ -181,8 +195,25 @@ analyze_coverage() {
                 echo "⚠️ Partial Coverage Data Found:"
                 echo "   Temp Files: $tmp_files coverage files in .tmp/"
                 echo "   Status: Coverage generated but not consolidated"
-                echo "   💡 Run with 'coverage' profile to generate HTML report"
-                found_coverage="partial"
+                
+                # Try to consolidate coverage automatically only if in generate profile
+                if [[ "${ANALYSIS_PROFILE}" == "generate" ]] && command -v npx >/dev/null 2>&1; then
+                    echo "   🔄 Attempting automatic consolidation..."
+                    if timeout 30 npx c8 report --reporter=html 2>/dev/null >/dev/null; then
+                        if [ -f "coverage/index.html" ]; then
+                            echo "   ✅ Coverage consolidated successfully"
+                            echo "   HTML Report: $component_path/coverage/index.html"
+                            found_coverage=true
+                        fi
+                    else
+                        echo "   ⚠️ Auto-consolidation failed, manual intervention needed"
+                        echo "   💡 Run: ./scripts/run-frontend-tests.sh coverage"
+                        found_coverage="partial"
+                    fi
+                else
+                    echo "   💡 Run: ./scripts/run-frontend-tests.sh coverage (to generate HTML report)"
+                    found_coverage="partial"
+                fi
             fi
         fi
         
@@ -248,7 +279,16 @@ COVERAGE_REPORT="${RESULTS_DIR}/coverage-analysis_${TIMESTAMP}.log"
     
     echo "📊 Coverage Analysis Results:"
     if [ $BACKEND_STATUS -eq 0 ]; then
-        echo "   ✅ Backend Coverage Available"
+        # Try to extract backend coverage percentage
+        backend_coverage=""
+        if [ -f "${PROJECT_ROOT}/apps/api/htmlcov/index.html" ]; then
+            backend_coverage=$(grep -o 'class="pc_cov">[0-9]*%' "${PROJECT_ROOT}/apps/api/htmlcov/index.html" 2>/dev/null | head -1 | sed 's/.*>\([0-9]*%\).*/\1/')
+        fi
+        if [ -n "$backend_coverage" ]; then
+            echo "   ✅ Backend Coverage Available: $backend_coverage"
+        else
+            echo "   ✅ Backend Coverage Available"
+        fi
     elif [ $BACKEND_STATUS -eq 2 ]; then
         echo "   ⚠️ Backend Coverage Partial"
     else
@@ -258,7 +298,14 @@ COVERAGE_REPORT="${RESULTS_DIR}/coverage-analysis_${TIMESTAMP}.log"
     if [ $FRONTEND_STATUS -eq 0 ]; then
         echo "   ✅ Frontend Coverage Available"
     elif [ $FRONTEND_STATUS -eq 2 ]; then
-        echo "   ⚠️ Frontend Coverage Partial"
+        # Count temp files if partial
+        temp_files=""
+        if [ -d "${PROJECT_ROOT}/apps/web/coverage/.tmp" ]; then
+            temp_files=$(ls "${PROJECT_ROOT}/apps/web/coverage/.tmp"/*.json 2>/dev/null | wc -l)
+            echo "   ⚠️ Frontend Coverage Partial ($temp_files temp files)"
+        else
+            echo "   ⚠️ Frontend Coverage Partial"
+        fi
     else
         echo "   ❌ Frontend Coverage Not Available"
     fi

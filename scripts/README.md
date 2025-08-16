@@ -1,6 +1,6 @@
 # 🧪 IAM Dashboard Test Scripts Manual
 
-**Comprehensive test execution suite with 12 focused scripts, profile-based execution, and real-time statistics.**
+**Comprehensive test execution suite with 13 focused scripts, profile-based execution, and real-time statistics.**
 
 📌 **Note**: This manual provides detailed documentation for the test scripts referenced in [CLAUDE.md](../CLAUDE.md). For general project guidelines and restrictions, see CLAUDE.md first.
 
@@ -34,6 +34,9 @@ ls test-results/                   # All timestamped results
 # Pre-commit validation  
 ./run-quality-checks.sh complete && ./run-backend-tests.sh coverage
 
+# Validation workflow
+./scripts/check-datetime-usage.sh && ./scripts/run-mock-violations-scan.sh
+
 # Full production validation
 ./run-security-tests.sh complete && ./run-database-tests.sh complete
 ```
@@ -53,6 +56,7 @@ ls test-results/                   # All timestamped results
 | `run-build-validation.sh` | complete, fast, info | 600s | Production builds | Build validation, info |
 | `analyze-coverage.sh` | complete, fast, backend, frontend, generate | 60s | Coverage analysis | Coverage reports |
 | `run-mock-violations-scan.sh` | complete, fast, backend, frontend, patterns | 60s | Mock compliance | Violation patterns |
+| `check-datetime-usage.sh` | - | 120s | DateTime deprecation check | AST violations |
 | `deploy-production.sh` | - | 600s | Production deployment | Service health, deployment |
 
 **Results Location**: All outputs saved to `test-results/` with timestamps
@@ -147,9 +151,9 @@ TEST_TIMEOUT=120 ./run-frontend-tests.sh
 # Solution 2: Generate fresh coverage reports
 ./analyze-coverage.sh generate
 
-# Solution 3: Check coverage locations
-ls apps/web/coverage/index.html      # Frontend
-ls apps/api/htmlcov/index.html       # Backend
+# Coverage locations (when generated):
+# Frontend: apps/web/coverage/index.html
+# Backend: apps/api/htmlcov/index.html
 ```
 
 #### Docker Permission Denied
@@ -178,19 +182,6 @@ docker compose up -d postgres
 docker compose exec postgres pg_isready -U postgres
 ```
 
-#### Build Failures
-```bash
-# Solution 1: Clean build
-rm -rf apps/web/.next apps/web/node_modules/.cache
-npm run build
-
-# Solution 2: Check dependencies
-npm run setup
-uv sync
-
-# Solution 3: Fast validation
-./run-build-validation.sh fast
-```
 
 ### Error Interpretation
 
@@ -263,6 +254,20 @@ cd apps/api && uv run alembic current
 # Manual migration
 cd apps/api && uv run alembic upgrade head
 ```
+
+## 🕐 DateTime Validation Workflow
+
+### Verificação Automática de DateTime Deprecated
+```bash
+# Descoberta dinâmica de diretórios Python e análise AST
+./scripts/check-datetime-usage.sh
+```
+
+### Características
+- **Descoberta Dinâmica**: Encontra automaticamente todos os diretórios Python
+- **Análise AST**: Detecção precisa sem falsos positivos
+- **Future-Proof**: Sem necessidade de manutenção para novos diretórios
+- **Exclusões Inteligentes**: Ignora cache, venv, node_modules automaticamente
 
 ## 🐳 Docker Testing Workflow
 
@@ -350,6 +355,9 @@ curl -f http://localhost:8000/health
 # Before commit
 ./run-quality-checks.sh complete
 ./run-mock-violations-scan.sh complete
+
+# Validation checks
+./scripts/check-datetime-usage.sh
 
 # Before production
 ./run-security-tests.sh complete

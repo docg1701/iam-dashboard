@@ -14,7 +14,7 @@ Essential guidance for Claude Code when working on this fullstack IAM Dashboard 
 - **User Interface (UI) content MUST be in Portuguese (Brazil)**
 
 ### ⚠️ CRITICAL COMPATIBILITY RULES
-- **NEVER use deprecated `datetime.utcnow()`** - causes Python 3.12+ warnings
+- **NEVER use deprecated `datetime.utcnow()`** - Run `./scripts/check-datetime-usage.sh` to verify
 - **MANDATORY: Search memory before modifying**:
   - Enums: `recall_memories "SQLModel enum Alembic"`
   - DateTime: `recall_memories "datetime timezone PostgreSQL"`
@@ -126,8 +126,7 @@ session_lessons "Discovered pattern: [what you learned]"
 ./scripts/deploy-production.sh                    # Setup with health checks
 
 # Development
-npm run setup  # Install dependencies
-npm run dev    # Start frontend and backend
+# Note: Use scripts for standardized workflows - see scripts/README.md
 ```
 
 
@@ -157,7 +156,7 @@ export DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=password
 - **Clean test summaries** automatically generated to reduce log file sizes
 - **Profile-based execution** allows choosing optimal testing strategy for development context
 
-## 📋 FOCUSED TEST CATEGORIES (12 Scripts)
+## 📋 FOCUSED TEST CATEGORIES (13 Scripts)
 **CRITICAL: Use focused test scripts with real data capture**
 
 **All test scripts now include**: Statistics tracking, timeout detection (exit code 124), signal handling (SIGINT/SIGTERM), and contextual reporting.
@@ -167,7 +166,7 @@ export DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=password
 **Security Grade**: A+ (92% secure, 8% requires monitoring)  
 **All critical vulnerabilities eliminated** - Scripts are production-ready
 
-### 🧪 Test Scripts (12 Available)
+### 🧪 Test Scripts (13 Available)
 
 | Script | Profiles | Purpose |
 |--------|----------|---------|
@@ -182,6 +181,7 @@ export DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=password
 | `run-build-validation.sh` | fast, info | Production build validation |
 | `analyze-coverage.sh` | fast, backend, frontend, generate | Coverage analysis |
 | `run-mock-violations-scan.sh` | fast, backend, frontend, patterns | Mock compliance |
+| `check-datetime-usage.sh` | - | DateTime deprecation check |
 | `deploy-production.sh` | - | Production deployment |
 
 **Results saved to**: `./scripts/test-results/` with timestamps
@@ -211,6 +211,7 @@ export DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=password
 
 # Before commit  
 ./scripts/run-quality-checks.sh complete && ./scripts/run-backend-tests.sh coverage
+./scripts/check-datetime-usage.sh  # Verify no deprecated datetime
 ```
 
 ## 📈 Test Results
@@ -238,7 +239,7 @@ cd apps/api
 uv sync                      # Sync dependencies
 uv add fastapi              # Add dependencies (NEVER edit pyproject.toml)
 uv run alembic upgrade head  # Database migrations
-uv run pytest              # Run tests
+./scripts/run-backend-tests.sh  # Use script for tests (not direct pytest)
 ```
 
 ## ⚠️ Critical Rules
@@ -262,7 +263,7 @@ uv run pytest              # Run tests
 ## 🔐 Production Deployment
 
 ### Pre-deployment Checklist
-1. Run all 12 test scripts 
+1. Run all 13 test scripts (including `check-datetime-usage.sh`) 
 2. Zero mock violations
 3. No Critical/High vulnerabilities
 4. >80% coverage
